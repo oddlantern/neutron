@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { dirname, join, parse as parsePath } from 'node:path';
+import { dirname, join } from 'node:path';
+
 import { parse as parseYaml } from 'yaml';
 
 import { configSchema, type MidoConfig } from './schema.js';
@@ -18,12 +19,16 @@ function findConfigFile(startDir: string): string | null {
   while (true) {
     for (const filename of CONFIG_FILENAMES) {
       const candidate = join(current, filename);
-      if (existsSync(candidate)) return candidate;
+      if (existsSync(candidate)) {
+        return candidate;
+      }
     }
 
     const parent = dirname(current);
     // Reached filesystem root
-    if (parent === current) return null;
+    if (parent === current) {
+      return null;
+    }
     current = parent;
   }
 }
@@ -46,10 +51,10 @@ export async function loadConfig(startDir?: string): Promise<LoadedConfig> {
   const searchFrom = startDir ?? process.cwd();
   const configPath = findConfigFile(searchFrom);
 
-  if (configPath === null) {
+  if (!configPath) {
     throw new Error(
       `No mido.yml found. Searched upward from ${searchFrom}\n` +
-      'Create a mido.yml in your workspace root to get started.',
+        'Create a mido.yml in your workspace root to get started.',
     );
   }
 
