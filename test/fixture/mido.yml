@@ -1,0 +1,34 @@
+workspace: nextsaga
+
+ecosystems:
+  typescript:
+    manifest: package.json
+    lockfile: bun.lock
+    packages:
+      - apps/server
+      - packages/api
+      - packages/design-system
+
+  dart:
+    manifest: pubspec.yaml
+    lockfile: pubspec.lock
+    packages:
+      - apps/flutter
+      - packages/api/clients/dart
+
+bridges:
+  - from: packages/api/clients/dart
+    to: packages/api
+    via: packages/api/openapi.json
+
+  - from: apps/flutter
+    to: packages/design-system
+    via: packages/design-system/tokens.json
+
+env:
+  shared:
+    - API_URL
+    - API_PORT
+  files:
+    - apps/server/.env.example
+    - apps/flutter/.env.example

@@ -1,0 +1,9 @@
+name: nextsaga_api_client
+version: 0.0.1
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+dependencies:
+  dio: ^5.8.0
+  freezed_annotation: ^3.2.0
+dev_dependencies:
+  freezed: ^3.2.5

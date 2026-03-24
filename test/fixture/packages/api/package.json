@@ -1,0 +1,8 @@
+{
+  "name": "@nextsaga/api",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "zod": "^3.24.0"
+  }
+}
