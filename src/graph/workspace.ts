@@ -28,10 +28,10 @@ export async function buildWorkspaceGraph(
   for (const [ecosystemName, ecosystemConfig] of Object.entries(config.ecosystems)) {
     const parser = parsers.get(ecosystemConfig.manifest);
 
-    if (parser === undefined) {
+    if (!parser) {
       errors.push(
         `No parser registered for manifest "${ecosystemConfig.manifest}" ` +
-        `(ecosystem: ${ecosystemName})`,
+          `(ecosystem: ${ecosystemName})`,
       );
       continue;
     }
@@ -44,7 +44,7 @@ export async function buildWorkspaceGraph(
       if (!existsSync(manifestPath)) {
         errors.push(
           `Manifest not found: ${manifestPath} ` +
-          `(ecosystem: ${ecosystemName}, package: ${pkgGlob})`,
+            `(ecosystem: ${ecosystemName}, package: ${pkgGlob})`,
         );
         continue;
       }
@@ -79,7 +79,7 @@ export async function buildWorkspaceGraph(
   if (errors.length > 0) {
     throw new Error(
       `Workspace graph build failed with ${errors.length} error(s):\n` +
-      errors.map((e) => `  - ${e}`).join('\n'),
+        errors.map((e) => `  - ${e}`).join('\n'),
     );
   }
 
@@ -108,7 +108,9 @@ export async function buildWorkspaceGraph(
 /** Check if a relative path is declared in any ecosystem's package list */
 function isInPackageList(config: MidoConfig, relPath: string): boolean {
   for (const eco of Object.values(config.ecosystems)) {
-    if (eco.packages.includes(relPath)) return true;
+    if (eco.packages.includes(relPath)) {
+      return true;
+    }
   }
   return false;
 }

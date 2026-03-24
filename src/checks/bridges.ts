@@ -47,12 +47,13 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
     const fromPkg = graph.packages.get(bridge.from);
     const toPkg = graph.packages.get(bridge.to);
 
-    if (fromPkg !== undefined && toPkg !== undefined && fromPkg.ecosystem === toPkg.ecosystem) {
+    if (fromPkg && toPkg && fromPkg.ecosystem === toPkg.ecosystem) {
       issues.push({
         severity: 'warning',
         check: 'bridges',
         message: `Bridge connects packages in the same ecosystem (${fromPkg.ecosystem}): ${bridge.from} → ${bridge.to}`,
-        details: 'Bridges are intended for cross-ecosystem edges. Intra-ecosystem dependencies should be declared in manifest files.',
+        details:
+          'Bridges are intended for cross-ecosystem edges. Intra-ecosystem dependencies should be declared in manifest files.',
       });
     }
   }
@@ -61,8 +62,9 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
     check: 'bridges',
     passed: issues.filter((i) => i.severity === 'error').length === 0,
     issues,
-    summary: issues.length === 0
-      ? `${graph.bridges.length} bridge(s) validated`
-      : `${issues.length} bridge issue(s) found`,
+    summary:
+      issues.length === 0
+        ? `${graph.bridges.length} bridge(s) validated`
+        : `${issues.length} bridge issue(s) found`,
   };
 }

@@ -1,0 +1,121 @@
+# CLAUDE.md — mido
+
+Cross-ecosystem monorepo workspace tool. Package: `@oddlantern/mido`. Binary: `mido`.
+
+## Architecture
+
+```
+src/
+  bin.ts                 # CLI entry point, command router
+  output.ts              # ANSI terminal formatting
+  lock.ts                # mido.lock read/write/merge
+  prompt.ts              # Interactive readline prompts
+  manifest-writer.ts     # Write version ranges back to manifests
+  config/
+    schema.ts            # Zod schema for mido.yml
+    loader.ts            # Walk-up config finder + validator
+  graph/
+    types.ts             # WorkspacePackage, Bridge, WorkspaceGraph
+    workspace.ts         # Build cross-ecosystem DAG from config + parsers
+  parsers/
+    types.ts             # ManifestParser interface (plugin boundary)
+    package-json.ts      # npm/yarn/pnpm/bun manifest parser
+    pubspec.ts           # Dart/Flutter manifest parser
+  checks/
+    types.ts             # CheckResult, CheckIssue, Severity
+    versions.ts          # Cross-package version consistency
+    bridges.ts           # Cross-ecosystem edge validation
+    env.ts               # Shared env key parity
+  commands/
+    check.ts             # Orchestrates all checks, --fix flow
+```
+
+## Key Design Decisions
+
+- **Parsers are the plugin boundary.** Adding a new ecosystem = one file implementing `ManifestParser`. Everything upstream is ecosystem-agnostic.
+- **The graph is the core data structure.** Every command loads config → builds graph → operates on graph. Never bypass the graph.
+- **`mido.lock` is the version policy.** When it exists, `mido check` validates manifests against the lock, not just against each other.
+- **Node.js target for distribution.** The published CLI must run on plain Node.js (>=20.19). No Bun-specific APIs in source. `#!/usr/bin/env node` shebang. Development uses Bun.
+- **Zero external deps for CLI UX.** ANSI colors are raw escape codes, prompts use Node `readline`. No chalk, no inquirer, no ora.
+
+## Code Rules
+
+- No magic strings or numbers — use named constants.
+- No `any` types — no exceptions. Use `unknown` and narrow.
+- All exports named, never default (config files exempt: `tsdown.config.ts`, `commitlint.config.js`).
+- No `as` type casting — parse external data with Zod, narrow with type guards.
+- `readonly` on all interface properties and array types.
+- Explicit return types on exported functions.
+- `import type` for type-only imports.
+- Prefer early returns over nested conditionals.
+- Functions do one thing. Files contain one concept.
+
+### Console Output
+
+This is a CLI tool — `console.log` and `console.error` are the output mechanism. Use them intentionally:
+- `console.log` for user-facing output (check results, help text, summaries)
+- `console.error` for errors
+- All formatting goes through `src/output.ts` — never inline ANSI codes in commands or checks
+
+### Import Order (enforced by oxfmt)
+
+1. Node.js built-ins (`node:fs`, `node:path`, etc.)
+2. Third-party packages (`yaml`, `zod`)
+3. Internal imports (`../graph/types.js`, `./schema.js`)
+
+Each group separated by a blank line. Always use `.js` extensions on internal imports (required for ESM resolution).
+
+## Naming
+
+- Files: `kebab-case.ts`
+- Types/interfaces: `PascalCase`
+- Functions/variables: `camelCase`
+- Constants: `SCREAMING_SNAKE_CASE` for true constants, `camelCase` for derived values
+
+## Commits
+
+Conventional commits enforced by commitlint.
+
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `cli`, `ci`, `deps`
+- Max header: 100 chars
+
+## Build
+
+```bash
+bun run build          # tsdown → dist/bin.js
+bun run typecheck      # tsc --noEmit
+bun run lint           # oxlint src/
+bun run format         # oxfmt src/
+bun run format:check   # oxfmt --check src/ (CI mode)
+```
+
+Build output is `dist/bin.js` (ESM, Node 20 target, sourcemaps). The `bin` field in `package.json` points to `./dist/bin.js`.
+
+## Testing
+
+- Test fixtures in `test/fixture/` (has intentional errors) and `test/fixture-clean/` (passes all checks)
+- Run from fixture dirs: `cd test/fixture && node ../../dist/bin.js check`
+- After any change, verify both fixtures produce expected results
+
+## Adding a New Ecosystem Parser
+
+1. Create `src/parsers/<manifest-name>.ts` implementing `ManifestParser`
+2. Register in `src/bin.ts` parser registry map
+3. Add ecosystem to `mido.yml` schema in `src/config/schema.ts` (if new manifest keys needed)
+4. Add test fixture packages with the new manifest format
+5. Verify `mido check` discovers and parses them
+
+## Adding a New Check
+
+1. Create `src/checks/<n>.ts` exporting a function that takes `WorkspaceGraph` and returns `CheckResult`
+2. Wire into `src/commands/check.ts` in the results array
+3. Add fixture test cases that exercise both pass and fail paths
+
+## Things NOT to Do
+
+- Do not add runtime dependencies without discussion. The dep count should stay minimal.
+- Do not use `process.exit()` anywhere except `src/bin.ts`. Commands return exit codes, the entry point exits.
+- Do not write Bun-specific code in `src/`. The published binary runs on Node.js.
+- Do not auto-format on commit hooks. The pre-commit hook runs `oxfmt --check` (fail-only). Developer runs `bun run format` manually.
+- Do not add CLI framework deps (commander, yargs, etc). The command router is ~20 lines and that's intentional.

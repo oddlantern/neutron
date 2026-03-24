@@ -1,4 +1,4 @@
-import type { CheckResult, CheckIssue } from '../checks/types.js';
+import type { CheckIssue, CheckResult } from '../checks/types.js';
 
 // ANSI color codes — no dependency needed
 const RESET = '\x1b[0m';
@@ -18,7 +18,7 @@ function formatIssue(issue: CheckIssue): string {
   const color = issue.severity === 'error' ? RED : YELLOW;
   let output = `  ${icon} ${color}${issue.message}${RESET}`;
 
-  if (issue.details !== undefined) {
+  if (issue.details) {
     const indented = issue.details
       .split('\n')
       .map((line) => `    ${DIM}${line}${RESET}`)
@@ -33,7 +33,9 @@ export function formatCheckResult(result: CheckResult): string {
   const icon = result.passed ? PASS : FAIL;
   const header = `${icon} ${BOLD}${result.check}${RESET} ${DIM}— ${result.summary}${RESET}`;
 
-  if (result.issues.length === 0) return header;
+  if (result.issues.length === 0) {
+    return header;
+  }
 
   const issueLines = result.issues.map(formatIssue).join('\n');
   return `${header}\n${issueLines}`;
@@ -53,7 +55,5 @@ export function formatSummary(results: readonly CheckResult[]): string {
 }
 
 export function formatHeader(workspaceName: string, packageCount: number): string {
-  return (
-    `\n${CYAN}${BOLD}mido${RESET} ${DIM}— workspace: ${workspaceName} (${packageCount} packages)${RESET}\n`
-  );
+  return `\n${CYAN}${BOLD}mido${RESET} ${DIM}— workspace: ${workspaceName} (${packageCount} packages)${RESET}\n`;
 }

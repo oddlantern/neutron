@@ -15,13 +15,19 @@ function parseEnvKeys(content: string): Set<string> {
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
     // Skip empty lines and comments
-    if (trimmed === '' || trimmed.startsWith('#')) continue;
+    if (trimmed === '' || trimmed.startsWith('#')) {
+      continue;
+    }
 
     const eqIndex = trimmed.indexOf('=');
-    if (eqIndex === -1) continue;
+    if (eqIndex === -1) {
+      continue;
+    }
 
     const key = trimmed.slice(0, eqIndex).trim();
-    if (key.length > 0) keys.add(key);
+    if (key.length > 0) {
+      keys.add(key);
+    }
   }
 
   return keys;
@@ -30,10 +36,7 @@ function parseEnvKeys(content: string): Set<string> {
 /**
  * Check that all shared keys exist in every declared env file.
  */
-export async function checkEnvParity(
-  envConfig: EnvConfig,
-  root: string,
-): Promise<CheckResult> {
+export async function checkEnvParity(envConfig: EnvConfig, root: string): Promise<CheckResult> {
   const issues: CheckIssue[] = [];
   const fileKeys = new Map<string, Set<string>>();
 
@@ -78,8 +81,9 @@ export async function checkEnvParity(
     check: 'env',
     passed: issues.length === 0,
     issues,
-    summary: issues.length === 0
-      ? `${envConfig.shared.length} shared key(s) verified across ${envConfig.files.length} file(s)`
-      : `${issues.length} env parity issue(s) found`,
+    summary:
+      issues.length === 0
+        ? `${envConfig.shared.length} shared key(s) verified across ${envConfig.files.length} file(s)`
+        : `${issues.length} env parity issue(s) found`,
   };
 }

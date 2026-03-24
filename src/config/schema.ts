@@ -19,10 +19,9 @@ const envSchema = z.object({
 
 export const configSchema = z.object({
   workspace: z.string(),
-  ecosystems: z.record(z.string(), ecosystemSchema).refine(
-    (eco) => Object.keys(eco).length >= 1,
-    { message: 'At least one ecosystem must be defined' },
-  ),
+  ecosystems: z.record(z.string(), ecosystemSchema).refine((eco) => Object.keys(eco).length >= 1, {
+    message: 'At least one ecosystem must be defined',
+  }),
   bridges: z.array(bridgeSchema).optional(),
   env: envSchema.optional(),
 });
