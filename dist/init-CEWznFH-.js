@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { n as closePrompt, t as ask } from "./prompt-BLf9wcmi.js";
+import { n as askPath, r as closePrompt, t as ask } from "./prompt-IS8nnzAW.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
-import { stringify } from "yaml";
+import { Document, isMap, isScalar } from "yaml";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 //#region src/discovery/scanner.ts
@@ -268,10 +268,23 @@ async function runInit(root) {
 		shared: [],
 		files: envFiles.map((e) => e.path)
 	};
-	await writeFile(configPath, stringify(config, { lineWidth: 120 }), "utf-8");
+	const doc = new Document(config);
+	doc.commentBefore = " yaml-language-server: $schema=https://raw.githubusercontent.com/oddlantern/mido/main/schema.json";
+	const comments = new Map([
+		["workspace", " Workspace name"],
+		["ecosystems", " Language ecosystems and their packages"],
+		["bridges", " Cross-ecosystem dependencies linked by a shared artifact"],
+		["env", " Environment variable parity across packages"]
+	]);
+	if (isMap(doc.contents)) for (const pair of doc.contents.items) {
+		if (!isScalar(pair.key)) continue;
+		const comment = comments.get(String(pair.key.value));
+		if (comment) pair.key.commentBefore = comment;
+	}
+	await writeFile(configPath, doc.toString({ lineWidth: 120 }), "utf-8");
 	console.log(`\n  ${BOLD}${CONFIG_FILENAME}${RESET} written\n`);
 	if ((await ask("  Install git hooks? [Y/n] ")).toLowerCase() !== "n") {
-		const { runInstall } = await import("./install-BRkV1UYQ.js");
+		const { runInstall } = await import("./install-cCGe-Me7.js");
 		const installResult = await runInstall(root);
 		if (installResult !== 0) {
 			closePrompt();
@@ -296,24 +309,20 @@ async function promptAdditionalBridges(root, packagePaths) {
 	if ((await ask("  Any additional bridges? [y/N] ")).toLowerCase() !== "y") return result;
 	let adding = true;
 	while (adding) {
-		console.log(`\n  ${DIM}A bridge connects two packages across ecosystems through a shared file.${RESET}`);
-		console.log(`\n  ${DIM}Source = the package that PRODUCES the artifact${RESET}\n`);
-		console.log(formatPackageList(packagePaths));
-		const source = pickPackage(await ask("\n  Source package: "), packagePaths);
+		console.log(`\n${formatPackageList(packagePaths)}`);
+		const source = pickPackage(await ask(`\n  Source ${DIM}(who generates the file)${RESET}: `), packagePaths);
 		if (!source) {
 			console.log("  Invalid choice, skipping bridge.");
 			break;
 		}
 		const targetPaths = packagePaths.filter((p) => p !== source);
-		console.log(`\n  ${DIM}Target = the package that CONSUMES the artifact${RESET}\n`);
-		console.log(formatPackageList(targetPaths));
-		const target = pickPackage(await ask("\n  Target package: "), targetPaths);
+		console.log(`\n${formatPackageList(targetPaths)}`);
+		const target = pickPackage(await ask(`\n  Target ${DIM}(who depends on it)${RESET}: `), targetPaths);
 		if (!target) {
 			console.log("  Invalid choice, skipping bridge.");
 			break;
 		}
-		console.log(`\n  ${DIM}Artifact = the file that connects them (e.g. openapi.json, tokens.json, schema.graphql)${RESET}`);
-		const artifact = await ask("  Artifact path (relative to repo root): ");
+		const artifact = await askPath(`  Artifact ${DIM}(shared file, e.g. openapi.json)${RESET}: `, root);
 		if (!artifact) {
 			console.log("  No artifact path given, skipping bridge.");
 			break;
@@ -426,4 +435,4 @@ function groupByEcosystem(packages) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-D0_Z7Fyp.js.map
+//# sourceMappingURL=init-CEWznFH-.js.map

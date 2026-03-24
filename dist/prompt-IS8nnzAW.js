@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { basename, dirname, join } from "node:path";
+import { readdirSync, statSync } from "node:fs";
 import { createInterface } from "node:readline";
 //#region src/prompt.ts
 let rl = null;
@@ -83,6 +85,60 @@ async function promptVersionResolution(depName, choices, lockedRange) {
 		targets
 	};
 }
+function pathCompleter(root) {
+	return (line) => {
+		const partial = line;
+		const dir = partial.includes("/") ? dirname(partial) : ".";
+		const prefix = partial.includes("/") ? basename(partial) : partial;
+		const absDir = join(root, dir);
+		let entries;
+		try {
+			entries = readdirSync(absDir);
+		} catch {
+			return [[], line];
+		}
+		return [entries.filter((e) => e.startsWith(prefix) && !e.startsWith(".")).map((e) => {
+			const full = join(absDir, e);
+			let isDir = false;
+			try {
+				isDir = statSync(full).isDirectory();
+			} catch {}
+			const rel = dir === "." ? e : `${dir}/${e}`;
+			return isDir ? `${rel}/` : rel;
+		}), line];
+	};
+}
+/**
+* Ask for a file path with tab-completion relative to the given root.
+* Spawns a temporary readline instance with a completer, then restores
+* the shared one.
+*/
+function askPath(question, root) {
+	if (bufferedLines) {
+		process.stdout.write(question);
+		const line = bufferedLines[lineIndex] ?? "";
+		lineIndex++;
+		process.stdout.write(line + "\n");
+		return Promise.resolve(line);
+	}
+	if (rl) {
+		rl.close();
+		rl = null;
+	}
+	const completer = pathCompleter(root);
+	const pathRl = createInterface({
+		input: process.stdin,
+		output: process.stdout,
+		terminal: process.stdin.isTTY === true,
+		completer
+	});
+	return new Promise((resolve) => {
+		pathRl.question(question, (answer) => {
+			pathRl.close();
+			resolve(answer.trim());
+		});
+	});
+}
 function closePrompt() {
 	if (rl) {
 		rl.close();
@@ -92,6 +148,6 @@ function closePrompt() {
 	lineIndex = 0;
 }
 //#endregion
-export { closePrompt as n, promptVersionResolution as r, ask as t };
+export { promptVersionResolution as i, askPath as n, closePrompt as r, ask as t };
 
-//# sourceMappingURL=prompt-BLf9wcmi.js.map
+//# sourceMappingURL=prompt-IS8nnzAW.js.map

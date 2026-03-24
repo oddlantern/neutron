@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/oddlantern/mido/main/schema.json",
+  "title": "mido.yml",
+  "description": "Configuration for mido — a cross-ecosystem monorepo workspace tool",
+  "type": "object",
+  "required": ["workspace", "ecosystems"],
+  "additionalProperties": false,
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Name of the workspace (used in CLI output and lock file)"
+    },
+    "ecosystems": {
+      "type": "object",
+      "description": "Language ecosystems and their packages. Keys are ecosystem names (e.g. typescript, dart)",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["manifest", "packages"],
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "type": "string",
+            "description": "Manifest filename for this ecosystem (e.g. package.json, pubspec.yaml)"
+          },
+          "lockfile": {
+            "type": "string",
+            "description": "Lockfile filename for this ecosystem (e.g. bun.lock, pubspec.lock). Optional — used for change detection"
+          },
+          "packages": {
+            "type": "array",
+            "description": "Paths to packages in this ecosystem, relative to the workspace root",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "bridges": {
+      "type": "array",
+      "description": "Cross-ecosystem dependencies linked by a shared artifact file",
+      "items": {
+        "type": "object",
+        "required": ["source", "target", "artifact"],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Package path that produces the artifact"
+          },
+          "target": {
+            "type": "string",
+            "description": "Package path that consumes the artifact"
+          },
+          "artifact": {
+            "type": "string",
+            "description": "Path to the shared file relative to the workspace root (e.g. packages/api/openapi.json)"
+          }
+        }
+      }
+    },
+    "env": {
+      "type": "object",
+      "description": "Environment variable parity checks across packages",
+      "required": ["shared", "files"],
+      "additionalProperties": false,
+      "properties": {
+        "shared": {
+          "type": "array",
+          "description": "Environment variable names that must be present in all listed env files",
+          "items": { "type": "string" }
+        },
+        "files": {
+          "type": "array",
+          "description": "Paths to .env files to check for parity, relative to the workspace root",
+          "items": { "type": "string" },
+          "minItems": 2
+        }
+      }
+    },
+    "commits": {
+      "type": "object",
+      "description": "Conventional commit rules enforced by the commit-msg hook",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "type": "array",
+          "description": "Allowed commit types (e.g. feat, fix, docs, refactor)",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "scopes": {
+          "type": "array",
+          "description": "Allowed commit scopes. If omitted, any scope is accepted",
+          "items": { "type": "string" }
+        },
+        "header_max_length": {
+          "type": "integer",
+          "description": "Maximum length of the commit header line",
+          "minimum": 1,
+          "default": 100
+        },
+        "body_max_line_length": {
+          "type": "integer",
+          "description": "Maximum length of each line in the commit body",
+          "minimum": 1,
+          "default": 200
+        }
+      }
+    }
+  }
+}

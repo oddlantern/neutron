@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { t as loadConfig } from "./loader-nzFN8Dng.js";
-import { n as closePrompt, r as promptVersionResolution } from "./prompt-BLf9wcmi.js";
+import { i as promptVersionResolution, r as closePrompt } from "./prompt-IS8nnzAW.js";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import { z } from "zod";
@@ -465,4 +465,4 @@ async function runCheck(parsers, options = {}) {
 //#endregion
 export { runCheck };
 
-//# sourceMappingURL=check-DClgq1v2.js.map
+//# sourceMappingURL=check-BCNQjr2M.js.map

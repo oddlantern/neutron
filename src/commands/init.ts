@@ -3,11 +3,11 @@ import { existsSync, statSync } from 'node:fs';
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { stringify as stringifyYaml } from 'yaml';
+import { Document, isMap, isScalar } from 'yaml';
 
 import { scanRepo, type DiscoveredPackage } from '../discovery/scanner.js';
 import { detectBridges, detectEnvFiles, type BridgeCandidate } from '../discovery/heuristics.js';
-import { ask, closePrompt } from '../prompt.js';
+import { ask, askPath, closePrompt } from '../prompt.js';
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -149,8 +149,31 @@ export async function runInit(root: string): Promise<number> {
     };
   }
 
-  // 9. Write config
-  const yaml = stringifyYaml(config, { lineWidth: 120 });
+  // 9. Write config with comments
+  const doc = new Document(config);
+  doc.commentBefore =
+    ' yaml-language-server: $schema=https://raw.githubusercontent.com/oddlantern/mido/main/schema.json';
+
+  const comments: ReadonlyMap<string, string> = new Map([
+    ['workspace', ' Workspace name'],
+    ['ecosystems', ' Language ecosystems and their packages'],
+    ['bridges', ' Cross-ecosystem dependencies linked by a shared artifact'],
+    ['env', ' Environment variable parity across packages'],
+  ]);
+
+  if (isMap(doc.contents)) {
+    for (const pair of doc.contents.items) {
+      if (!isScalar(pair.key)) {
+        continue;
+      }
+      const comment = comments.get(String(pair.key.value));
+      if (comment) {
+        pair.key.commentBefore = comment;
+      }
+    }
+  }
+
+  const yaml = doc.toString({ lineWidth: 120 });
   await writeFile(configPath, yaml, 'utf-8');
   console.log(`\n  ${BOLD}${CONFIG_FILENAME}${RESET} written\n`);
 
@@ -200,10 +223,8 @@ async function promptAdditionalBridges(
   let adding = true;
   while (adding) {
     // Source selection
-    console.log(`\n  ${DIM}A bridge connects two packages across ecosystems through a shared file.${RESET}`);
-    console.log(`\n  ${DIM}Source = the package that PRODUCES the artifact${RESET}\n`);
-    console.log(formatPackageList(packagePaths));
-    const sourceAnswer = await ask('\n  Source package: ');
+    console.log(`\n${formatPackageList(packagePaths)}`);
+    const sourceAnswer = await ask(`\n  Source ${DIM}(who generates the file)${RESET}: `);
     const source = pickPackage(sourceAnswer, packagePaths);
     if (!source) {
       console.log('  Invalid choice, skipping bridge.');
@@ -212,9 +233,8 @@ async function promptAdditionalBridges(
 
     // Target selection — exclude source
     const targetPaths = packagePaths.filter((p) => p !== source);
-    console.log(`\n  ${DIM}Target = the package that CONSUMES the artifact${RESET}\n`);
-    console.log(formatPackageList(targetPaths));
-    const targetAnswer = await ask('\n  Target package: ');
+    console.log(`\n${formatPackageList(targetPaths)}`);
+    const targetAnswer = await ask(`\n  Target ${DIM}(who depends on it)${RESET}: `);
     const target = pickPackage(targetAnswer, targetPaths);
     if (!target) {
       console.log('  Invalid choice, skipping bridge.');
@@ -222,8 +242,7 @@ async function promptAdditionalBridges(
     }
 
     // Artifact path
-    console.log(`\n  ${DIM}Artifact = the file that connects them (e.g. openapi.json, tokens.json, schema.graphql)${RESET}`);
-    const artifact = await ask('  Artifact path (relative to repo root): ');
+    const artifact = await askPath(`  Artifact ${DIM}(shared file, e.g. openapi.json)${RESET}: `, root);
     if (!artifact) {
       console.log('  No artifact path given, skipping bridge.');
       break;

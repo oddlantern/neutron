@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { n as closePrompt, t as ask } from "./prompt-BLf9wcmi.js";
+import { r as closePrompt, t as ask } from "./prompt-IS8nnzAW.js";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -74,4 +74,4 @@ async function runInstall(root) {
 //#endregion
 export { runInstall };
 
-//# sourceMappingURL=install-BRkV1UYQ.js.map
+//# sourceMappingURL=install-cCGe-Me7.js.map

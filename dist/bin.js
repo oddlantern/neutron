@@ -163,7 +163,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-DClgq1v2.js");
+		const { runCheck } = await import("./check-BCNQjr2M.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -171,12 +171,12 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-D0_Z7Fyp.js");
+		const { runInit } = await import("./init-CEWznFH-.js");
 		const exitCode = await runInit(process.cwd());
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-BRkV1UYQ.js");
+		const { runInstall } = await import("./install-cCGe-Me7.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}

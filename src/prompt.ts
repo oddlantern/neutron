@@ -1,4 +1,6 @@
-import { createInterface, type Interface } from 'node:readline';
+import { readdirSync, statSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
+import { createInterface, type Interface, type CompleterResult } from 'node:readline';
 
 export interface DepChoice {
   readonly range: string;
@@ -132,6 +134,74 @@ export async function promptVersionResolution(
   const targets = choices.filter((c) => c.range !== chosenRange);
 
   return { depName, chosenRange, targets };
+}
+
+function pathCompleter(root: string): (line: string) => CompleterResult {
+  return (line: string): CompleterResult => {
+    const partial = line;
+    const dir = partial.includes('/') ? dirname(partial) : '.';
+    const prefix = partial.includes('/') ? basename(partial) : partial;
+    const absDir = join(root, dir);
+
+    let entries: string[];
+    try {
+      entries = readdirSync(absDir);
+    } catch {
+      return [[], line];
+    }
+
+    const matches = entries
+      .filter((e) => e.startsWith(prefix) && !e.startsWith('.'))
+      .map((e) => {
+        const full = join(absDir, e);
+        let isDir = false;
+        try {
+          isDir = statSync(full).isDirectory();
+        } catch {
+          // treat as file
+        }
+        const rel = dir === '.' ? e : `${dir}/${e}`;
+        return isDir ? `${rel}/` : rel;
+      });
+
+    return [matches, line];
+  };
+}
+
+/**
+ * Ask for a file path with tab-completion relative to the given root.
+ * Spawns a temporary readline instance with a completer, then restores
+ * the shared one.
+ */
+export function askPath(question: string, root: string): Promise<string> {
+  if (bufferedLines) {
+    process.stdout.write(question);
+    const line = bufferedLines[lineIndex] ?? '';
+    lineIndex++;
+    process.stdout.write(line + '\n');
+    return Promise.resolve(line);
+  }
+
+  // Pause the shared readline so we can take over stdin
+  if (rl) {
+    rl.close();
+    rl = null;
+  }
+
+  const completer = pathCompleter(root);
+  const pathRl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: process.stdin.isTTY === true,
+    completer,
+  });
+
+  return new Promise<string>((resolve) => {
+    pathRl.question(question, (answer) => {
+      pathRl.close();
+      resolve(answer.trim());
+    });
+  });
 }
 
 export function closePrompt(): void {
