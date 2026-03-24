@@ -32,12 +32,12 @@ export interface WorkspacePackage {
  * Represents a dependency edge that cannot be inferred from manifest files alone.
  */
 export interface Bridge {
-  /** Package path that depends on the artifact */
-  readonly from: string;
   /** Package path that produces the artifact */
-  readonly to: string;
+  readonly source: string;
+  /** Package path that consumes the artifact */
+  readonly target: string;
   /** Path to the bridge artifact (e.g., openapi.json) */
-  readonly via: string;
+  readonly artifact: string;
 }
 
 /**

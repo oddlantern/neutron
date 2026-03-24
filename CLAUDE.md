@@ -12,8 +12,8 @@ src/
   prompt.ts              # Interactive readline prompts
   manifest-writer.ts     # Write version ranges back to manifests
   config/
-    schema.ts            # Zod schema for mido.yml
-    loader.ts            # Walk-up config finder + validator
+    schema.ts            # Zod schema for mido.yml (ecosystems, bridges, env, commits)
+    loader.ts            # Walk-up config finder + validator + auto-migration
   graph/
     types.ts             # WorkspacePackage, Bridge, WorkspaceGraph
     workspace.ts         # Build cross-ecosystem DAG from config + parsers
@@ -27,7 +27,15 @@ src/
     bridges.ts           # Cross-ecosystem edge validation
     env.ts               # Shared env key parity
   commands/
-    check.ts             # Orchestrates all checks, --fix flow
+    check.ts             # Orchestrates all checks, --fix flow, --quiet mode
+    init.ts              # Scan repo, generate mido.yml interactively
+    install.ts           # Write git hooks to .git/hooks/
+    commit-msg.ts        # Validate commit message against conventional commit rules
+  discovery/
+    scanner.ts           # Filesystem scanning for ecosystem markers
+    heuristics.ts        # Bridge and ecosystem detection heuristics
+  commit/
+    validator.ts         # Conventional commit parsing and validation
 ```
 
 ## Key Design Decisions
@@ -35,8 +43,17 @@ src/
 - **Parsers are the plugin boundary.** Adding a new ecosystem = one file implementing `ManifestParser`. Everything upstream is ecosystem-agnostic.
 - **The graph is the core data structure.** Every command loads config → builds graph → operates on graph. Never bypass the graph.
 - **`mido.lock` is the version policy.** When it exists, `mido check` validates manifests against the lock, not just against each other.
+- **mido owns git hooks.** `mido install` writes hooks to `.git/hooks/`. No Husky, no commitlint — mido handles pre-commit, commit-msg, post-merge, and post-checkout.
+- **Config auto-migration.** The loader detects old schema formats (e.g., `from/to/via` bridges) and rewrites them in place, preserving YAML formatting.
 - **Node.js target for distribution.** The published CLI must run on plain Node.js (>=20.19). No Bun-specific APIs in source. `#!/usr/bin/env node` shebang. Development uses Bun.
 - **Zero external deps for CLI UX.** ANSI colors are raw escape codes, prompts use Node `readline`. No chalk, no inquirer, no ora.
+
+## Bridge Fields
+
+Bridges use `source/target/artifact`:
+- `source` — the package that **produces** the artifact
+- `target` — the package that **consumes** the artifact
+- `artifact` — path to the bridge file (e.g., `openapi.json`)
 
 ## Code Rules
 
@@ -74,10 +91,10 @@ Each group separated by a blank line. Always use `.js` extensions on internal im
 
 ## Commits
 
-Conventional commits enforced by commitlint.
+Conventional commits enforced by `mido commit-msg` (via git hook).
 
 - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `cli`, `ci`, `deps`
+- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `cli`, `ci`, `deps`, `init`, `hooks`, `commit`
 - Max header: 100 chars
 
 ## Build
@@ -117,5 +134,5 @@ Build output is `dist/bin.js` (ESM, Node 20 target, sourcemaps). The `bin` field
 - Do not add runtime dependencies without discussion. The dep count should stay minimal.
 - Do not use `process.exit()` anywhere except `src/bin.ts`. Commands return exit codes, the entry point exits.
 - Do not write Bun-specific code in `src/`. The published binary runs on Node.js.
-- Do not auto-format on commit hooks. The pre-commit hook runs `oxfmt --check` (fail-only). Developer runs `bun run format` manually.
-- Do not add CLI framework deps (commander, yargs, etc). The command router is ~20 lines and that's intentional.
+- Do not auto-format on commit hooks. The pre-commit hook runs `mido check --quiet`, not a formatter.
+- Do not add CLI framework deps (commander, yargs, etc). The command router is ~30 lines and that's intentional.

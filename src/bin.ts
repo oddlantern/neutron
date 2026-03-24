@@ -15,8 +15,12 @@ Usage:
   mido <command> [options]
 
 Commands:
+  init              Scan repo and generate mido.yml
+  install           Install git hooks
   check             Run all workspace consistency checks
   check --fix       Interactively resolve version mismatches and update mido.lock
+  check --quiet     Silent mode — only output on failure (for hooks)
+  commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
 
 Config:
@@ -28,7 +32,7 @@ Options:
   --version, -v    Show version
 `;
 
-const VERSION = '0.0.2';
+const VERSION = '0.0.3';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -46,8 +50,32 @@ async function main(): Promise<void> {
 
   if (command === 'check') {
     const fix = args.includes('--fix');
+    const quiet = args.includes('--quiet') || args.includes('--hook');
     const { runCheck } = await import('./commands/check.js');
-    const exitCode = await runCheck(parsers, fix);
+    const exitCode = await runCheck(parsers, { fix, quiet });
+    process.exit(exitCode);
+  }
+
+  if (command === 'init') {
+    const { runInit } = await import('./commands/init.js');
+    const exitCode = await runInit(process.cwd());
+    process.exit(exitCode);
+  }
+
+  if (command === 'install') {
+    const { runInstall } = await import('./commands/install.js');
+    const exitCode = await runInstall(process.cwd());
+    process.exit(exitCode);
+  }
+
+  if (command === 'commit-msg') {
+    const filePath = args[1];
+    if (!filePath) {
+      console.error('Usage: mido commit-msg <file>');
+      process.exit(1);
+    }
+    const { runCommitMsg } = await import('./commands/commit-msg.js');
+    const exitCode = await runCommitMsg(filePath);
     process.exit(exitCode);
   }
 

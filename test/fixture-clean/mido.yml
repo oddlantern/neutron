@@ -14,12 +14,12 @@ ecosystems:
       - apps/flutter
       - packages/api/clients/dart
 bridges:
-  - from: packages/api/clients/dart
-    to: packages/api
-    via: packages/api/openapi.json
-  - from: apps/flutter
-    to: packages/design-system
-    via: packages/design-system/tokens.json
+  - source: packages/api
+    target: packages/api/clients/dart
+    artifact: packages/api/openapi.json
+  - source: packages/design-system
+    target: apps/flutter
+    artifact: packages/design-system/tokens.json
 env:
   shared:
     - API_URL

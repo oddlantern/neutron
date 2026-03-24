@@ -53,7 +53,7 @@ async function bufferStdin(): Promise<void> {
   });
 }
 
-function ask(question: string): Promise<string> {
+export function ask(question: string): Promise<string> {
   if (bufferedLines) {
     // Piped input mode — print the question, return next buffered line
     process.stdout.write(question);

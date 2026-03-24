@@ -7,14 +7,35 @@ const ecosystemSchema = z.object({
 });
 
 const bridgeSchema = z.object({
-  from: z.string(),
-  to: z.string(),
-  via: z.string(),
+  source: z.string(),
+  target: z.string(),
+  artifact: z.string(),
 });
 
 const envSchema = z.object({
   shared: z.array(z.string()).min(1),
   files: z.array(z.string()).min(2),
+});
+
+const DEFAULT_COMMIT_TYPES = [
+  'feat',
+  'fix',
+  'docs',
+  'style',
+  'refactor',
+  'perf',
+  'test',
+  'build',
+  'ci',
+  'chore',
+  'revert',
+] as const;
+
+const commitsSchema = z.object({
+  types: z.array(z.string()).min(1).default([...DEFAULT_COMMIT_TYPES]),
+  scopes: z.array(z.string()).optional(),
+  header_max_length: z.number().int().positive().default(100),
+  body_max_line_length: z.number().int().positive().default(200),
 });
 
 export const configSchema = z.object({
@@ -24,9 +45,13 @@ export const configSchema = z.object({
   }),
   bridges: z.array(bridgeSchema).optional(),
   env: envSchema.optional(),
+  commits: commitsSchema.optional(),
 });
 
 export type MidoConfig = z.infer<typeof configSchema>;
 export type EcosystemConfig = z.infer<typeof ecosystemSchema>;
 export type BridgeConfig = z.infer<typeof bridgeSchema>;
 export type EnvConfig = z.infer<typeof envSchema>;
+export type CommitsConfig = z.infer<typeof commitsSchema>;
+
+export { DEFAULT_COMMIT_TYPES };

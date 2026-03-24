@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import { parse as parseYaml } from 'yaml';
+import { isMap, isSeq, parse as parseYaml, parseDocument } from 'yaml';
 
 import { configSchema, type MidoConfig } from './schema.js';
 
@@ -33,6 +33,52 @@ function findConfigFile(startDir: string): string | null {
   }
 }
 
+/** Field renames for bridge schema migration (v0.0.2 → v0.0.3) */
+const BRIDGE_FIELD_RENAMES: ReadonlyMap<string, string> = new Map([
+  ['from', 'source'],
+  ['to', 'target'],
+  ['via', 'artifact'],
+]);
+
+/**
+ * Detect and migrate old config formats in place.
+ * Uses parseDocument to preserve YAML formatting and comments.
+ *
+ * @returns true if migration was performed, false if no migration needed
+ */
+async function migrateConfig(configPath: string, raw: string): Promise<{ migrated: boolean; content: string }> {
+  const doc = parseDocument(raw);
+  let migrated = false;
+
+  // Migrate bridges: from/to/via → source/target/artifact
+  const bridges = doc.get('bridges', true);
+  if (isSeq(bridges)) {
+    for (const item of bridges.items) {
+      if (!isMap(item)) {
+        continue;
+      }
+
+      for (const [oldKey, newKey] of BRIDGE_FIELD_RENAMES) {
+        if (item.has(oldKey)) {
+          const value = item.get(oldKey);
+          item.delete(oldKey);
+          item.set(newKey, value);
+          migrated = true;
+        }
+      }
+    }
+  }
+
+  if (migrated) {
+    const newContent = doc.toString();
+    await writeFile(configPath, newContent, 'utf-8');
+    console.log('migrated mido.yml to v0.0.3 format.');
+    return { migrated: true, content: newContent };
+  }
+
+  return { migrated: false, content: raw };
+}
+
 export interface LoadedConfig {
   readonly config: MidoConfig;
   /** Absolute path to the workspace root (directory containing mido.yml) */
@@ -54,11 +100,15 @@ export async function loadConfig(startDir?: string): Promise<LoadedConfig> {
   if (!configPath) {
     throw new Error(
       `No mido.yml found. Searched upward from ${searchFrom}\n` +
-        'Create a mido.yml in your workspace root to get started.',
+        'Create a mido.yml in your workspace root, or run "mido init" to generate one.',
     );
   }
 
-  const raw = await readFile(configPath, 'utf-8');
+  let raw = await readFile(configPath, 'utf-8');
+
+  // Migrate old config formats before validation
+  const migration = await migrateConfig(configPath, raw);
+  raw = migration.content;
 
   let parsed: unknown;
   try {

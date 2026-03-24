@@ -17,9 +17,17 @@ npm install -D @oddlantern/mido
 npm install -g @oddlantern/mido
 ```
 
+## Quick start
+
+```bash
+mido init       # Scan repo, generate mido.yml interactively
+mido install    # Install git hooks (pre-commit, commit-msg, post-merge, post-checkout)
+mido check      # Run all workspace consistency checks
+```
+
 ## Setup
 
-Create `mido.yml` in your workspace root:
+`mido init` scans your repo and proposes a `mido.yml`. You can also create one manually:
 
 ```yaml
 workspace: my-project
@@ -41,9 +49,9 @@ ecosystems:
       - packages/api/clients/dart
 
 bridges:
-  - from: packages/api/clients/dart
-    to: packages/api
-    via: packages/api/openapi.json
+  - source: packages/api                  # produces the artifact
+    target: packages/api/clients/dart      # consumes the artifact
+    artifact: packages/api/openapi.json    # the bridge file
 
 env:
   shared:
@@ -51,19 +59,61 @@ env:
   files:
     - apps/server/.env.example
     - apps/mobile/.env.example
+
+commits:
+  types:
+    - feat
+    - fix
+    - docs
+    - style
+    - refactor
+    - perf
+    - test
+    - build
+    - ci
+    - chore
+    - revert
+  scopes:
+    - server
+    - api
+    - flutter
+  header_max_length: 100
+  body_max_line_length: 200
 ```
 
-## Usage
+## Commands
 
-```bash
-mido check
-```
+### `mido check`
 
 Runs all workspace checks with a unified pass/fail exit code:
 
 - **versions** — flags any dependency that appears in 2+ packages with different version ranges, across all ecosystems
 - **bridges** — validates cross-ecosystem dependency edges and their bridge artifacts
 - **env** — checks that shared environment keys exist in all declared env files
+
+```bash
+mido check           # Full output
+mido check --quiet   # Silent on success, errors only on failure (for hooks)
+mido check --fix     # Interactively resolve version mismatches
+```
+
+### `mido init`
+
+Scans your repo for ecosystem markers (`package.json`, `pubspec.yaml`, etc.), detects bridges and env files, and generates `mido.yml` interactively.
+
+### `mido install`
+
+Writes git hooks to `.git/hooks/`. Idempotent — safe to run multiple times. Warns before overwriting existing non-mido hooks.
+
+Installs:
+- **pre-commit** — runs `mido check --quiet`
+- **commit-msg** — runs `mido commit-msg` (conventional commit validation)
+- **post-merge** — warns on workspace drift
+- **post-checkout** — warns on workspace drift (branch checkout only)
+
+### `mido commit-msg <file>`
+
+Validates a commit message against conventional commit rules. Configured via the `commits` section in `mido.yml`. Falls back to sensible defaults if no config exists.
 
 ### Example output
 
@@ -103,12 +153,12 @@ Bridges declare cross-ecosystem dependency edges that can't be inferred from man
 
 ```yaml
 bridges:
-  - from: packages/api/clients/dart   # the consumer
-    to: packages/api                   # the producer
-    via: packages/api/openapi.json     # the bridge artifact
+  - source: packages/api                # the producer
+    target: packages/api/clients/dart    # the consumer
+    artifact: packages/api/openapi.json  # the bridge artifact
 ```
 
-This tells mido that the Dart client depends on the TypeScript API package through the OpenAPI spec. `mido check` validates that both packages exist in the workspace and that the bridge artifact is present on disk.
+This tells mido that the TypeScript API package produces an OpenAPI spec consumed by the Dart client. `mido check` validates that both packages exist in the workspace and that the bridge artifact is present on disk.
 
 ## License
 

@@ -1,80 +1,11 @@
 #!/usr/bin/env node
+import { t as loadConfig } from "./loader-nzFN8Dng.js";
+import { n as closePrompt, r as promptVersionResolution } from "./prompt-BLf9wcmi.js";
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { z } from "zod";
 import { isMap, parse, parseDocument, stringify } from "yaml";
 import { existsSync } from "node:fs";
-import { createInterface } from "node:readline";
-//#region src/config/schema.ts
-const ecosystemSchema = z.object({
-	manifest: z.string(),
-	lockfile: z.string().optional(),
-	packages: z.array(z.string()).min(1)
-});
-const bridgeSchema = z.object({
-	from: z.string(),
-	to: z.string(),
-	via: z.string()
-});
-const envSchema = z.object({
-	shared: z.array(z.string()).min(1),
-	files: z.array(z.string()).min(2)
-});
-const configSchema = z.object({
-	workspace: z.string(),
-	ecosystems: z.record(z.string(), ecosystemSchema).refine((eco) => Object.keys(eco).length >= 1, { message: "At least one ecosystem must be defined" }),
-	bridges: z.array(bridgeSchema).optional(),
-	env: envSchema.optional()
-});
-//#endregion
-//#region src/config/loader.ts
-const CONFIG_FILENAMES = ["mido.yml", "mido.yaml"];
-/**
-* Walk upward from `startDir` until we find a mido.yml/mido.yaml.
-* Returns the absolute path to the config file, or null if not found.
-*/
-function findConfigFile(startDir) {
-	let current = startDir;
-	while (true) {
-		for (const filename of CONFIG_FILENAMES) {
-			const candidate = join(current, filename);
-			if (existsSync(candidate)) return candidate;
-		}
-		const parent = dirname(current);
-		if (parent === current) return null;
-		current = parent;
-	}
-}
-/**
-* Locate and parse the mido config file.
-* Searches upward from the given directory (defaults to cwd).
-*
-* @throws {Error} if no config file is found or validation fails
-*/
-async function loadConfig(startDir) {
-	const searchFrom = startDir ?? process.cwd();
-	const configPath = findConfigFile(searchFrom);
-	if (!configPath) throw new Error(`No mido.yml found. Searched upward from ${searchFrom}\nCreate a mido.yml in your workspace root to get started.`);
-	const raw = await readFile(configPath, "utf-8");
-	let parsed;
-	try {
-		parsed = parse(raw);
-	} catch (cause) {
-		throw new Error(`Invalid YAML in ${configPath}`, { cause });
-	}
-	const result = configSchema.safeParse(parsed);
-	if (!result.success) {
-		const issues = result.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
-		throw new Error(`Invalid mido config at ${configPath}:\n${issues}`);
-	}
-	const root = dirname(configPath);
-	return {
-		config: result.data,
-		root,
-		configPath
-	};
-}
-//#endregion
 //#region src/checks/bridges.ts
 /**
 * Validate that all declared bridges reference existing packages
@@ -83,31 +14,31 @@ async function loadConfig(startDir) {
 function checkBridges(graph) {
 	const issues = [];
 	for (const bridge of graph.bridges) {
-		if (!graph.packages.has(bridge.from)) issues.push({
+		if (!graph.packages.has(bridge.source)) issues.push({
 			severity: "error",
 			check: "bridges",
-			message: `Bridge "from" package not found in workspace: ${bridge.from}`,
-			details: `Declared bridge: ${bridge.from} → ${bridge.to} via ${bridge.via}`
+			message: `Bridge source package not found in workspace: ${bridge.source}`,
+			details: `Declared bridge: ${bridge.source} → ${bridge.target} via ${bridge.artifact}`
 		});
-		if (!graph.packages.has(bridge.to)) issues.push({
+		if (!graph.packages.has(bridge.target)) issues.push({
 			severity: "error",
 			check: "bridges",
-			message: `Bridge "to" package not found in workspace: ${bridge.to}`,
-			details: `Declared bridge: ${bridge.from} → ${bridge.to} via ${bridge.via}`
+			message: `Bridge target package not found in workspace: ${bridge.target}`,
+			details: `Declared bridge: ${bridge.source} → ${bridge.target} via ${bridge.artifact}`
 		});
-		const viaPath = resolve(graph.root, bridge.via);
-		if (!existsSync(viaPath)) issues.push({
+		const artifactPath = resolve(graph.root, bridge.artifact);
+		if (!existsSync(artifactPath)) issues.push({
 			severity: "error",
 			check: "bridges",
-			message: `Bridge artifact not found: ${bridge.via}`,
-			details: `Expected at ${viaPath}\nBridge: ${bridge.from} → ${bridge.to}`
+			message: `Bridge artifact not found: ${bridge.artifact}`,
+			details: `Expected at ${artifactPath}\nBridge: ${bridge.source} → ${bridge.target}`
 		});
-		const fromPkg = graph.packages.get(bridge.from);
-		const toPkg = graph.packages.get(bridge.to);
-		if (fromPkg && toPkg && fromPkg.ecosystem === toPkg.ecosystem) issues.push({
+		const sourcePkg = graph.packages.get(bridge.source);
+		const targetPkg = graph.packages.get(bridge.target);
+		if (sourcePkg && targetPkg && sourcePkg.ecosystem === targetPkg.ecosystem) issues.push({
 			severity: "warning",
 			check: "bridges",
-			message: `Bridge connects packages in the same ecosystem (${fromPkg.ecosystem}): ${bridge.from} → ${bridge.to}`,
+			message: `Bridge connects packages in the same ecosystem (${sourcePkg.ecosystem}): ${bridge.source} → ${bridge.target}`,
 			details: "Bridges are intended for cross-ecosystem edges. Intra-ecosystem dependencies should be declared in manifest files."
 		});
 	}
@@ -314,9 +245,9 @@ async function buildWorkspaceGraph(config, root, parsers) {
 		});
 	}
 	const bridges = (config.bridges ?? []).map((b) => ({
-		from: b.from,
-		to: b.to,
-		via: b.via
+		source: b.source,
+		target: b.target,
+		artifact: b.artifact
 	}));
 	return {
 		name: config.workspace,
@@ -402,98 +333,6 @@ function mergeLock(existing, updates) {
 	} };
 }
 //#endregion
-//#region src/prompt.ts
-let rl = null;
-let bufferedLines = null;
-let lineIndex = 0;
-function ensureReadline() {
-	if (rl) return rl;
-	rl = createInterface({
-		input: process.stdin,
-		output: process.stdout,
-		terminal: process.stdin.isTTY === true
-	});
-	return rl;
-}
-async function bufferStdin() {
-	if (bufferedLines) return;
-	if (process.stdin.isTTY) return;
-	bufferedLines = [];
-	const iface = ensureReadline();
-	return new Promise((resolve) => {
-		iface.on("line", (line) => {
-			bufferedLines?.push(line);
-		});
-		iface.on("close", () => {
-			resolve();
-		});
-	});
-}
-function ask(question) {
-	if (bufferedLines) {
-		process.stdout.write(question);
-		const line = bufferedLines[lineIndex] ?? "";
-		lineIndex++;
-		process.stdout.write(line + "\n");
-		return Promise.resolve(line);
-	}
-	const iface = ensureReadline();
-	return new Promise((resolve) => {
-		iface.question(question, (answer) => {
-			resolve(answer.trim());
-		});
-	});
-}
-async function promptVersionResolution(depName, choices, lockedRange) {
-	await bufferStdin();
-	const ranges = [...new Set(choices.map((c) => c.range))];
-	const totalPackages = choices.length;
-	console.log(`\n  ${depName} — ${totalPackages} packages, ${ranges.length} ranges`);
-	if (lockedRange) console.log(`  locked: ${lockedRange}`);
-	console.log("");
-	for (let i = 0; i < choices.length; i++) {
-		const c = choices[i];
-		if (!c) continue;
-		console.log(`    ${i + 1}) ${c.range}  ← ${c.packagePath} (${c.ecosystem}) [${c.type}]`);
-	}
-	console.log("    s) skip");
-	console.log("    c) custom range");
-	console.log("");
-	const answer = await ask("    Pick: ");
-	if (answer === "s") return null;
-	let chosenRange;
-	if (answer === "c") {
-		chosenRange = await ask("    Custom range: ");
-		if (chosenRange === "") return null;
-	} else {
-		const idx = parseInt(answer, 10);
-		if (isNaN(idx) || idx < 1 || idx > choices.length) {
-			console.log("    Invalid choice, skipping.");
-			return null;
-		}
-		const picked = choices[idx - 1];
-		if (!picked) {
-			console.log("    Invalid choice, skipping.");
-			return null;
-		}
-		chosenRange = picked.range;
-	}
-	const targets = choices.filter((c) => c.range !== chosenRange);
-	return {
-		depName,
-		chosenRange,
-		targets
-	};
-}
-function closePrompt() {
-	if (rl) {
-		rl.close();
-		rl = null;
-	}
-	bufferedLines = null;
-	lineIndex = 0;
-}
-//#endregion
 //#region src/manifest-writer.ts
 const DEFAULT_INDENT = "  ";
 const DEP_FIELDS_JSON = [
@@ -562,30 +401,35 @@ async function writePubspec(root, update) {
 *
 * @returns exit code (0 = all passed, 1 = failures found)
 */
-async function runCheck(parsers, fix = false) {
+async function runCheck(parsers, options = {}) {
+	const { fix = false, quiet = false } = options;
 	const { config, root } = await loadConfig();
 	const graph = await buildWorkspaceGraph(config, root, parsers);
 	const lock = await loadLock(root);
-	let header = formatHeader(graph.name, graph.packages.size);
-	if (lock) {
-		const count = Object.keys(lock.resolved).length;
-		header += `  lock: mido.lock (${count} resolved)\n`;
-	}
-	console.log(header);
 	const results = [];
 	results.push(checkVersionConsistency(graph, lock));
 	if (graph.bridges.length > 0) results.push(checkBridges(graph));
 	if (config.env) results.push(await checkEnvParity(config.env, root));
-	for (const result of results) console.log(formatCheckResult(result));
-	console.log(formatSummary(results));
+	const allPassed = results.every((r) => r.passed);
+	if (!quiet) {
+		let header = formatHeader(graph.name, graph.packages.size);
+		if (lock) {
+			const count = Object.keys(lock.resolved).length;
+			header += `  lock: mido.lock (${count} resolved)\n`;
+		}
+		console.log(header);
+		for (const result of results) console.log(formatCheckResult(result));
+		console.log(formatSummary(results));
+	} else if (!allPassed) {
+		const failed = results.filter((r) => !r.passed);
+		for (const result of failed) console.log(formatCheckResult(result));
+	}
 	if (fix) {
 		const mismatches = findVersionMismatches(graph, lock);
 		if (mismatches.length === 0) {
 			console.log("No version mismatches to fix.\n");
-			return results.every((r) => r.passed) ? 0 : 1;
+			return allPassed ? 0 : 1;
 		}
-		const pkgEcosystems = /* @__PURE__ */ new Map();
-		for (const pkg of graph.packages.values()) pkgEcosystems.set(pkg.path, pkg.ecosystem);
 		const resolutions = {};
 		let updatedCount = 0;
 		for (const mismatch of mismatches) {
@@ -616,9 +460,9 @@ async function runCheck(parsers, fix = false) {
 			console.log(`\nmido.lock updated (${total} resolved)\n`);
 		}
 	}
-	return results.every((r) => r.passed) ? 0 : 1;
+	return allPassed ? 0 : 1;
 }
 //#endregion
 export { runCheck };
 
-//# sourceMappingURL=check-0PdavguU.js.map
+//# sourceMappingURL=check-DClgq1v2.js.map

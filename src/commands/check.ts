@@ -9,23 +9,22 @@ import { loadLock, mergeLock, writeLock } from '../lock.js';
 import { promptVersionResolution, closePrompt, type DepChoice } from '../prompt.js';
 import { applyManifestUpdate } from '../manifest-writer.js';
 
+export interface CheckOptions {
+  readonly fix?: boolean;
+  readonly quiet?: boolean;
+}
+
 /**
  * Run all workspace checks and report results.
  *
  * @returns exit code (0 = all passed, 1 = failures found)
  */
-export async function runCheck(parsers: ParserRegistry, fix = false): Promise<number> {
+export async function runCheck(parsers: ParserRegistry, options: CheckOptions = {}): Promise<number> {
+  const { fix = false, quiet = false } = options;
   const { config, root } = await loadConfig();
 
   const graph = await buildWorkspaceGraph(config, root, parsers);
   const lock = await loadLock(root);
-
-  let header = formatHeader(graph.name, graph.packages.size);
-  if (lock) {
-    const count = Object.keys(lock.resolved).length;
-    header += `  lock: mido.lock (${count} resolved)\n`;
-  }
-  console.log(header);
 
   const results: CheckResult[] = [];
 
@@ -42,12 +41,29 @@ export async function runCheck(parsers: ParserRegistry, fix = false): Promise<nu
     results.push(await checkEnvParity(config.env, root));
   }
 
-  // Print results
-  for (const result of results) {
-    console.log(formatCheckResult(result));
-  }
+  const allPassed = results.every((r) => r.passed);
 
-  console.log(formatSummary(results));
+  // In quiet mode, suppress all output when passing
+  if (!quiet) {
+    let header = formatHeader(graph.name, graph.packages.size);
+    if (lock) {
+      const count = Object.keys(lock.resolved).length;
+      header += `  lock: mido.lock (${count} resolved)\n`;
+    }
+    console.log(header);
+
+    for (const result of results) {
+      console.log(formatCheckResult(result));
+    }
+
+    console.log(formatSummary(results));
+  } else if (!allPassed) {
+    // Quiet mode but failures — show only failures
+    const failed = results.filter((r) => !r.passed);
+    for (const result of failed) {
+      console.log(formatCheckResult(result));
+    }
+  }
 
   // --fix flow
   if (fix) {
@@ -55,13 +71,7 @@ export async function runCheck(parsers: ParserRegistry, fix = false): Promise<nu
 
     if (mismatches.length === 0) {
       console.log('No version mismatches to fix.\n');
-      return results.every((r) => r.passed) ? 0 : 1;
-    }
-
-    // Map ecosystem names back to package paths for writer
-    const pkgEcosystems = new Map<string, string>();
-    for (const pkg of graph.packages.values()) {
-      pkgEcosystems.set(pkg.path, pkg.ecosystem);
+      return allPassed ? 0 : 1;
     }
 
     const resolutions: Record<string, string> = {};
@@ -117,5 +127,5 @@ export async function runCheck(parsers: ParserRegistry, fix = false): Promise<nu
     }
   }
 
-  return results.every((r) => r.passed) ? 0 : 1;
+  return allPassed ? 0 : 1;
 }
