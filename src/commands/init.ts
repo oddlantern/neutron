@@ -1,11 +1,12 @@
+import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { stringify as stringifyYaml } from 'yaml';
 
 import { scanRepo, type DiscoveredPackage } from '../discovery/scanner.js';
-import { detectBridges, detectEnvFiles } from '../discovery/heuristics.js';
+import { detectBridges, detectEnvFiles, type BridgeCandidate } from '../discovery/heuristics.js';
 import { ask, closePrompt } from '../prompt.js';
 
 const RESET = '\x1b[0m';
@@ -79,11 +80,24 @@ export async function runInit(root: string): Promise<number> {
   }
 
   // 4. Detect bridges
-  const bridgeCandidates = await detectBridges(root, supported);
+  const bridges: BridgeCandidate[] = [...(await detectBridges(root, supported))];
 
-  if (bridgeCandidates.length > 0) {
-    console.log(`\n  Bridges:`);
-    for (const bridge of bridgeCandidates) {
+  if (bridges.length > 0) {
+    console.log(`\n  Bridges (auto-detected):`);
+    for (const bridge of bridges) {
+      console.log(`    ${bridge.source} → ${bridge.target}`);
+      console.log(`      ${DIM}via ${bridge.artifact}${RESET}`);
+    }
+  }
+
+  // 4b. Prompt for additional bridges
+  const allPaths = supported.map((p) => p.path);
+  const manualBridges = await promptAdditionalBridges(root, allPaths);
+  bridges.push(...manualBridges);
+
+  if (manualBridges.length > 0) {
+    console.log(`\n  Bridges (manual):`);
+    for (const bridge of manualBridges) {
       console.log(`    ${bridge.source} → ${bridge.target}`);
       console.log(`      ${DIM}via ${bridge.artifact}${RESET}`);
     }
@@ -120,8 +134,8 @@ export async function runInit(root: string): Promise<number> {
     ecosystems,
   };
 
-  if (bridgeCandidates.length > 0) {
-    config['bridges'] = bridgeCandidates.map((b) => ({
+  if (bridges.length > 0) {
+    config['bridges'] = bridges.map((b) => ({
       source: b.source,
       target: b.target,
       artifact: b.artifact,
@@ -142,14 +156,162 @@ export async function runInit(root: string): Promise<number> {
 
   // 10. Offer to install hooks
   const installAnswer = await ask('  Install git hooks? [Y/n] ');
-  closePrompt();
 
   if (installAnswer.toLowerCase() !== 'n') {
     const { runInstall } = await import('./install.js');
-    return runInstall(root);
+    const installResult = await runInstall(root);
+    if (installResult !== 0) {
+      closePrompt();
+      return installResult;
+    }
   }
 
+  // 11. Clean up replaced tooling (Husky, commitlint)
+  await cleanupReplacedTooling(root);
+
+  closePrompt();
   return 0;
+}
+
+async function promptAdditionalBridges(
+  root: string,
+  packagePaths: readonly string[],
+): Promise<BridgeCandidate[]> {
+  const result: BridgeCandidate[] = [];
+
+  console.log('');
+  const addMore = await ask('  Any additional bridges? [y/N] ');
+  if (addMore.toLowerCase() !== 'y') {
+    return result;
+  }
+
+  const listLines = packagePaths.map((p, i) => `    ${i + 1}) ${p}`).join('\n');
+
+  let adding = true;
+  while (adding) {
+    console.log(`\n${listLines}`);
+    const sourceAnswer = await ask('\n  Source package (produces the artifact): ');
+    const sourceIdx = parseInt(sourceAnswer, 10);
+    if (isNaN(sourceIdx) || sourceIdx < 1 || sourceIdx > packagePaths.length) {
+      console.log('  Invalid choice, skipping bridge.');
+      break;
+    }
+    const source = packagePaths[sourceIdx - 1]!;
+
+    console.log(`\n${listLines}`);
+    const targetAnswer = await ask('\n  Target package (consumes the artifact): ');
+    const targetIdx = parseInt(targetAnswer, 10);
+    if (isNaN(targetIdx) || targetIdx < 1 || targetIdx > packagePaths.length) {
+      console.log('  Invalid choice, skipping bridge.');
+      break;
+    }
+    const target = packagePaths[targetIdx - 1]!;
+
+    const artifact = await ask('  Artifact path (relative to repo root): ');
+    if (!artifact) {
+      console.log('  No artifact path given, skipping bridge.');
+      break;
+    }
+
+    if (!existsSync(join(root, artifact))) {
+      console.log(`  ${YELLOW}⚠${RESET} ${artifact} does not exist yet — adding anyway`);
+    }
+
+    result.push({ source, target, artifact, reason: 'manual' });
+
+    const another = await ask('  Add another bridge? [y/N] ');
+    adding = another.toLowerCase() === 'y';
+  }
+
+  return result;
+}
+
+const HUSKY_DEPS = ['husky', '@commitlint/cli', '@commitlint/config-conventional'];
+const COMMITLINT_CONFIGS = ['commitlint.config.js', '.commitlintrc.js', '.commitlintrc.json'];
+
+const LOCKFILE_TO_REMOVE_CMD: ReadonlyMap<string, string> = new Map([
+  ['bun.lock', 'bun remove'],
+  ['bun.lockb', 'bun remove'],
+  ['pnpm-lock.yaml', 'pnpm remove'],
+  ['yarn.lock', 'yarn remove'],
+  ['package-lock.json', 'npm uninstall'],
+]);
+
+function detectRemoveCommand(root: string): string {
+  for (const [lockfile, cmd] of LOCKFILE_TO_REMOVE_CMD) {
+    if (existsSync(join(root, lockfile))) {
+      return cmd;
+    }
+  }
+  return 'npm uninstall';
+}
+
+async function cleanupReplacedTooling(root: string): Promise<void> {
+  // 1. Remove .husky/ directory
+  const huskyDir = join(root, '.husky');
+  if (existsSync(huskyDir)) {
+    const answer = await ask('  mido replaces Husky. Remove .husky/ directory? [Y/n] ');
+    if (answer.toLowerCase() !== 'n') {
+      await rm(huskyDir, { recursive: true });
+      console.log(`  ${DIM}removed .husky/${RESET}`);
+    }
+  }
+
+  // 2. Remove commitlint config files
+  const foundConfigs: string[] = [];
+  for (const name of COMMITLINT_CONFIGS) {
+    if (existsSync(join(root, name))) {
+      foundConfigs.push(name);
+    }
+  }
+
+  if (foundConfigs.length > 0) {
+    const answer = await ask('  mido replaces commitlint. Remove commitlint config? [Y/n] ');
+    if (answer.toLowerCase() !== 'n') {
+      for (const name of foundConfigs) {
+        await unlink(join(root, name));
+        console.log(`  ${DIM}removed ${name}${RESET}`);
+      }
+    }
+  }
+
+  // 3. Remove Husky/commitlint from devDependencies
+  const pkgJsonPath = join(root, 'package.json');
+  if (!existsSync(pkgJsonPath)) {
+    return;
+  }
+
+  const pkgRaw = await readFile(pkgJsonPath, 'utf-8');
+  const pkg = JSON.parse(pkgRaw) as Record<string, unknown>;
+  const devDeps = pkg['devDependencies'] as Record<string, unknown> | undefined;
+
+  const depsToRemove = devDeps ? HUSKY_DEPS.filter((d) => d in devDeps) : [];
+
+  if (depsToRemove.length > 0) {
+    const answer = await ask('  Remove Husky and commitlint from devDependencies? [Y/n] ');
+    if (answer.toLowerCase() !== 'n') {
+      const cmd = detectRemoveCommand(root);
+      const full = `${cmd} ${depsToRemove.join(' ')}`;
+      console.log(`  ${DIM}$ ${full}${RESET}`);
+      execSync(full, { cwd: root, stdio: 'inherit' });
+    }
+  }
+
+  // 4. Replace scripts.prepare if it's "husky"
+  // Re-read package.json in case it was modified by the uninstall step
+  if (!existsSync(pkgJsonPath)) {
+    return;
+  }
+
+  const freshRaw = await readFile(pkgJsonPath, 'utf-8');
+  const freshPkg = JSON.parse(freshRaw) as Record<string, unknown>;
+  const scripts = freshPkg['scripts'] as Record<string, unknown> | undefined;
+
+  if (scripts && scripts['prepare'] === 'husky') {
+    scripts['prepare'] = 'mido install';
+    await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + '\n', 'utf-8');
+    console.log(`  ${DIM}updated scripts.prepare → "mido install"${RESET}`);
+  }
 }
 
 function groupByEcosystem(

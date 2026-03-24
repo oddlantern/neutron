@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { n as closePrompt, t as ask } from "./prompt-BLf9wcmi.js";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { stringify } from "yaml";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { execSync } from "node:child_process";
 //#region src/discovery/scanner.ts
 /** Directories to always skip during scanning */
 const SKIP_DIRS = new Set([
@@ -225,10 +226,19 @@ async function runInit(root) {
 		console.log(`    ${BOLD}${name}${RESET} (${group.packages.length} packages)`);
 		for (const pkg of group.packages) console.log(`      ${pkg}`);
 	}
-	const bridgeCandidates = await detectBridges(root, supported);
-	if (bridgeCandidates.length > 0) {
-		console.log(`\n  Bridges:`);
-		for (const bridge of bridgeCandidates) {
+	const bridges = [...await detectBridges(root, supported)];
+	if (bridges.length > 0) {
+		console.log(`\n  Bridges (auto-detected):`);
+		for (const bridge of bridges) {
+			console.log(`    ${bridge.source} → ${bridge.target}`);
+			console.log(`      ${DIM}via ${bridge.artifact}${RESET}`);
+		}
+	}
+	const manualBridges = await promptAdditionalBridges(root, supported.map((p) => p.path));
+	bridges.push(...manualBridges);
+	if (manualBridges.length > 0) {
+		console.log(`\n  Bridges (manual):`);
+		for (const bridge of manualBridges) {
 			console.log(`    ${bridge.source} → ${bridge.target}`);
 			console.log(`      ${DIM}via ${bridge.artifact}${RESET}`);
 		}
@@ -249,7 +259,7 @@ async function runInit(root) {
 		workspace: await ask(`  Workspace name [${dirName}]: `) || dirName,
 		ecosystems
 	};
-	if (bridgeCandidates.length > 0) config["bridges"] = bridgeCandidates.map((b) => ({
+	if (bridges.length > 0) config["bridges"] = bridges.map((b) => ({
 		source: b.source,
 		target: b.target,
 		artifact: b.artifact
@@ -260,13 +270,118 @@ async function runInit(root) {
 	};
 	await writeFile(configPath, stringify(config, { lineWidth: 120 }), "utf-8");
 	console.log(`\n  ${BOLD}${CONFIG_FILENAME}${RESET} written\n`);
-	const installAnswer = await ask("  Install git hooks? [Y/n] ");
-	closePrompt();
-	if (installAnswer.toLowerCase() !== "n") {
+	if ((await ask("  Install git hooks? [Y/n] ")).toLowerCase() !== "n") {
 		const { runInstall } = await import("./install-BRkV1UYQ.js");
-		return runInstall(root);
+		const installResult = await runInstall(root);
+		if (installResult !== 0) {
+			closePrompt();
+			return installResult;
+		}
 	}
+	await cleanupReplacedTooling(root);
+	closePrompt();
 	return 0;
+}
+async function promptAdditionalBridges(root, packagePaths) {
+	const result = [];
+	console.log("");
+	if ((await ask("  Any additional bridges? [y/N] ")).toLowerCase() !== "y") return result;
+	const listLines = packagePaths.map((p, i) => `    ${i + 1}) ${p}`).join("\n");
+	let adding = true;
+	while (adding) {
+		console.log(`\n${listLines}`);
+		const sourceAnswer = await ask("\n  Source package (produces the artifact): ");
+		const sourceIdx = parseInt(sourceAnswer, 10);
+		if (isNaN(sourceIdx) || sourceIdx < 1 || sourceIdx > packagePaths.length) {
+			console.log("  Invalid choice, skipping bridge.");
+			break;
+		}
+		const source = packagePaths[sourceIdx - 1];
+		console.log(`\n${listLines}`);
+		const targetAnswer = await ask("\n  Target package (consumes the artifact): ");
+		const targetIdx = parseInt(targetAnswer, 10);
+		if (isNaN(targetIdx) || targetIdx < 1 || targetIdx > packagePaths.length) {
+			console.log("  Invalid choice, skipping bridge.");
+			break;
+		}
+		const target = packagePaths[targetIdx - 1];
+		const artifact = await ask("  Artifact path (relative to repo root): ");
+		if (!artifact) {
+			console.log("  No artifact path given, skipping bridge.");
+			break;
+		}
+		if (!existsSync(join(root, artifact))) console.log(`  ${YELLOW}⚠${RESET} ${artifact} does not exist yet — adding anyway`);
+		result.push({
+			source,
+			target,
+			artifact,
+			reason: "manual"
+		});
+		adding = (await ask("  Add another bridge? [y/N] ")).toLowerCase() === "y";
+	}
+	return result;
+}
+const HUSKY_DEPS = [
+	"husky",
+	"@commitlint/cli",
+	"@commitlint/config-conventional"
+];
+const COMMITLINT_CONFIGS = [
+	"commitlint.config.js",
+	".commitlintrc.js",
+	".commitlintrc.json"
+];
+const LOCKFILE_TO_REMOVE_CMD = new Map([
+	["bun.lock", "bun remove"],
+	["bun.lockb", "bun remove"],
+	["pnpm-lock.yaml", "pnpm remove"],
+	["yarn.lock", "yarn remove"],
+	["package-lock.json", "npm uninstall"]
+]);
+function detectRemoveCommand(root) {
+	for (const [lockfile, cmd] of LOCKFILE_TO_REMOVE_CMD) if (existsSync(join(root, lockfile))) return cmd;
+	return "npm uninstall";
+}
+async function cleanupReplacedTooling(root) {
+	const huskyDir = join(root, ".husky");
+	if (existsSync(huskyDir)) {
+		if ((await ask("  mido replaces Husky. Remove .husky/ directory? [Y/n] ")).toLowerCase() !== "n") {
+			await rm(huskyDir, { recursive: true });
+			console.log(`  ${DIM}removed .husky/${RESET}`);
+		}
+	}
+	const foundConfigs = [];
+	for (const name of COMMITLINT_CONFIGS) if (existsSync(join(root, name))) foundConfigs.push(name);
+	if (foundConfigs.length > 0) {
+		if ((await ask("  mido replaces commitlint. Remove commitlint config? [Y/n] ")).toLowerCase() !== "n") for (const name of foundConfigs) {
+			await unlink(join(root, name));
+			console.log(`  ${DIM}removed ${name}${RESET}`);
+		}
+	}
+	const pkgJsonPath = join(root, "package.json");
+	if (!existsSync(pkgJsonPath)) return;
+	const pkgRaw = await readFile(pkgJsonPath, "utf-8");
+	const devDeps = JSON.parse(pkgRaw)["devDependencies"];
+	const depsToRemove = devDeps ? HUSKY_DEPS.filter((d) => d in devDeps) : [];
+	if (depsToRemove.length > 0) {
+		if ((await ask("  Remove Husky and commitlint from devDependencies? [Y/n] ")).toLowerCase() !== "n") {
+			const full = `${detectRemoveCommand(root)} ${depsToRemove.join(" ")}`;
+			console.log(`  ${DIM}$ ${full}${RESET}`);
+			execSync(full, {
+				cwd: root,
+				stdio: "inherit"
+			});
+		}
+	}
+	if (!existsSync(pkgJsonPath)) return;
+	const freshRaw = await readFile(pkgJsonPath, "utf-8");
+	const freshPkg = JSON.parse(freshRaw);
+	const scripts = freshPkg["scripts"];
+	if (scripts && scripts["prepare"] === "husky") {
+		scripts["prepare"] = "mido install";
+		await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + "\n", "utf-8");
+		console.log(`  ${DIM}updated scripts.prepare → "mido install"${RESET}`);
+	}
 }
 function groupByEcosystem(packages) {
 	const groups = {};
@@ -288,4 +403,4 @@ function groupByEcosystem(packages) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-BPkQoNha.js.map
+//# sourceMappingURL=init-BDbXEuq9.js.map
