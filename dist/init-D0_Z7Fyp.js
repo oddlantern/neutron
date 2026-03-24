@@ -282,35 +282,58 @@ async function runInit(root) {
 	closePrompt();
 	return 0;
 }
+function formatPackageList(paths) {
+	return paths.map((p, i) => `    ${i + 1}) ${p}`).join("\n");
+}
+function pickPackage(answer, paths) {
+	const idx = parseInt(answer, 10);
+	if (isNaN(idx) || idx < 1 || idx > paths.length) return;
+	return paths[idx - 1];
+}
 async function promptAdditionalBridges(root, packagePaths) {
 	const result = [];
 	console.log("");
 	if ((await ask("  Any additional bridges? [y/N] ")).toLowerCase() !== "y") return result;
-	const listLines = packagePaths.map((p, i) => `    ${i + 1}) ${p}`).join("\n");
 	let adding = true;
 	while (adding) {
-		console.log(`\n${listLines}`);
-		const sourceAnswer = await ask("\n  Source package (produces the artifact): ");
-		const sourceIdx = parseInt(sourceAnswer, 10);
-		if (isNaN(sourceIdx) || sourceIdx < 1 || sourceIdx > packagePaths.length) {
+		console.log(`\n  ${DIM}A bridge connects two packages across ecosystems through a shared file.${RESET}`);
+		console.log(`\n  ${DIM}Source = the package that PRODUCES the artifact${RESET}\n`);
+		console.log(formatPackageList(packagePaths));
+		const source = pickPackage(await ask("\n  Source package: "), packagePaths);
+		if (!source) {
 			console.log("  Invalid choice, skipping bridge.");
 			break;
 		}
-		const source = packagePaths[sourceIdx - 1];
-		console.log(`\n${listLines}`);
-		const targetAnswer = await ask("\n  Target package (consumes the artifact): ");
-		const targetIdx = parseInt(targetAnswer, 10);
-		if (isNaN(targetIdx) || targetIdx < 1 || targetIdx > packagePaths.length) {
+		const targetPaths = packagePaths.filter((p) => p !== source);
+		console.log(`\n  ${DIM}Target = the package that CONSUMES the artifact${RESET}\n`);
+		console.log(formatPackageList(targetPaths));
+		const target = pickPackage(await ask("\n  Target package: "), targetPaths);
+		if (!target) {
 			console.log("  Invalid choice, skipping bridge.");
 			break;
 		}
-		const target = packagePaths[targetIdx - 1];
+		console.log(`\n  ${DIM}Artifact = the file that connects them (e.g. openapi.json, tokens.json, schema.graphql)${RESET}`);
 		const artifact = await ask("  Artifact path (relative to repo root): ");
 		if (!artifact) {
 			console.log("  No artifact path given, skipping bridge.");
 			break;
 		}
-		if (!existsSync(join(root, artifact))) console.log(`  ${YELLOW}⚠${RESET} ${artifact} does not exist yet — adding anyway`);
+		const fullArtifactPath = join(root, artifact);
+		if (existsSync(fullArtifactPath)) try {
+			if (statSync(fullArtifactPath).isDirectory()) {
+				console.log("  Artifact must be a file, not a directory. Skipping bridge.");
+				adding = (await ask("  Add another bridge? [y/N] ")).toLowerCase() === "y";
+				continue;
+			}
+		} catch {}
+		else if ((await ask(`  ${YELLOW}⚠${RESET} File not found — it may not be generated yet. Continue? [y/N] `)).toLowerCase() !== "y") {
+			adding = (await ask("  Add another bridge? [y/N] ")).toLowerCase() === "y";
+			continue;
+		}
+		if ((await ask(`  Bridge: ${source} → ${target} via ${artifact} — correct? [Y/n] `)).toLowerCase() === "n") {
+			adding = (await ask("  Add another bridge? [y/N] ")).toLowerCase() === "y";
+			continue;
+		}
 		result.push({
 			source,
 			target,
@@ -403,4 +426,4 @@ function groupByEcosystem(packages) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-BDbXEuq9.js.map
+//# sourceMappingURL=init-D0_Z7Fyp.js.map

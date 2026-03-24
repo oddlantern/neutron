@@ -171,7 +171,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-BDbXEuq9.js");
+		const { runInit } = await import("./init-D0_Z7Fyp.js");
 		const exitCode = await runInit(process.cwd());
 		process.exit(exitCode);
 	}

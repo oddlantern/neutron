@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -173,6 +173,18 @@ export async function runInit(root: string): Promise<number> {
   return 0;
 }
 
+function formatPackageList(paths: readonly string[]): string {
+  return paths.map((p, i) => `    ${i + 1}) ${p}`).join('\n');
+}
+
+function pickPackage(answer: string, paths: readonly string[]): string | undefined {
+  const idx = parseInt(answer, 10);
+  if (isNaN(idx) || idx < 1 || idx > paths.length) {
+    return undefined;
+  }
+  return paths[idx - 1];
+}
+
 async function promptAdditionalBridges(
   root: string,
   packagePaths: readonly string[],
@@ -185,36 +197,65 @@ async function promptAdditionalBridges(
     return result;
   }
 
-  const listLines = packagePaths.map((p, i) => `    ${i + 1}) ${p}`).join('\n');
-
   let adding = true;
   while (adding) {
-    console.log(`\n${listLines}`);
-    const sourceAnswer = await ask('\n  Source package (produces the artifact): ');
-    const sourceIdx = parseInt(sourceAnswer, 10);
-    if (isNaN(sourceIdx) || sourceIdx < 1 || sourceIdx > packagePaths.length) {
+    // Source selection
+    console.log(`\n  ${DIM}A bridge connects two packages across ecosystems through a shared file.${RESET}`);
+    console.log(`\n  ${DIM}Source = the package that PRODUCES the artifact${RESET}\n`);
+    console.log(formatPackageList(packagePaths));
+    const sourceAnswer = await ask('\n  Source package: ');
+    const source = pickPackage(sourceAnswer, packagePaths);
+    if (!source) {
       console.log('  Invalid choice, skipping bridge.');
       break;
     }
-    const source = packagePaths[sourceIdx - 1]!;
 
-    console.log(`\n${listLines}`);
-    const targetAnswer = await ask('\n  Target package (consumes the artifact): ');
-    const targetIdx = parseInt(targetAnswer, 10);
-    if (isNaN(targetIdx) || targetIdx < 1 || targetIdx > packagePaths.length) {
+    // Target selection — exclude source
+    const targetPaths = packagePaths.filter((p) => p !== source);
+    console.log(`\n  ${DIM}Target = the package that CONSUMES the artifact${RESET}\n`);
+    console.log(formatPackageList(targetPaths));
+    const targetAnswer = await ask('\n  Target package: ');
+    const target = pickPackage(targetAnswer, targetPaths);
+    if (!target) {
       console.log('  Invalid choice, skipping bridge.');
       break;
     }
-    const target = packagePaths[targetIdx - 1]!;
 
+    // Artifact path
+    console.log(`\n  ${DIM}Artifact = the file that connects them (e.g. openapi.json, tokens.json, schema.graphql)${RESET}`);
     const artifact = await ask('  Artifact path (relative to repo root): ');
     if (!artifact) {
       console.log('  No artifact path given, skipping bridge.');
       break;
     }
 
-    if (!existsSync(join(root, artifact))) {
-      console.log(`  ${YELLOW}⚠${RESET} ${artifact} does not exist yet — adding anyway`);
+    const fullArtifactPath = join(root, artifact);
+    if (existsSync(fullArtifactPath)) {
+      try {
+        if (statSync(fullArtifactPath).isDirectory()) {
+          console.log('  Artifact must be a file, not a directory. Skipping bridge.');
+          const retry = await ask('  Add another bridge? [y/N] ');
+          adding = retry.toLowerCase() === 'y';
+          continue;
+        }
+      } catch {
+        // stat failed — treat as non-existent below
+      }
+    } else {
+      const confirm = await ask(`  ${YELLOW}⚠${RESET} File not found — it may not be generated yet. Continue? [y/N] `);
+      if (confirm.toLowerCase() !== 'y') {
+        const retry = await ask('  Add another bridge? [y/N] ');
+        adding = retry.toLowerCase() === 'y';
+        continue;
+      }
+    }
+
+    // Confirmation
+    const ok = await ask(`  Bridge: ${source} → ${target} via ${artifact} — correct? [Y/n] `);
+    if (ok.toLowerCase() === 'n') {
+      const retry = await ask('  Add another bridge? [y/N] ');
+      adding = retry.toLowerCase() === 'y';
+      continue;
     }
 
     result.push({ source, target, artifact, reason: 'manual' });
