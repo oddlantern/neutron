@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 
 import {
   cancel,
@@ -291,7 +291,7 @@ async function runReconciliation(root: string, configPath: string, parsers: Pars
 
   for (const bridge of existingBridges) {
     const action = await select({
-      message: `${bridge.source} \u2192 ${bridge.target} via ${bridge.artifact}`,
+      message: `Bridge: ${bridge.source} produces ${basename(bridge.artifact)}, consumed by ${bridge.target}`,
       options: [
         { value: 'keep', label: 'Keep' },
         { value: 'modify', label: 'Modify' },

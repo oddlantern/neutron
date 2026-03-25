@@ -3,7 +3,7 @@ import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-BqgJlGYf.js";
 import { runCheck } from "./check-DGNQGCP2.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { cancel, confirm, intro, isCancel, log, multiselect, outro, path, select, spinner, text } from "@clack/prompts";
@@ -352,7 +352,7 @@ async function runReconciliation(root, configPath, parsers) {
 	const updatedBridges = [];
 	for (const bridge of existingBridges) {
 		const action = await select({
-			message: `${bridge.source} \u2192 ${bridge.target} via ${bridge.artifact}`,
+			message: `Bridge: ${bridge.source} produces ${basename(bridge.artifact)}, consumed by ${bridge.target}`,
 			options: [
 				{
 					value: "keep",
@@ -704,4 +704,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-CD5Ndc2V.js.map
+//# sourceMappingURL=init-C0jYQYLV.js.map
