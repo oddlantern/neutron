@@ -94,7 +94,6 @@ async function findRouteSource(
 
       for (const [framework, defaultPatterns] of SERVER_FRAMEWORKS) {
         if (hasDep(manifest, framework)) {
-          // Check if the routes directory actually exists
           const routesDir = join(root, pkg.path, 'src', 'routes');
           const watchPatterns = existsSync(routesDir)
             ? [`${pkg.path}/src/routes/**`]

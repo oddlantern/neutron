@@ -326,6 +326,9 @@ async function runReconciliation(root, configPath, parsers) {
 		return 1;
 	}
 	s.stop("Scan complete");
+	const { ecosystem, domain } = loadPlugins();
+	const pluginRegistry = new PluginRegistry(ecosystem, domain);
+	const reconPackageMap = buildPackageMap(supported);
 	const existingPaths = /* @__PURE__ */ new Set();
 	const existingEcosystemForPath = /* @__PURE__ */ new Map();
 	for (const [eco, group] of Object.entries(existing.ecosystems)) for (const pkg of group.packages) {
@@ -395,13 +398,11 @@ async function runReconciliation(root, configPath, parsers) {
 		});
 		if (isCancel(action)) handleCancel();
 		if (action === "keep") if (!bridge.watch?.length) {
-			const addWatch = await confirm({
-				message: `Add watch paths for this bridge?`,
-				initialValue: false
-			});
-			if (isCancel(addWatch)) handleCancel();
-			if (addWatch) {
-				const watch = await promptWatchPaths(root, bridge.source);
+			const sourcePackage = reconPackageMap.get(bridge.source);
+			let reconSuggestion = null;
+			if (sourcePackage) reconSuggestion = await pluginRegistry.suggestWatchPaths(sourcePackage, bridge.artifact, reconPackageMap, root);
+			if (reconSuggestion) {
+				const watch = await promptWatchPaths(root, bridge.source, reconSuggestion);
 				if (watch) {
 					updatedBridges.push({
 						...bridge,
@@ -409,7 +410,23 @@ async function runReconciliation(root, configPath, parsers) {
 					});
 					configChanged = true;
 				} else updatedBridges.push(bridge);
-			} else updatedBridges.push(bridge);
+			} else {
+				const addWatch = await confirm({
+					message: "Add watch paths for this bridge?",
+					initialValue: false
+				});
+				if (isCancel(addWatch)) handleCancel();
+				if (addWatch) {
+					const watch = await promptWatchPaths(root, bridge.source);
+					if (watch) {
+						updatedBridges.push({
+							...bridge,
+							watch: [...watch]
+						});
+						configChanged = true;
+					} else updatedBridges.push(bridge);
+				} else updatedBridges.push(bridge);
+			}
 		} else updatedBridges.push(bridge);
 		else if (action === "modify") {
 			const modified = await promptModifyBridge(root, existing, bridge);
@@ -896,4 +913,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-l5WC-Q8b.js.map
+//# sourceMappingURL=init-Dci3nstu.js.map
