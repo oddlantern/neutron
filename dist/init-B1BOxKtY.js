@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-BO3NzoPs.js";
+import { t as loadConfig } from "./loader-DEIL81UX.js";
 import { n as loadPlugins, t as PluginRegistry } from "./registry-C3Iky15L.js";
-import { runCheck } from "./check-DMsxC53B.js";
+import { runCheck } from "./check-BfVJls7g.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -551,7 +551,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-Db52tFK_.js");
+			const { runDev } = await import("./dev-BVOsLa7-.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -1136,4 +1136,4 @@ async function migrateLintFormatConfig(root, _configPath) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-Ddgpbb3l.js.map
+//# sourceMappingURL=init-B1BOxKtY.js.map

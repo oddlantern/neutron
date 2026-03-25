@@ -45,13 +45,8 @@ const commitsSchema = z.object({
   body_max_line_length: z.number().int().positive().default(200),
 });
 
-const lintRuleValue = z.union([
-  z.string(),
-  z.number(),
-]);
-
 const lintSchema = z.object({
-  rules: z.record(z.string(), lintRuleValue).optional(),
+  rules: z.record(z.string(), z.unknown()).optional(),
   ignore: z.array(z.string()).optional(),
 });
 
