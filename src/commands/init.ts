@@ -268,6 +268,11 @@ async function runReconciliation(
 
   s.stop('Scan complete');
 
+  // Load plugins for watch path suggestions
+  const { ecosystem, domain } = loadPlugins();
+  const pluginRegistry = new PluginRegistry(ecosystem, domain);
+  const reconPackageMap = buildPackageMap(supported);
+
   // Build set of existing package paths
   const existingPaths = new Set<string>();
   const existingEcosystemForPath = new Map<string, string>();
@@ -372,17 +377,22 @@ async function runReconciliation(
     }
 
     if (action === 'keep') {
-      // If bridge has no watch paths, offer to add them
+      // If bridge has no watch paths, offer to add them (with plugin suggestion)
       if (!bridge.watch?.length) {
-        const addWatch = await confirm({
-          message: `Add watch paths for this bridge?`,
-          initialValue: false,
-        });
-        if (isCancel(addWatch)) {
-          handleCancel();
+        const sourcePackage = reconPackageMap.get(bridge.source);
+        let reconSuggestion: WatchPathSuggestion | null = null;
+        if (sourcePackage) {
+          reconSuggestion = await pluginRegistry.suggestWatchPaths(
+            sourcePackage,
+            bridge.artifact,
+            reconPackageMap,
+            root,
+          );
         }
-        if (addWatch) {
-          const watch = await promptWatchPaths(root, bridge.source);
+
+        if (reconSuggestion) {
+          // Plugin has a suggestion — show the full watch path menu
+          const watch = await promptWatchPaths(root, bridge.source, reconSuggestion);
           if (watch) {
             updatedBridges.push({ ...bridge, watch: [...watch] });
             configChanged = true;
@@ -390,7 +400,25 @@ async function runReconciliation(
             updatedBridges.push(bridge);
           }
         } else {
-          updatedBridges.push(bridge);
+          // No suggestion — ask if they want to add paths manually
+          const addWatch = await confirm({
+            message: 'Add watch paths for this bridge?',
+            initialValue: false,
+          });
+          if (isCancel(addWatch)) {
+            handleCancel();
+          }
+          if (addWatch) {
+            const watch = await promptWatchPaths(root, bridge.source);
+            if (watch) {
+              updatedBridges.push({ ...bridge, watch: [...watch] });
+              configChanged = true;
+            } else {
+              updatedBridges.push(bridge);
+            }
+          } else {
+            updatedBridges.push(bridge);
+          }
         }
       } else {
         updatedBridges.push(bridge);
