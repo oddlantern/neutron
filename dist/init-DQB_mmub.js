@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-COqKnZAI.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-BvW7qGue.js";
-import { runCheck } from "./check-HYvM7jpp.js";
+import { t as loadConfig } from "./loader-FCfvYc9I.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-n9grMa4r.js";
+import { runCheck } from "./check-D3ubffXo.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -287,7 +287,12 @@ async function runFirstTime(root, configPath, parsers) {
 		defaultValue: dirName
 	});
 	if (isCancel(nameResult)) handleCancel();
-	await writeFile(configPath, renderYaml(buildConfigObject(nameResult || dirName, finalEcosystems, bridgesWithWatch, envFiles)), "utf-8");
+	const name = nameResult || dirName;
+	const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
+	const config = buildConfigObject(name, finalEcosystems, bridgesWithWatch, envFiles);
+	if (migratedToolConfig.lint) config["lint"] = migratedToolConfig.lint;
+	if (migratedToolConfig.format) config["format"] = migratedToolConfig.format;
+	await writeFile(configPath, renderYaml(config), "utf-8");
 	log.success(`${ORANGE}${CONFIG_FILENAME}${RESET} written`);
 	const installHooks = await confirm({
 		message: "Install git hooks?",
@@ -450,6 +455,15 @@ async function runReconciliation(root, configPath, parsers) {
 		existing["bridges"] = updatedBridges.length > 0 ? updatedBridges : void 0;
 		configChanged = true;
 	}
+	const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
+	if (migratedToolConfig.lint) {
+		existing["lint"] = migratedToolConfig.lint;
+		configChanged = true;
+	}
+	if (migratedToolConfig.format) {
+		existing["format"] = migratedToolConfig.format;
+		configChanged = true;
+	}
 	if (configChanged) {
 		await writeFile(configPath, renderYaml(configToObject(existing)), "utf-8");
 		log.success("Config updated");
@@ -536,7 +550,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-PeMXPKLU.js");
+			const { runDev } = await import("./dev-CE9IWThB.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -777,6 +791,8 @@ function configToObject(config) {
 	if (config.bridges && config.bridges.length > 0) obj["bridges"] = config.bridges;
 	if (config.env) obj["env"] = config.env;
 	if (config.commits) obj["commits"] = config.commits;
+	if (config.lint) obj["lint"] = config.lint;
+	if (config.format) obj["format"] = config.format;
 	return obj;
 }
 function buildConfigObject(name, ecosystems, bridges, envFiles) {
@@ -806,7 +822,9 @@ function renderYaml(config) {
 		["workspace", " Workspace name"],
 		["ecosystems", " Language ecosystems and their packages"],
 		["bridges", " Cross-ecosystem dependencies linked by a shared artifact"],
-		["env", " Environment variable parity across packages"]
+		["env", " Environment variable parity across packages"],
+		["lint", " Linter configuration (passed to oxlint)"],
+		["format", " Formatter configuration (passed to oxfmt)"]
 	]);
 	if (isMap(doc.contents)) for (const pair of doc.contents.items) {
 		if (!isScalar(pair.key)) continue;
@@ -917,7 +935,92 @@ async function cleanupReplacedTooling(root) {
 		log.step("Updated scripts.prepare → \"mido install\"");
 	}
 }
+function isRecord(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+/**
+* Migrate existing .oxlintrc.json and .oxfmtrc.json into mido.yml sections.
+* Prompts the user before removing original files.
+*/
+async function migrateLintFormatConfig(root, configPath) {
+	const migrated = {};
+	const oxlintPath = join(root, ".oxlintrc.json");
+	if (existsSync(oxlintPath)) try {
+		const raw = await readFile(oxlintPath, "utf-8");
+		const parsed = JSON.parse(raw);
+		if (isRecord(parsed)) {
+			const lint = {};
+			if (isRecord(parsed["rules"]) && Object.keys(parsed["rules"]).length > 0) lint["rules"] = parsed["rules"];
+			if (Array.isArray(parsed["ignorePatterns"]) && parsed["ignorePatterns"].length > 0) lint["ignore"] = parsed["ignorePatterns"];
+			if (Object.keys(lint).length > 0) {
+				migrated.lint = lint;
+				log.info("Migrated oxlint config into mido.yml lint section");
+			}
+			const remove = await confirm({
+				message: "Remove .oxlintrc.json? (config now lives in mido.yml)",
+				initialValue: true
+			});
+			if (isCancel(remove)) handleCancel();
+			if (remove) {
+				await unlink(oxlintPath);
+				log.step("Removed .oxlintrc.json");
+			}
+		}
+	} catch {
+		log.warn("Could not parse .oxlintrc.json — skipping migration");
+	}
+	const oxfmtPath = join(root, ".oxfmtrc.json");
+	const oxfmtIgnorePath = join(root, ".oxfmtignore");
+	const hasOxfmtConfig = existsSync(oxfmtPath);
+	const hasOxfmtIgnore = existsSync(oxfmtIgnorePath);
+	if (hasOxfmtConfig) try {
+		const raw = await readFile(oxfmtPath, "utf-8");
+		const parsed = JSON.parse(raw);
+		if (isRecord(parsed)) {
+			const format = {};
+			if (typeof parsed["singleQuote"] === "boolean") format["singleQuote"] = parsed["singleQuote"];
+			if (typeof parsed["trailingComma"] === "string") format["trailingComma"] = parsed["trailingComma"];
+			if (typeof parsed["printWidth"] === "number") format["printWidth"] = parsed["printWidth"];
+			if (Object.keys(format).length > 0) {
+				migrated.format = format;
+				log.info("Migrated oxfmt config into mido.yml format section");
+			}
+			const remove = await confirm({
+				message: "Remove .oxfmtrc.json? (config now lives in mido.yml)",
+				initialValue: true
+			});
+			if (isCancel(remove)) handleCancel();
+			if (remove) {
+				await unlink(oxfmtPath);
+				log.step("Removed .oxfmtrc.json");
+			}
+		}
+	} catch {
+		log.warn("Could not parse .oxfmtrc.json — skipping migration");
+	}
+	if (hasOxfmtIgnore) try {
+		const patterns = (await readFile(oxfmtIgnorePath, "utf-8")).split("\n").map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
+		if (patterns.length > 0) {
+			if (!migrated.format) migrated.format = {};
+			const existing = migrated.format["ignore"] ?? [];
+			migrated.format["ignore"] = [...existing, ...patterns];
+			log.info("Migrated .oxfmtignore patterns into mido.yml format.ignore");
+		}
+		const remove = await confirm({
+			message: "Remove .oxfmtignore? (patterns now in mido.yml)",
+			initialValue: true
+		});
+		if (isCancel(remove)) handleCancel();
+		if (remove) {
+			await unlink(oxfmtIgnorePath);
+			log.step("Removed .oxfmtignore");
+		}
+	} catch {
+		log.warn("Could not read .oxfmtignore — skipping migration");
+	}
+	return migrated;
+}
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-rmiNcR2E.js.map
+//# sourceMappingURL=init-DQB_mmub.js.map

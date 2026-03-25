@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 import { i as GREEN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
-import { t as loadConfig } from "./loader-COqKnZAI.js";
+import { t as loadConfig } from "./loader-FCfvYc9I.js";
 import { t as buildWorkspaceGraph } from "./workspace-B2H5BXLY.js";
-import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-BvW7qGue.js";
+import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-n9grMa4r.js";
 import { t as detectPackageManager } from "./pm-detect-wR8KpsCR.js";
-//#region src/commands/fmt.ts
+//#region src/commands/lint.ts
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
 /**
-* Run formatting across all packages in the workspace.
+* Run linters across all packages in the workspace.
 *
-* @returns exit code (0 = all formatted, 1 = unformatted files found in check mode)
+* @returns exit code (0 = no errors, 1 = errors found)
 */
-async function runFmt(parsers, options = {}) {
-	const { check = false, quiet = false } = options;
+async function runLint(parsers, options = {}) {
+	const { fix = false, quiet = false } = options;
 	const { config, root } = await loadConfig();
 	const graph = await buildWorkspaceGraph(config, root, parsers);
 	const plugins = loadPlugins();
 	const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
 	const pm = detectPackageManager(root);
-	const context = registry.createContext(graph, root, pm);
-	const action = check ? STANDARD_ACTIONS.FORMAT_CHECK : STANDARD_ACTIONS.FORMAT;
+	const context = registry.createContext(graph, root, pm, config.lint ? { lintConfig: config.lint } : void 0);
+	const action = fix ? STANDARD_ACTIONS.LINT_FIX : STANDARD_ACTIONS.LINT;
 	const grouped = groupByEcosystem(graph.packages, options);
 	let hasErrors = false;
 	for (const [ecosystem, packages] of grouped) {
@@ -54,7 +54,10 @@ async function runFmt(parsers, options = {}) {
 			}
 		}
 	}
-	if (!quiet) console.log(`\n${hasErrors ? FAIL : PASS} ${check ? hasErrors ? "Formatting issues found" : "All files formatted" : hasErrors ? "Formatting failed" : "All formatted"}\n`);
+	if (!quiet) {
+		const total = [...grouped.values()].reduce((sum, pkgs) => sum + pkgs.length, 0);
+		console.log(`\n${hasErrors ? FAIL : PASS} ${hasErrors ? "Lint errors found" : `All ${total} package(s) clean`}\n`);
+	}
 	return hasErrors ? 1 : 0;
 }
 /** Group packages by ecosystem, applying filters */
@@ -70,6 +73,6 @@ function groupByEcosystem(packages, options) {
 	return grouped;
 }
 //#endregion
-export { runFmt };
+export { runLint };
 
-//# sourceMappingURL=fmt-Bwxwx28k.js.map
+//# sourceMappingURL=lint-CK0_B5zV.js.map

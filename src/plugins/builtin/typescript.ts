@@ -1,5 +1,7 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+
+import type { FormatConfig, LintConfig } from '../../config/schema.js';
 
 import type { WorkspacePackage } from '../../graph/types.js';
 import { MIDO_ROOT } from '../../version.js';
@@ -92,6 +94,83 @@ export function resolveBin(name: string, workspaceRoot: string): string | null {
   }
 
   return null;
+}
+
+const CACHE_DIR_NAME = 'node_modules/.cache/mido';
+
+/** Ensure the cache directory exists and return its absolute path */
+function ensureCacheDir(root: string): string {
+  const cacheDir = join(root, CACHE_DIR_NAME);
+  mkdirSync(cacheDir, { recursive: true });
+  return cacheDir;
+}
+
+/**
+ * Generate a temporary oxlintrc.json from the mido lint config.
+ * Returns the path to the file, or null if no config is needed.
+ */
+function writeOxlintConfig(root: string, lint: LintConfig): string | null {
+  const hasRules = lint.rules && Object.keys(lint.rules).length > 0;
+  const hasIgnore = lint.ignore && lint.ignore.length > 0;
+  if (!hasRules && !hasIgnore) {
+    return null;
+  }
+
+  const config: Record<string, unknown> = {};
+  if (hasRules) {
+    config['rules'] = lint.rules;
+  }
+  if (hasIgnore) {
+    config['ignorePatterns'] = lint.ignore;
+  }
+
+  const cacheDir = ensureCacheDir(root);
+  const configPath = join(cacheDir, 'oxlintrc.json');
+  writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  return configPath;
+}
+
+/**
+ * Generate a temporary oxfmtrc.json from the mido format config.
+ * Returns the config path and optional ignore path.
+ */
+function writeOxfmtConfig(
+  root: string,
+  format: FormatConfig,
+): { readonly configPath: string | null; readonly ignorePath: string | null } {
+  const opts: Record<string, unknown> = {};
+  if (format.singleQuote !== undefined) {
+    opts['singleQuote'] = format.singleQuote;
+  }
+  if (format.trailingComma !== undefined) {
+    opts['trailingComma'] = format.trailingComma;
+  }
+  if (format.printWidth !== undefined) {
+    opts['printWidth'] = format.printWidth;
+  }
+
+  const hasOpts = Object.keys(opts).length > 0;
+  const hasIgnore = format.ignore && format.ignore.length > 0;
+
+  if (!hasOpts && !hasIgnore) {
+    return { configPath: null, ignorePath: null };
+  }
+
+  const cacheDir = ensureCacheDir(root);
+
+  let configPath: string | null = null;
+  if (hasOpts) {
+    configPath = join(cacheDir, 'oxfmtrc.json');
+    writeFileSync(configPath, JSON.stringify(opts, null, 2) + '\n', 'utf-8');
+  }
+
+  let ignorePath: string | null = null;
+  if (hasIgnore && format.ignore) {
+    ignorePath = join(cacheDir, 'oxfmt-ignore');
+    writeFileSync(ignorePath, format.ignore.join('\n') + '\n', 'utf-8');
+  }
+
+  return { configPath, ignorePath };
 }
 
 /**
@@ -216,7 +295,17 @@ export const typescriptPlugin: EcosystemPlugin = {
       const { dir } = findSourceDir(pkg, root);
       const oxlint = resolveBin('oxlint', root);
       if (oxlint) {
-        const args = fix ? ['--fix', dir] : [dir];
+        const args: string[] = [];
+        if (context.lintConfig) {
+          const configPath = writeOxlintConfig(root, context.lintConfig);
+          if (configPath) {
+            args.push('--config', configPath);
+          }
+        }
+        if (fix) {
+          args.push('--fix');
+        }
+        args.push(dir);
         return runCommand(oxlint, args, cwd);
       }
       const eslint = resolveBin('eslint', root);
@@ -235,12 +324,25 @@ export const typescriptPlugin: EcosystemPlugin = {
       const { dir, isRoot } = findSourceDir(pkg, root);
       const oxfmt = resolveBin('oxfmt', root);
       if (oxfmt) {
-        // When targeting the package root (no src/ or lib/), use TS-only globs
-        // to avoid formatting JSON/Dart in nested subdirectories.
-        // --no-error-on-unmatched-pattern prevents failure when no TS files exist.
-        const args = isRoot
-          ? ['--no-error-on-unmatched-pattern', join(dir, '**/*.ts'), join(dir, '**/*.tsx')]
-          : [dir];
+        const args: string[] = [];
+        if (context.formatConfig) {
+          const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+          if (configPath) {
+            args.push('--config', configPath);
+          }
+          if (ignorePath) {
+            args.push('--ignore-path', ignorePath);
+          }
+        }
+        if (isRoot) {
+          args.push(
+            '--no-error-on-unmatched-pattern',
+            join(dir, '**/*.ts'),
+            join(dir, '**/*.tsx'),
+          );
+        } else {
+          args.push(dir);
+        }
         return runCommand(oxfmt, args, cwd);
       }
       const prettier = resolveBin('prettier', root);
@@ -258,14 +360,25 @@ export const typescriptPlugin: EcosystemPlugin = {
       const { dir, isRoot } = findSourceDir(pkg, root);
       const oxfmt = resolveBin('oxfmt', root);
       if (oxfmt) {
-        const args = isRoot
-          ? [
-              '--check',
-              '--no-error-on-unmatched-pattern',
-              join(dir, '**/*.ts'),
-              join(dir, '**/*.tsx'),
-            ]
-          : ['--check', dir];
+        const args: string[] = ['--check'];
+        if (context.formatConfig) {
+          const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+          if (configPath) {
+            args.push('--config', configPath);
+          }
+          if (ignorePath) {
+            args.push('--ignore-path', ignorePath);
+          }
+        }
+        if (isRoot) {
+          args.push(
+            '--no-error-on-unmatched-pattern',
+            join(dir, '**/*.ts'),
+            join(dir, '**/*.tsx'),
+          );
+        } else {
+          args.push(dir);
+        }
         return runCommand(oxfmt, args, cwd);
       }
       const prettier = resolveBin('prettier', root);

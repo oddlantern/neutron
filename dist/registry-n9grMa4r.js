@@ -3,7 +3,7 @@ import { t as MIDO_ROOT } from "./version-WDd4fw5u.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { parse } from "yaml";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 //#region src/plugins/types.ts
@@ -176,6 +176,59 @@ function resolveBin(name, workspaceRoot) {
 	if (existsSync(bundledBin)) return bundledBin;
 	return null;
 }
+const CACHE_DIR_NAME = "node_modules/.cache/mido";
+/** Ensure the cache directory exists and return its absolute path */
+function ensureCacheDir(root) {
+	const cacheDir = join(root, CACHE_DIR_NAME);
+	mkdirSync(cacheDir, { recursive: true });
+	return cacheDir;
+}
+/**
+* Generate a temporary oxlintrc.json from the mido lint config.
+* Returns the path to the file, or null if no config is needed.
+*/
+function writeOxlintConfig(root, lint) {
+	const hasRules = lint.rules && Object.keys(lint.rules).length > 0;
+	const hasIgnore = lint.ignore && lint.ignore.length > 0;
+	if (!hasRules && !hasIgnore) return null;
+	const config = {};
+	if (hasRules) config["rules"] = lint.rules;
+	if (hasIgnore) config["ignorePatterns"] = lint.ignore;
+	const configPath = join(ensureCacheDir(root), "oxlintrc.json");
+	writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
+	return configPath;
+}
+/**
+* Generate a temporary oxfmtrc.json from the mido format config.
+* Returns the config path and optional ignore path.
+*/
+function writeOxfmtConfig(root, format) {
+	const opts = {};
+	if (format.singleQuote !== void 0) opts["singleQuote"] = format.singleQuote;
+	if (format.trailingComma !== void 0) opts["trailingComma"] = format.trailingComma;
+	if (format.printWidth !== void 0) opts["printWidth"] = format.printWidth;
+	const hasOpts = Object.keys(opts).length > 0;
+	const hasIgnore = format.ignore && format.ignore.length > 0;
+	if (!hasOpts && !hasIgnore) return {
+		configPath: null,
+		ignorePath: null
+	};
+	const cacheDir = ensureCacheDir(root);
+	let configPath = null;
+	if (hasOpts) {
+		configPath = join(cacheDir, "oxfmtrc.json");
+		writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
+	}
+	let ignorePath = null;
+	if (hasIgnore && format.ignore) {
+		ignorePath = join(cacheDir, "oxfmt-ignore");
+		writeFileSync(ignorePath, format.ignore.join("\n") + "\n", "utf-8");
+	}
+	return {
+		configPath,
+		ignorePath
+	};
+}
 /**
 * Find the source directory for a TS package.
 * Prefers src/, falls back to lib/, then package root.
@@ -248,7 +301,16 @@ const typescriptPlugin = {
 			const fix = action === STANDARD_ACTIONS.LINT_FIX;
 			const { dir } = findSourceDir(pkg, root);
 			const oxlint = resolveBin("oxlint", root);
-			if (oxlint) return runCommand(oxlint, fix ? ["--fix", dir] : [dir], cwd);
+			if (oxlint) {
+				const args = [];
+				if (context.lintConfig) {
+					const configPath = writeOxlintConfig(root, context.lintConfig);
+					if (configPath) args.push("--config", configPath);
+				}
+				if (fix) args.push("--fix");
+				args.push(dir);
+				return runCommand(oxlint, args, cwd);
+			}
 			const eslint = resolveBin("eslint", root);
 			if (eslint) return runCommand(eslint, fix ? ["--fix", dir] : [dir], cwd);
 			return {
@@ -260,11 +322,17 @@ const typescriptPlugin = {
 		if (action === STANDARD_ACTIONS.FORMAT) {
 			const { dir, isRoot } = findSourceDir(pkg, root);
 			const oxfmt = resolveBin("oxfmt", root);
-			if (oxfmt) return runCommand(oxfmt, isRoot ? [
-				"--no-error-on-unmatched-pattern",
-				join(dir, "**/*.ts"),
-				join(dir, "**/*.tsx")
-			] : [dir], cwd);
+			if (oxfmt) {
+				const args = [];
+				if (context.formatConfig) {
+					const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+					if (configPath) args.push("--config", configPath);
+					if (ignorePath) args.push("--ignore-path", ignorePath);
+				}
+				if (isRoot) args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
+				else args.push(dir);
+				return runCommand(oxfmt, args, cwd);
+			}
 			const prettier = resolveBin("prettier", root);
 			if (prettier) return runCommand(prettier, ["--write", dir], cwd);
 			return {
@@ -276,12 +344,17 @@ const typescriptPlugin = {
 		if (action === STANDARD_ACTIONS.FORMAT_CHECK) {
 			const { dir, isRoot } = findSourceDir(pkg, root);
 			const oxfmt = resolveBin("oxfmt", root);
-			if (oxfmt) return runCommand(oxfmt, isRoot ? [
-				"--check",
-				"--no-error-on-unmatched-pattern",
-				join(dir, "**/*.ts"),
-				join(dir, "**/*.tsx")
-			] : ["--check", dir], cwd);
+			if (oxfmt) {
+				const args = ["--check"];
+				if (context.formatConfig) {
+					const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+					if (configPath) args.push("--config", configPath);
+					if (ignorePath) args.push("--ignore-path", ignorePath);
+				}
+				if (isRoot) args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
+				else args.push(dir);
+				return runCommand(oxfmt, args, cwd);
+			}
 			const prettier = resolveBin("prettier", root);
 			if (prettier) return runCommand(prettier, ["--check", dir], cwd);
 			return {
@@ -1135,12 +1208,14 @@ var PluginRegistry = class {
 		return null;
 	}
 	/** Create an ExecutionContext for plugin execution */
-	createContext(graph, root, packageManager, verbose) {
+	createContext(graph, root, packageManager, options) {
 		return {
 			graph,
 			root,
 			packageManager,
-			verbose,
+			verbose: options?.verbose,
+			lintConfig: options?.lintConfig,
+			formatConfig: options?.formatConfig,
 			findEcosystemHandlers: async (domain, artifact) => {
 				const allTargets = [...graph.packages.values()];
 				return this.findEcosystemHandlers(domain, artifact, allTargets, root);
@@ -1151,4 +1226,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-BvW7qGue.js.map
+//# sourceMappingURL=registry-n9grMa4r.js.map

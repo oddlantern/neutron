@@ -1,3 +1,4 @@
+import type { FormatConfig, LintConfig } from '../config/schema.js';
 import type { WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
 
 /** Standard action names shared across ecosystem plugins */
@@ -225,6 +226,10 @@ export interface ExecutionContext {
   readonly artifactPath?: string | undefined;
   /** Verbose logging enabled */
   readonly verbose?: boolean | undefined;
+  /** Lint configuration from mido.yml */
+  readonly lintConfig?: LintConfig | undefined;
+  /** Format configuration from mido.yml */
+  readonly formatConfig?: FormatConfig | undefined;
 }
 
 export interface EcosystemHandler {
