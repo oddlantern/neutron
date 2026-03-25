@@ -84,9 +84,14 @@ function logUnchanged(message: string): void {
 }
 
 function logOutput(output: string): void {
-  const trimmed = output.trim().split('\n').slice(0, 5);
-  for (const line of trimmed) {
+  const lines = output.trim().split('\n');
+  const MAX_OUTPUT_LINES = 15;
+  const shown = lines.slice(0, MAX_OUTPUT_LINES);
+  for (const line of shown) {
     console.log(`    ${DIM}${line}${RESET}`);
+  }
+  if (lines.length > MAX_OUTPUT_LINES) {
+    console.log(`    ${DIM}... ${lines.length - MAX_OUTPUT_LINES} more line(s)${RESET}`);
   }
 }
 
@@ -218,9 +223,10 @@ async function executeBridge(
   graph: WorkspaceGraph,
   root: string,
   pm: string,
+  verbose: boolean,
 ): Promise<void> {
   const bridge = resolved.bridge;
-  const context = registry.createContext(graph, root, pm);
+  const context = registry.createContext(graph, root, pm, verbose);
 
   // Escape hatch: explicit run script
   if (bridge.run && resolved.sourcePlugin) {
@@ -450,7 +456,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         pending = new Set();
 
         for (const item of batch) {
-          await executeBridge(item, registry, graph, root, pm);
+          await executeBridge(item, registry, graph, root, pm, verbose);
         }
       }
 

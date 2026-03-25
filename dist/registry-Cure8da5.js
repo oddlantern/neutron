@@ -467,51 +467,115 @@ async function waitForServer(port, timeout) {
 }
 /**
 * Try fetching the spec from a list of paths.
-* Returns the parsed JSON and the path that worked, or null.
+* Returns the parsed JSON and the path that worked, or null with attempt details.
 */
 async function fetchSpec(port, paths) {
+	const attempts = [];
 	for (const specPath of paths) {
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), 1e4);
 		try {
-			const response = await fetch(`http://127.0.0.1:${String(port)}${specPath}`, {
+			const url = `http://127.0.0.1:${String(port)}${specPath}`;
+			const response = await fetch(url, {
 				signal: controller.signal,
 				redirect: "error"
 			});
 			if (!response.ok) {
+				attempts.push({
+					path: specPath,
+					status: response.status,
+					error: null
+				});
 				response.body?.cancel();
 				continue;
 			}
 			const contentLength = response.headers.get("content-length");
 			if (contentLength && Number(contentLength) > MAX_RESPONSE_BYTES) {
+				attempts.push({
+					path: specPath,
+					status: response.status,
+					error: "response too large"
+				});
 				response.body?.cancel();
 				continue;
 			}
 			const text = await response.text();
-			if (text.length > MAX_RESPONSE_BYTES) continue;
-			const body = JSON.parse(text);
-			if (!isRecord(body)) continue;
-			if (!("openapi" in body) && !("swagger" in body)) continue;
+			if (text.length > MAX_RESPONSE_BYTES) {
+				attempts.push({
+					path: specPath,
+					status: response.status,
+					error: "response body too large"
+				});
+				continue;
+			}
+			let body;
+			try {
+				body = JSON.parse(text);
+			} catch {
+				attempts.push({
+					path: specPath,
+					status: response.status,
+					error: "invalid JSON"
+				});
+				continue;
+			}
+			if (!isRecord(body)) {
+				attempts.push({
+					path: specPath,
+					status: response.status,
+					error: "response is not a JSON object"
+				});
+				continue;
+			}
+			if (!("openapi" in body) && !("swagger" in body)) {
+				attempts.push({
+					path: specPath,
+					status: response.status,
+					error: "missing openapi/swagger key"
+				});
+				continue;
+			}
 			return {
 				spec: body,
-				path: specPath
+				path: specPath,
+				attempts
 			};
-		} catch {
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			attempts.push({
+				path: specPath,
+				status: null,
+				error: msg
+			});
 			continue;
 		} finally {
 			clearTimeout(timer);
 		}
 	}
-	return null;
+	return {
+		spec: null,
+		path: null,
+		attempts
+	};
 }
 /**
 * Export an OpenAPI spec by booting the server, fetching the spec endpoint,
 * writing it to disk, and killing the server.
 */
+/** Format fetch attempts into a readable diagnostic string */
+function formatAttempts(attempts) {
+	if (attempts.length === 0) return "";
+	return attempts.map((a) => {
+		if (a.status) return `  ${a.path} → ${String(a.status)}${a.error ? ` (${a.error})` : ""}`;
+		return `  ${a.path} → ${a.error ?? "unknown error"}`;
+	}).join("\n");
+}
 async function exportSpec(options) {
-	const { packageDir, pm, adapter, outputPath, startupTimeout = DEFAULT_STARTUP_TIMEOUT } = options;
+	const { packageDir, pm, adapter, outputPath, startupTimeout = DEFAULT_STARTUP_TIMEOUT, verbose = false } = options;
 	const start = performance.now();
+	const debug = verbose ? (msg) => console.error(`  [exporter] ${msg}`) : void 0;
 	const entryFile = options.entryFile ?? await detectEntryFile(packageDir);
+	debug?.(`entry file: ${entryFile ?? "not found"}`);
 	if (!entryFile) return {
 		success: false,
 		duration: Math.round(performance.now() - start),
@@ -520,6 +584,7 @@ async function exportSpec(options) {
 	let port;
 	try {
 		port = await findFreePort();
+		debug?.(`allocated port ${String(port)}`);
 	} catch {
 		return {
 			success: false,
@@ -527,7 +592,10 @@ async function exportSpec(options) {
 			summary: "Port allocation failed. Check if another mido dev instance is running."
 		};
 	}
-	const child = spawn(pm === "bun" ? "bun" : "npx", pm === "bun" ? ["run", entryFile] : ["tsx", entryFile], {
+	const runnerArgs = pm === "bun" ? ["run", entryFile] : ["tsx", entryFile];
+	const runner = pm === "bun" ? "bun" : "npx";
+	debug?.(`spawning: ${runner} ${runnerArgs.join(" ")} (cwd: ${packageDir})`);
+	const child = spawn(runner, runnerArgs, {
 		cwd: packageDir,
 		stdio: [
 			"ignore",
@@ -556,32 +624,45 @@ async function exportSpec(options) {
 	child.stdout?.on("data", collectOutput);
 	child.stderr?.on("data", collectOutput);
 	let earlyExit = false;
-	child.on("exit", () => {
+	let exitCode = null;
+	child.on("exit", (code) => {
 		earlyExit = true;
+		exitCode = code;
+		debug?.(`server process exited with code ${String(code)}`);
 	});
 	try {
-		if (!await waitForServer(port, startupTimeout)) {
-			const output = outputChunks.join("");
+		debug?.(`polling http://127.0.0.1:${String(port)}/ (timeout: ${String(startupTimeout)}ms)`);
+		const ready = await waitForServer(port, startupTimeout);
+		debug?.(`server ready: ${String(ready)}, earlyExit: ${String(earlyExit)}`);
+		if (!ready) {
+			const serverOutput = outputChunks.join("");
 			const timeoutSec = Math.round(startupTimeout / 1e3);
+			const reason = earlyExit ? `Server exited with code ${String(exitCode)} before becoming ready` : `Server didn't start within ${String(timeoutSec)}s`;
 			return {
 				success: false,
 				duration: Math.round(performance.now() - start),
-				summary: earlyExit ? `Server exited before becoming ready. Entry: ${entryFile}` : `Server didn't start within ${String(timeoutSec)}s. Entry: ${entryFile}`,
-				output
+				summary: `${reason}. Entry: ${entryFile}`,
+				output: serverOutput || void 0
 			};
 		}
 		const specPathOverride = options.specPath;
 		const normalize = (p) => p.startsWith("/") ? p : `/${p}`;
 		const pathsToTry = specPathOverride ? [normalize(specPathOverride)] : [adapter.defaultSpecPath, ...adapter.fallbackSpecPaths];
+		debug?.(`fetching spec from: ${pathsToTry.join(", ")}`);
 		const result = await fetchSpec(port, pathsToTry);
-		if (!result) {
-			const tried = pathsToTry.join(", ");
+		debug?.(`fetch result: ${result.spec ? `found at ${result.path}` : "not found"}`);
+		if (!result.spec) {
+			const serverOutput = outputChunks.join("");
+			const attemptDetails = formatAttempts(result.attempts);
+			const details = [attemptDetails ? `Endpoints tried:\n${attemptDetails}` : "", serverOutput ? `Server output:\n${serverOutput.trim().split("\n").slice(0, 10).join("\n")}` : ""].filter(Boolean).join("\n");
 			return {
 				success: false,
 				duration: Math.round(performance.now() - start),
-				summary: `Could not find OpenAPI spec. Tried: ${tried}. Add an openapi:export script as fallback.`
+				summary: "Could not find OpenAPI spec. Add an openapi:export script as fallback.",
+				output: details || void 0
 			};
 		}
+		debug?.(`writing spec to ${outputPath}`);
 		try {
 			const outputDir = dirname(outputPath);
 			if (!existsSync(outputDir)) await mkdir(outputDir, { recursive: true });
@@ -594,12 +675,14 @@ async function exportSpec(options) {
 				summary: `Failed to write spec: ${msg}`
 			};
 		}
+		debug?.(`export complete`);
 		return {
 			success: true,
 			duration: Math.round(performance.now() - start),
 			summary: `exported from ${result.path}`
 		};
 	} finally {
+		debug?.(`killing server process`);
 		await killProcess(child);
 		process.removeListener("exit", exitHandler);
 	}
@@ -743,7 +826,8 @@ async function tryAdapterExport(source, artifact, root, context) {
 		adapter,
 		outputPath,
 		entryFile: bridge?.entryFile,
-		specPath: bridge?.specPath
+		specPath: bridge?.specPath,
+		verbose: context.verbose
 	});
 }
 const openapiPlugin = {
@@ -903,11 +987,12 @@ var PluginRegistry = class {
 		return null;
 	}
 	/** Create an ExecutionContext for plugin execution */
-	createContext(graph, root, packageManager) {
+	createContext(graph, root, packageManager, verbose) {
 		return {
 			graph,
 			root,
 			packageManager,
+			verbose,
 			findEcosystemHandlers: async (domain, artifact) => {
 				const allTargets = [...graph.packages.values()];
 				return this.findEcosystemHandlers(domain, artifact, allTargets, root);
@@ -918,4 +1003,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, PluginRegistry as t };
 
-//# sourceMappingURL=registry-KndbGdZr.js.map
+//# sourceMappingURL=registry-Cure8da5.js.map

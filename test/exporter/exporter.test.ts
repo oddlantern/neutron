@@ -172,7 +172,7 @@ describe('exportSpec', () => {
 
       expect(result.success).toBe(false);
       expect(result.summary).toContain('Could not find OpenAPI spec');
-      expect(result.summary).toContain('/nonexistent/spec/endpoint');
+      expect(result.output).toContain('/nonexistent/spec/endpoint');
     },
     TEST_TIMEOUT,
   );

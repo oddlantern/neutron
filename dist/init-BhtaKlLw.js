@@ -3,7 +3,7 @@ import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./outp
 import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-Doj3f4_w.js";
 import { runCheck } from "./check-sFZYG_SJ.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-KndbGdZr.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-Cure8da5.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -536,7 +536,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-giA6AJ_6.js");
+			const { runDev } = await import("./dev-rz9i-R-g.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -920,4 +920,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init--d8xIW4w.js.map
+//# sourceMappingURL=init-BhtaKlLw.js.map

@@ -204,6 +204,8 @@ export interface ExecutionContext {
   readonly root: string;
   /** Artifact path (relative to root) when executing a domain-triggered action */
   readonly artifactPath?: string | undefined;
+  /** Verbose logging enabled */
+  readonly verbose?: boolean | undefined;
 }
 
 export interface EcosystemHandler {

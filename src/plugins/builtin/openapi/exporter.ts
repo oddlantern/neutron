@@ -52,6 +52,8 @@ export interface ExportOptions {
   readonly entryFile?: string | undefined;
   /** Spec endpoint path (overrides adapter default) */
   readonly specPath?: string | undefined;
+  /** Enable verbose debug logging */
+  readonly verbose?: boolean | undefined;
 }
 
 /** Find a free port by binding to port 0 and closing immediately */
@@ -201,24 +203,38 @@ async function waitForServer(port: number, timeout: number): Promise<boolean> {
   return false;
 }
 
+/** Per-path fetch attempt result for diagnostics */
+interface FetchAttempt {
+  readonly path: string;
+  readonly status: number | null;
+  readonly error: string | null;
+}
+
 /**
  * Try fetching the spec from a list of paths.
- * Returns the parsed JSON and the path that worked, or null.
+ * Returns the parsed JSON and the path that worked, or null with attempt details.
  */
 async function fetchSpec(
   port: number,
   paths: readonly string[],
-): Promise<{ readonly spec: Record<string, unknown>; readonly path: string } | null> {
+): Promise<
+  | { readonly spec: Record<string, unknown>; readonly path: string; readonly attempts: readonly FetchAttempt[] }
+  | { readonly spec: null; readonly path: null; readonly attempts: readonly FetchAttempt[] }
+> {
+  const attempts: FetchAttempt[] = [];
+
   for (const specPath of paths) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10_000);
     try {
-      const response = await fetch(`http://127.0.0.1:${String(port)}${specPath}`, {
+      const url = `http://127.0.0.1:${String(port)}${specPath}`;
+      const response = await fetch(url, {
         signal: controller.signal,
         redirect: 'error',
       });
 
       if (!response.ok) {
+        attempts.push({ path: specPath, status: response.status, error: null });
         response.body?.cancel();
         continue;
       }
@@ -226,40 +242,68 @@ async function fetchSpec(
       // Guard against oversized responses
       const contentLength = response.headers.get('content-length');
       if (contentLength && Number(contentLength) > MAX_RESPONSE_BYTES) {
+        attempts.push({ path: specPath, status: response.status, error: 'response too large' });
         response.body?.cancel();
         continue;
       }
 
       const text = await response.text();
       if (text.length > MAX_RESPONSE_BYTES) {
+        attempts.push({ path: specPath, status: response.status, error: 'response body too large' });
         continue;
       }
 
-      const body: unknown = JSON.parse(text);
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        attempts.push({ path: specPath, status: response.status, error: 'invalid JSON' });
+        continue;
+      }
+
       if (!isRecord(body)) {
+        attempts.push({ path: specPath, status: response.status, error: 'response is not a JSON object' });
         continue;
       }
 
       // Validate it looks like an OpenAPI spec
       if (!('openapi' in body) && !('swagger' in body)) {
+        attempts.push({ path: specPath, status: response.status, error: 'missing openapi/swagger key' });
         continue;
       }
 
-      return { spec: body, path: specPath };
-    } catch {
+      return { spec: body, path: specPath, attempts };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      attempts.push({ path: specPath, status: null, error: msg });
       continue;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  return null;
+  return { spec: null, path: null, attempts };
 }
 
 /**
  * Export an OpenAPI spec by booting the server, fetching the spec endpoint,
  * writing it to disk, and killing the server.
  */
+/** Format fetch attempts into a readable diagnostic string */
+function formatAttempts(attempts: readonly FetchAttempt[]): string {
+  if (attempts.length === 0) {
+    return '';
+  }
+  return attempts
+    .map((a) => {
+      if (a.status) {
+        return `  ${a.path} → ${String(a.status)}${a.error ? ` (${a.error})` : ''}`;
+      }
+      return `  ${a.path} → ${a.error ?? 'unknown error'}`;
+    })
+    .join('\n');
+}
+
 export async function exportSpec(options: ExportOptions): Promise<ExecuteResult> {
   const {
     packageDir,
@@ -267,11 +311,14 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     adapter,
     outputPath,
     startupTimeout = DEFAULT_STARTUP_TIMEOUT,
+    verbose = false,
   } = options;
   const start = performance.now();
+  const debug = verbose ? (msg: string): void => console.error(`  [exporter] ${msg}`) : undefined;
 
   // 1. Resolve entry file
   const entryFile = options.entryFile ?? (await detectEntryFile(packageDir));
+  debug?.(`entry file: ${entryFile ?? 'not found'}`);
   if (!entryFile) {
     return {
       success: false,
@@ -284,6 +331,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
   let port: number;
   try {
     port = await findFreePort();
+    debug?.(`allocated port ${String(port)}`);
   } catch {
     return {
       success: false,
@@ -297,6 +345,8 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     ? ['run', entryFile]
     : ['tsx', entryFile];
   const runner = pm === 'bun' ? 'bun' : 'npx';
+
+  debug?.(`spawning: ${runner} ${runnerArgs.join(' ')} (cwd: ${packageDir})`);
 
   const child = spawn(runner, runnerArgs, {
     cwd: packageDir,
@@ -328,23 +378,30 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
 
   // Handle early exit (e.g., syntax error, missing dependency)
   let earlyExit = false;
-  child.on('exit', () => {
+  let exitCode: number | null = null;
+  child.on('exit', (code) => {
     earlyExit = true;
+    exitCode = code;
+    debug?.(`server process exited with code ${String(code)}`);
   });
 
   try {
     // 4. Wait for server to be ready
+    debug?.(`polling http://127.0.0.1:${String(port)}/ (timeout: ${String(startupTimeout)}ms)`);
     const ready = await waitForServer(port, startupTimeout);
+    debug?.(`server ready: ${String(ready)}, earlyExit: ${String(earlyExit)}`);
+
     if (!ready) {
-      const output = outputChunks.join('');
+      const serverOutput = outputChunks.join('');
       const timeoutSec = Math.round(startupTimeout / 1000);
+      const reason = earlyExit
+        ? `Server exited with code ${String(exitCode)} before becoming ready`
+        : `Server didn't start within ${String(timeoutSec)}s`;
       return {
         success: false,
         duration: Math.round(performance.now() - start),
-        summary: earlyExit
-          ? `Server exited before becoming ready. Entry: ${entryFile}`
-          : `Server didn't start within ${String(timeoutSec)}s. Entry: ${entryFile}`,
-        output,
+        summary: `${reason}. Entry: ${entryFile}`,
+        output: serverOutput || undefined,
       };
     }
     // Server responded — from here, success depends only on fetching and writing
@@ -358,18 +415,29 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
       ? [normalize(specPathOverride)]
       : [adapter.defaultSpecPath, ...adapter.fallbackSpecPaths];
 
+    debug?.(`fetching spec from: ${pathsToTry.join(', ')}`);
     const result = await fetchSpec(port, pathsToTry);
+    debug?.(`fetch result: ${result.spec ? `found at ${result.path}` : 'not found'}`);
 
-    if (!result) {
-      const tried = pathsToTry.join(', ');
+    if (!result.spec) {
+      const serverOutput = outputChunks.join('');
+      const attemptDetails = formatAttempts(result.attempts);
+      const details = [
+        attemptDetails ? `Endpoints tried:\n${attemptDetails}` : '',
+        serverOutput ? `Server output:\n${serverOutput.trim().split('\n').slice(0, 10).join('\n')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
       return {
         success: false,
         duration: Math.round(performance.now() - start),
-        summary: `Could not find OpenAPI spec. Tried: ${tried}. Add an openapi:export script as fallback.`,
+        summary: 'Could not find OpenAPI spec. Add an openapi:export script as fallback.',
+        output: details || undefined,
       };
     }
 
     // 6. Write spec to disk
+    debug?.(`writing spec to ${outputPath}`);
     try {
       const outputDir = dirname(outputPath);
       if (!existsSync(outputDir)) {
@@ -385,6 +453,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
       };
     }
 
+    debug?.(`export complete`);
     return {
       success: true,
       duration: Math.round(performance.now() - start),
@@ -392,6 +461,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     };
   } finally {
     // Always kill the server and remove the exit handler
+    debug?.(`killing server process`);
     await killProcess(child);
     process.removeListener('exit', exitHandler);
   }

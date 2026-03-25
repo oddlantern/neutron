@@ -88,11 +88,17 @@ export class PluginRegistry {
   }
 
   /** Create an ExecutionContext for plugin execution */
-  createContext(graph: WorkspaceGraph, root: string, packageManager: string): ExecutionContext {
+  createContext(
+    graph: WorkspaceGraph,
+    root: string,
+    packageManager: string,
+    verbose?: boolean,
+  ): ExecutionContext {
     return {
       graph,
       root,
       packageManager,
+      verbose,
       findEcosystemHandlers: async (domain: string, artifact: string) => {
         const allTargets = [...graph.packages.values()];
         return this.findEcosystemHandlers(domain, artifact, allTargets, root);

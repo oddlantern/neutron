@@ -198,6 +198,7 @@ async function tryAdapterExport(
     outputPath,
     entryFile: bridge?.entryFile,
     specPath: bridge?.specPath,
+    verbose: context.verbose,
   });
 }
 

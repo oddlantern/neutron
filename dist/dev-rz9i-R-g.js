@@ -2,7 +2,7 @@
 import { c as YELLOW, i as GREEN, n as CYAN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as loadConfig } from "./loader-Doj3f4_w.js";
 import { t as buildWorkspaceGraph } from "./workspace-0L_gtkdk.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-KndbGdZr.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-Cure8da5.js";
 import { lstat, readFile, readdir, realpath, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import { existsSync } from "node:fs";
@@ -1700,8 +1700,11 @@ function logUnchanged(message) {
 	log(`${DIM}\u00B7${RESET}`, `${DIM}${message}${RESET}`);
 }
 function logOutput(output) {
-	const trimmed = output.trim().split("\n").slice(0, 5);
-	for (const line of trimmed) console.log(`    ${DIM}${line}${RESET}`);
+	const lines = output.trim().split("\n");
+	const MAX_OUTPUT_LINES = 15;
+	const shown = lines.slice(0, MAX_OUTPUT_LINES);
+	for (const line of shown) console.log(`    ${DIM}${line}${RESET}`);
+	if (lines.length > MAX_OUTPUT_LINES) console.log(`    ${DIM}... ${lines.length - MAX_OUTPUT_LINES} more line(s)${RESET}`);
 }
 function logDebug(message) {
 	console.log(`  ${MAGENTA}[verbose]${RESET} ${DIM}${message}${RESET}`);
@@ -1784,9 +1787,9 @@ function printStepResult(stepResult) {
 	}
 	logSuccess(`${stepResult.step.description.replace(/\.\.\.$/, "")} (${formatMs(stepResult.duration)})`);
 }
-async function executeBridge(resolved, registry, graph, root, pm) {
+async function executeBridge(resolved, registry, graph, root, pm, verbose) {
 	const bridge = resolved.bridge;
-	const context = registry.createContext(graph, root, pm);
+	const context = registry.createContext(graph, root, pm, verbose);
 	if (bridge.run && resolved.sourcePlugin) {
 		logStep(`running "${bridge.run}" on ${resolved.source.name}...`);
 		printResult(await resolved.sourcePlugin.execute(bridge.run, resolved.source, root, context), `${bridge.source} bridge`);
@@ -1927,7 +1930,7 @@ async function runDev(parsers, options = {}) {
 			while (pending.size > 0) {
 				const batch = [...pending];
 				pending = /* @__PURE__ */ new Set();
-				for (const item of batch) await executeBridge(item, registry, graph, root, pm);
+				for (const item of batch) await executeBridge(item, registry, graph, root, pm, verbose);
 			}
 			running = false;
 		}
@@ -2027,4 +2030,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-giA6AJ_6.js.map
+//# sourceMappingURL=dev-rz9i-R-g.js.map
