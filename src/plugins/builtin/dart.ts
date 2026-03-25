@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -8,18 +9,13 @@ import type {
   DomainCapability,
   EcosystemPlugin,
   ExecuteResult,
+  WatchPathSuggestion,
 } from '../types.js';
 import { isRecord, runCommand } from './exec.js';
 
-const WATCH_PATTERNS: readonly string[] = [
-  'lib/**/*.dart',
-  'bin/**/*.dart',
-];
+const WATCH_PATTERNS: readonly string[] = ['lib/**/*.dart', 'bin/**/*.dart'];
 
-async function readPubspec(
-  pkg: WorkspacePackage,
-  root: string,
-): Promise<Record<string, unknown>> {
+async function readPubspec(pkg: WorkspacePackage, root: string): Promise<Record<string, unknown>> {
   const manifestPath = join(root, pkg.path, 'pubspec.yaml');
   const content = await readFile(manifestPath, 'utf-8');
   const parsed: unknown = parseYaml(content);
@@ -29,10 +25,7 @@ async function readPubspec(
   return parsed;
 }
 
-function hasDep(
-  manifest: Record<string, unknown>,
-  name: string,
-): boolean {
+function hasDep(manifest: Record<string, unknown>, name: string): boolean {
   const fields = ['dependencies', 'dev_dependencies', 'dependency_overrides'];
   for (const field of fields) {
     const deps = manifest[field];
@@ -83,11 +76,7 @@ export const dartPlugin: EcosystemPlugin = {
     }
   },
 
-  async execute(
-    action: string,
-    pkg: WorkspacePackage,
-    root: string,
-  ): Promise<ExecuteResult> {
+  async execute(action: string, pkg: WorkspacePackage, root: string): Promise<ExecuteResult> {
     const cwd = join(root, pkg.path);
 
     let manifest: Record<string, unknown>;
@@ -159,5 +148,23 @@ export const dartPlugin: EcosystemPlugin = {
     }
 
     return null;
+  },
+
+  async suggestWatchPaths(
+    pkg: WorkspacePackage,
+    root: string,
+  ): Promise<WatchPathSuggestion | null> {
+    const libDir = join(root, pkg.path, 'lib');
+    if (existsSync(libDir)) {
+      return {
+        paths: [`${pkg.path}/lib/**`],
+        reason: `Dart source in ${pkg.path}/lib/`,
+      };
+    }
+
+    return {
+      paths: [`${pkg.path}/**`],
+      reason: `Package root of ${pkg.path}`,
+    };
   },
 };

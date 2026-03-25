@@ -10,10 +10,18 @@ import type { Bridge, WorkspaceGraph, WorkspacePackage } from '../graph/types.js
 import { BOLD, CYAN, DIM, GREEN, RED, RESET, YELLOW } from '../output.js';
 import { loadPlugins } from '../plugins/loader.js';
 import { PluginRegistry } from '../plugins/registry.js';
-import type { DomainPlugin, EcosystemPlugin, ExecuteResult } from '../plugins/types.js';
+import type {
+  DomainPlugin,
+  EcosystemPlugin,
+  ExecutablePipelineStep,
+  ExecuteResult,
+  PipelineResult,
+  PipelineStepResult,
+} from '../plugins/types.js';
 import { detectPackageManager } from './pm-detect.js';
 import { createDebouncer } from './debouncer.js';
 import type { Debouncer } from './debouncer.js';
+import { runPipeline } from './pipeline.js';
 
 const MAGENTA = '\x1b[35m';
 const CONFIG_FILENAME = 'mido.yml';
@@ -69,6 +77,10 @@ function logChange(path: string): void {
 
 function logWaiting(): void {
   log(`${DIM}\u2298${RESET}`, `${DIM}waiting for next change...${RESET}`);
+}
+
+function logUnchanged(message: string): void {
+  log(`${DIM}\u00B7${RESET}`, `${DIM}${message}${RESET}`);
 }
 
 function logOutput(output: string): void {
@@ -132,10 +144,7 @@ async function resolveBridges(
   return resolved;
 }
 
-function printBridgeSummary(
-  resolved: readonly ResolvedBridge[],
-  registry: PluginRegistry,
-): void {
+function printBridgeSummary(resolved: readonly ResolvedBridge[], registry: PluginRegistry): void {
   for (const r of resolved) {
     const artifact = r.bridge.artifact;
     const sourceLabel = r.source.path;
@@ -167,26 +176,40 @@ function printBridgeSummary(
       console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
       console.log(`    ${DIM}targets: ${targetLabels}${RESET}`);
     } else {
-      console.log(
-        `  ${YELLOW}${BOLD}unmatched:${RESET} ${artifact}`,
-      );
-      console.log(
-        `    ${YELLOW}No plugin found \u2014 add run: <script> to this bridge${RESET}`,
-      );
+      console.log(`  ${YELLOW}${BOLD}unmatched:${RESET} ${artifact}`);
+      console.log(`    ${YELLOW}No plugin found \u2014 add run: <script> to this bridge${RESET}`);
     }
     console.log();
   }
 }
 
-function printStartup(
-  resolved: readonly ResolvedBridge[],
-  registry: PluginRegistry,
-): void {
+function printStartup(resolved: readonly ResolvedBridge[], registry: PluginRegistry): void {
   console.log(
     `\n${CYAN}${BOLD}mido dev${RESET} ${DIM}\u2014 watching ${resolved.length} bridge(s)${RESET}\n`,
   );
   printBridgeSummary(resolved, registry);
   console.log(`  ${DIM}Waiting for changes...${RESET}\n`);
+}
+
+function printStepResult(stepResult: PipelineStepResult): void {
+  if (!stepResult.success) {
+    logFail(
+      `${stepResult.step.description.replace(/\.\.\.$/, '')} failed (${formatMs(stepResult.duration)})`,
+    );
+    if (stepResult.output) {
+      logOutput(stepResult.output);
+    }
+    return;
+  }
+
+  if (!stepResult.changed) {
+    logUnchanged(`${stepResult.step.description.replace(/\.\.\.$/, '')} \u2014 unchanged`);
+    return;
+  }
+
+  logSuccess(
+    `${stepResult.step.description.replace(/\.\.\.$/, '')} (${formatMs(stepResult.duration)})`,
+  );
 }
 
 async function executeBridge(
@@ -202,18 +225,38 @@ async function executeBridge(
   // Escape hatch: explicit run script
   if (bridge.run && resolved.sourcePlugin) {
     logStep(`running "${bridge.run}" on ${resolved.source.name}...`);
-    const result = await resolved.sourcePlugin.execute(
-      bridge.run,
-      resolved.source,
-      root,
-      context,
-    );
+    const result = await resolved.sourcePlugin.execute(bridge.run, resolved.source, root, context);
     printResult(result, `${bridge.source} bridge`);
     return;
   }
 
-  // Domain plugin path
+  // Domain plugin path — use pipeline if available
   if (resolved.domain) {
+    if (resolved.domain.buildPipeline) {
+      const steps = await resolved.domain.buildPipeline(
+        resolved.source,
+        bridge.artifact,
+        resolved.targets,
+        root,
+        context,
+      );
+
+      if (steps.length > 0) {
+        const pipelineResult = await runPipelineWithProgress(steps, root);
+
+        if (pipelineResult.success) {
+          const stepCount = pipelineResult.steps.length;
+          logSuccess(
+            `${resolved.domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) \u2014 ${stepCount} step(s)`,
+          );
+        } else {
+          logWaiting();
+        }
+        return;
+      }
+    }
+
+    // Fallback: legacy export + generateDownstream flow
     logStep(`mido-${resolved.domain.name}: exporting spec...`);
     const exportResult = await resolved.domain.exportArtifact(
       resolved.source,
@@ -233,7 +276,6 @@ async function executeBridge(
 
     logSuccess(`${bridge.artifact} updated (${formatMs(exportResult.duration)})`);
 
-    // Generate downstream
     if (resolved.targets.length > 0) {
       const downstreamResults = await resolved.domain.generateDownstream(
         bridge.artifact,
@@ -256,9 +298,7 @@ async function executeBridge(
       }
 
       if (allSuccess) {
-        logSuccess(
-          `${resolved.domain.name} bridge: synced (${formatMs(totalDuration)})`,
-        );
+        logSuccess(`${resolved.domain.name} bridge: synced (${formatMs(totalDuration)})`);
       }
     }
 
@@ -268,9 +308,7 @@ async function executeBridge(
   // Ecosystem-only path
   if (resolved.sourcePlugin) {
     const actions = await resolved.sourcePlugin.getActions(resolved.source, root);
-    const action = actions.includes('generate')
-      ? 'generate'
-      : actions[0];
+    const action = actions.includes('generate') ? 'generate' : actions[0];
 
     if (!action) {
       logFail(`no actions available for ${resolved.source.name}`);
@@ -279,20 +317,29 @@ async function executeBridge(
     }
 
     logStep(`mido-${resolved.sourcePlugin.name}: running "${action}"...`);
-    const result = await resolved.sourcePlugin.execute(
-      action,
-      resolved.source,
-      root,
-      context,
-    );
+    const result = await resolved.sourcePlugin.execute(action, resolved.source, root, context);
     printResult(result, `${resolved.source.path} bridge`);
     return;
   }
 
-  logFail(
-    `No plugin found for ${bridge.artifact} \u2014 add run: <script> to this bridge`,
-  );
+  logFail(`No plugin found for ${bridge.artifact} \u2014 add run: <script> to this bridge`);
   logWaiting();
+}
+
+/**
+ * Run a pipeline step-by-step, printing progress as each step completes.
+ */
+async function runPipelineWithProgress(
+  steps: readonly ExecutablePipelineStep[],
+  root: string,
+): Promise<PipelineResult> {
+  const result = await runPipeline(steps, root);
+
+  for (const stepResult of result.steps) {
+    printStepResult(stepResult);
+  }
+
+  return result;
 }
 
 function printResult(result: ExecuteResult, label: string): void {
@@ -309,8 +356,9 @@ function printResult(result: ExecuteResult, label: string): void {
 
 function matchesBridge(relPath: string, bridge: ResolvedBridge): boolean {
   for (const pattern of bridge.watchPatterns) {
-    const patternBase = pattern.replace(/\*\*.*/, '');
-    if (relPath.startsWith(patternBase) || pattern.includes('**')) {
+    // Strip glob suffix to get the directory prefix
+    const patternBase = pattern.replace(/\/?\*\*.*$/, '');
+    if (patternBase && relPath.startsWith(patternBase)) {
       return true;
     }
   }
@@ -318,10 +366,7 @@ function matchesBridge(relPath: string, bridge: ResolvedBridge): boolean {
 }
 
 /** Resolve watch patterns to base directories for chokidar */
-function resolveWatchDirs(
-  resolved: readonly ResolvedBridge[],
-  root: string,
-): readonly string[] {
+function resolveWatchDirs(resolved: readonly ResolvedBridge[], root: string): readonly string[] {
   const watchDirs = new Set<string>();
   for (const r of resolved) {
     for (const pattern of r.watchPatterns) {
@@ -348,10 +393,7 @@ function teardownSession(session: WatcherSession): void {
  * and re-runs bridge pipelines on changes. Watches mido.yml and
  * reloads everything when the config changes.
  */
-export async function runDev(
-  parsers: ParserRegistry,
-  options: DevOptions = {},
-): Promise<number> {
+export async function runDev(parsers: ParserRegistry, options: DevOptions = {}): Promise<number> {
   const verbose = options.verbose ?? false;
 
   let session: WatcherSession | undefined;
@@ -371,9 +413,7 @@ export async function runDev(
     const registry = new PluginRegistry(ecosystem, domain);
 
     if (graph.bridges.length === 0) {
-      console.error(
-        `${YELLOW}warn:${RESET} No bridges defined in mido.yml. Nothing to watch.`,
-      );
+      console.error(`${YELLOW}warn:${RESET} No bridges defined in mido.yml. Nothing to watch.`);
       return undefined;
     }
 
@@ -506,7 +546,9 @@ export async function runDev(
         if (matchesBridge(relPath, r)) {
           matched = true;
           if (verbose) {
-            logDebug(`  matched bridge: ${r.bridge.source} \u2192 ${r.bridge.target} (triggering debouncer)`);
+            logDebug(
+              `  matched bridge: ${r.bridge.source} \u2192 ${r.bridge.target} (triggering debouncer)`,
+            );
           }
           const debouncer = bridgeDebouncers.get(r);
           if (debouncer) {

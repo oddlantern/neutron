@@ -1,9 +1,5 @@
+import { DIM, ORANGE, RESET } from './output.js';
 import { VERSION } from './version.js';
-
-// ANSI 256-color: \x1b[38;5;208m = warm orange
-const ORANGE = '\x1b[38;5;208m';
-const DIM = '\x1b[2m';
-const RESET = '\x1b[0m';
 
 const ART = `\
 ░███     ░███ ░██████░███████     ░██████
@@ -22,7 +18,5 @@ export function printBanner(): void {
     Math.floor((ART_WIDTH + 'workspace guardian'.length) / 2),
   );
 
-  console.log(
-    `\n${ORANGE}${ART}${RESET}\n${DIM}${versionLine}\n${tagLine}${RESET}\n`,
-  );
+  console.log(`\n${ORANGE}${ART}${RESET}\n${DIM}${versionLine}\n${tagLine}${RESET}\n`);
 }

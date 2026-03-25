@@ -4,6 +4,7 @@ import type {
   EcosystemHandler,
   EcosystemPlugin,
   ExecutionContext,
+  WatchPathSuggestion,
 } from './types.js';
 
 /**
@@ -13,10 +14,7 @@ export class PluginRegistry {
   private readonly ecosystemPlugins: readonly EcosystemPlugin[];
   private readonly domainPlugins: readonly DomainPlugin[];
 
-  constructor(
-    ecosystem: readonly EcosystemPlugin[],
-    domain: readonly DomainPlugin[],
-  ) {
+  constructor(ecosystem: readonly EcosystemPlugin[], domain: readonly DomainPlugin[]) {
     this.ecosystemPlugins = ecosystem;
     this.domainPlugins = domain;
   }
@@ -27,10 +25,7 @@ export class PluginRegistry {
   }
 
   /** Find the domain plugin that can handle a bridge artifact */
-  async getDomainForArtifact(
-    artifact: string,
-    root: string,
-  ): Promise<DomainPlugin | undefined> {
+  async getDomainForArtifact(artifact: string, root: string): Promise<DomainPlugin | undefined> {
     for (const plugin of this.domainPlugins) {
       if (await plugin.detectBridge(artifact, root)) {
         return plugin;
@@ -53,12 +48,7 @@ export class PluginRegistry {
         if (!plugin.canHandleDomainArtifact) {
           continue;
         }
-        const capability = await plugin.canHandleDomainArtifact(
-          domain,
-          artifact,
-          pkg,
-          root,
-        );
+        const capability = await plugin.canHandleDomainArtifact(domain, artifact, pkg, root);
         if (capability) {
           handlers.push({ plugin, pkg, capability });
         }
@@ -68,12 +58,37 @@ export class PluginRegistry {
     return handlers;
   }
 
-  /** Create an ExecutionContext for plugin execution */
-  createContext(
-    graph: WorkspaceGraph,
+  /**
+   * Ask plugins to suggest watch paths for a bridge.
+   * Domain plugins get priority (they understand the artifact type).
+   * Falls back to ecosystem plugin suggestions.
+   */
+  async suggestWatchPaths(
+    source: WorkspacePackage,
+    artifact: string,
+    packages: ReadonlyMap<string, WorkspacePackage>,
     root: string,
-    packageManager: string,
-  ): ExecutionContext {
+  ): Promise<WatchPathSuggestion | null> {
+    // Try domain plugin first — it understands the artifact semantics
+    const domain = await this.getDomainForArtifact(artifact, root);
+    if (domain?.suggestWatchPaths) {
+      const suggestion = await domain.suggestWatchPaths(source, artifact, packages, root);
+      if (suggestion) {
+        return suggestion;
+      }
+    }
+
+    // Fall back to ecosystem plugin for the source package
+    const ecosystem = this.getEcosystemForPackage(source);
+    if (ecosystem?.suggestWatchPaths) {
+      return ecosystem.suggestWatchPaths(source, root);
+    }
+
+    return null;
+  }
+
+  /** Create an ExecutionContext for plugin execution */
+  createContext(graph: WorkspaceGraph, root: string, packageManager: string): ExecutionContext {
     return {
       graph,
       root,

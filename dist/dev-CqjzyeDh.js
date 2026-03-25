@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-import { t as loadConfig } from "./loader-DBSgOfQT.js";
-import { t as buildWorkspaceGraph } from "./workspace-Zl3e0e5g.js";
-import { a as RED, i as GREEN, n as CYAN, o as RESET, r as DIM, s as YELLOW, t as BOLD } from "./output-zdeO_w5V.js";
+import { c as YELLOW, i as GREEN, n as CYAN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
+import { t as loadConfig } from "./loader-ls4c5R1g.js";
+import { t as buildWorkspaceGraph } from "./workspace-BNr04jHQ.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-C1i9dp7M.js";
 import { lstat, readFile, readdir, realpath, stat } from "node:fs/promises";
-import { basename, join, relative, resolve, sep } from "node:path";
-import { parse } from "yaml";
+import { join, relative, resolve, sep } from "node:path";
 import { existsSync } from "node:fs";
-import { spawn } from "node:child_process";
 import { stat as stat$1, unwatchFile, watch, watchFile } from "fs";
 import { lstat as lstat$1, open, readdir as readdir$1, realpath as realpath$1, stat as stat$2 } from "fs/promises";
 import { EventEmitter } from "events";
 import * as sysPath from "path";
 import { Readable } from "node:stream";
 import { type } from "os";
+import { createHash } from "node:crypto";
 //#region node_modules/readdirp/esm/index.js
 const EntryTypes = {
 	FILE_TYPE: "files",
@@ -1560,335 +1560,6 @@ var esm_default = {
 	FSWatcher
 };
 //#endregion
-//#region src/plugins/builtin/exec.ts
-/** Maximum bytes of stdout/stderr to accumulate per process */
-const MAX_OUTPUT_BYTES = 1024 * 1024;
-function isRecord(value) {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-/**
-* Spawn a command and collect its output.
-* Does NOT use shell: true — arguments are passed directly to the executable.
-*/
-function runCommand(command, args, cwd) {
-	const start = performance.now();
-	return new Promise((resolve) => {
-		const child = spawn(command, [...args], {
-			cwd,
-			stdio: [
-				"ignore",
-				"pipe",
-				"pipe"
-			]
-		});
-		const chunks = [];
-		let totalBytes = 0;
-		child.stdout.on("data", (data) => {
-			if (totalBytes < MAX_OUTPUT_BYTES) {
-				chunks.push(data.toString());
-				totalBytes += data.length;
-			}
-		});
-		child.stderr.on("data", (data) => {
-			if (totalBytes < MAX_OUTPUT_BYTES) {
-				chunks.push(data.toString());
-				totalBytes += data.length;
-			}
-		});
-		child.on("close", (code) => {
-			const duration = Math.round(performance.now() - start);
-			const output = chunks.join("");
-			if (code === 0) resolve({
-				success: true,
-				duration,
-				summary: `${command} ${args.join(" ")} completed`,
-				output
-			});
-			else resolve({
-				success: false,
-				duration,
-				summary: `${command} ${args.join(" ")} failed (exit ${String(code)})`,
-				output
-			});
-		});
-		child.on("error", (err) => {
-			resolve({
-				success: false,
-				duration: Math.round(performance.now() - start),
-				summary: `Failed to spawn: ${err.message}`,
-				output: err.message
-			});
-		});
-	});
-}
-//#endregion
-//#region src/plugins/builtin/typescript.ts
-const WATCH_PATTERNS$1 = ["src/**/*.ts", "src/**/*.tsx"];
-const WELL_KNOWN_ACTIONS = [
-	"generate",
-	"build",
-	"dev",
-	"codegen"
-];
-async function readPackageJson(pkg, root) {
-	const manifestPath = join(root, pkg.path, "package.json");
-	const content = await readFile(manifestPath, "utf-8");
-	const parsed = JSON.parse(content);
-	if (!isRecord(parsed)) throw new Error(`Expected object in ${manifestPath}`);
-	return parsed;
-}
-function getScripts(manifest) {
-	const scripts = manifest["scripts"];
-	if (!isRecord(scripts)) return {};
-	const result = {};
-	for (const [key, value] of Object.entries(scripts)) if (typeof value === "string") result[key] = value;
-	return result;
-}
-function hasDep$1(manifest, name) {
-	for (const field of [
-		"dependencies",
-		"devDependencies",
-		"peerDependencies"
-	]) {
-		const deps = manifest[field];
-		if (isRecord(deps) && name in deps) return true;
-	}
-	return false;
-}
-const typescriptPlugin = {
-	type: "ecosystem",
-	name: "typescript",
-	manifest: "package.json",
-	async detect(pkg) {
-		return pkg.ecosystem === "typescript";
-	},
-	async getWatchPatterns() {
-		return WATCH_PATTERNS$1;
-	},
-	async getActions(pkg, root) {
-		try {
-			const scripts = getScripts(await readPackageJson(pkg, root));
-			const actions = [];
-			for (const action of WELL_KNOWN_ACTIONS) if (scripts[action]) actions.push(action);
-			for (const key of Object.keys(scripts)) if (!actions.includes(key) && !key.startsWith("pre") && !key.startsWith("post")) actions.push(key);
-			return actions;
-		} catch {
-			return [];
-		}
-	},
-	async execute(action, pkg, root, context) {
-		const cwd = join(root, pkg.path);
-		const pm = context.packageManager;
-		return runCommand(pm, ["run", action], cwd);
-	},
-	async canHandleDomainArtifact(domain, _artifact, pkg, root) {
-		if (domain !== "openapi") return null;
-		try {
-			const manifest = await readPackageJson(pkg, root);
-			if (hasDep$1(manifest, "openapi-typescript")) return {
-				action: "generate-openapi-ts",
-				description: "TypeScript types via openapi-typescript"
-			};
-			if (getScripts(manifest)["generate"]) return {
-				action: "generate",
-				description: "Generate via package script"
-			};
-		} catch {}
-		return null;
-	}
-};
-//#endregion
-//#region src/plugins/builtin/dart.ts
-const WATCH_PATTERNS = ["lib/**/*.dart", "bin/**/*.dart"];
-async function readPubspec(pkg, root) {
-	const manifestPath = join(root, pkg.path, "pubspec.yaml");
-	const parsed = parse(await readFile(manifestPath, "utf-8"));
-	if (!isRecord(parsed)) throw new Error(`Expected object in ${manifestPath}`);
-	return parsed;
-}
-function hasDep(manifest, name) {
-	for (const field of [
-		"dependencies",
-		"dev_dependencies",
-		"dependency_overrides"
-	]) {
-		const deps = manifest[field];
-		if (isRecord(deps) && name in deps) return true;
-	}
-	return false;
-}
-function isFlutterPackage(manifest) {
-	const deps = manifest["dependencies"];
-	if (!isRecord(deps)) return false;
-	return "flutter" in deps;
-}
-const dartPlugin = {
-	type: "ecosystem",
-	name: "dart",
-	manifest: "pubspec.yaml",
-	async detect(pkg) {
-		return pkg.ecosystem === "dart";
-	},
-	async getWatchPatterns() {
-		return WATCH_PATTERNS;
-	},
-	async getActions(pkg, root) {
-		try {
-			const manifest = await readPubspec(pkg, root);
-			const actions = ["pub-get"];
-			if (hasDep(manifest, "build_runner")) actions.push("codegen");
-			if (hasDep(manifest, "swagger_parser")) actions.push("generate-api");
-			return actions;
-		} catch {
-			return ["pub-get"];
-		}
-	},
-	async execute(action, pkg, root) {
-		const cwd = join(root, pkg.path);
-		let manifest;
-		try {
-			manifest = await readPubspec(pkg, root);
-		} catch {
-			manifest = {};
-		}
-		const dartCmd = isFlutterPackage(manifest) ? "flutter" : "dart";
-		switch (action) {
-			case "pub-get": return runCommand(dartCmd, ["pub", "get"], cwd);
-			case "codegen": return runCommand("dart", [
-				"run",
-				"build_runner",
-				"build",
-				"--delete-conflicting-outputs"
-			], cwd);
-			case "generate-api": return runCommand("dart", ["run", "swagger_parser"], cwd);
-			case "generate-openapi-dart": {
-				const swaggerResult = await runCommand("dart", ["run", "swagger_parser"], cwd);
-				if (!swaggerResult.success) return swaggerResult;
-				return runCommand("dart", [
-					"run",
-					"build_runner",
-					"build",
-					"--delete-conflicting-outputs"
-				], cwd);
-			}
-			default: return {
-				success: false,
-				duration: 0,
-				summary: `Unknown action: ${action}`
-			};
-		}
-	},
-	async canHandleDomainArtifact(domain, _artifact, pkg, root) {
-		if (domain !== "openapi") return null;
-		try {
-			if (hasDep(await readPubspec(pkg, root), "swagger_parser")) return {
-				action: "generate-openapi-dart",
-				description: "Dart client via swagger_parser + build_runner"
-			};
-		} catch {}
-		return null;
-	}
-};
-//#endregion
-//#region src/plugins/builtin/openapi.ts
-const OPENAPI_FILENAMES = new Set([
-	"openapi.json",
-	"openapi.yaml",
-	"openapi.yml",
-	"swagger.json",
-	"swagger.yaml"
-]);
-const openapiPlugin = {
-	type: "domain",
-	name: "openapi",
-	async detectBridge(artifact) {
-		const filename = basename(artifact);
-		return OPENAPI_FILENAMES.has(filename);
-	},
-	async exportArtifact(source, artifact, root, context) {
-		const sourceHandler = (await context.findEcosystemHandlers("openapi", artifact)).find((h) => h.pkg.path === source.path);
-		if (sourceHandler) return sourceHandler.plugin.execute(sourceHandler.capability.action, source, root, context);
-		return {
-			success: false,
-			duration: 0,
-			summary: `No export method found for ${source.path} — add a "generate" script or install an OpenAPI export plugin`
-		};
-	},
-	async generateDownstream(artifact, targets, root, context) {
-		const handlers = await context.findEcosystemHandlers("openapi", artifact);
-		const targetPaths = new Set(targets.map((t) => t.path));
-		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
-		if (relevantHandlers.length === 0) return [];
-		const results = [];
-		for (const handler of relevantHandlers) {
-			const result = await handler.plugin.execute(handler.capability.action, handler.pkg, root, context);
-			results.push(result);
-		}
-		return results;
-	}
-};
-//#endregion
-//#region src/plugins/loader.ts
-/**
-* Load all plugins — builtins are always present.
-*
-* External plugins from devDependencies (mido-plugin-*) will be loaded
-* on top of builtins when the external plugin system is implemented.
-*/
-function loadPlugins() {
-	return {
-		ecosystem: [typescriptPlugin, dartPlugin],
-		domain: [openapiPlugin]
-	};
-}
-//#endregion
-//#region src/plugins/registry.ts
-/**
-* Holds loaded plugins and provides context factory for plugin execution.
-*/
-var PluginRegistry = class {
-	ecosystemPlugins;
-	domainPlugins;
-	constructor(ecosystem, domain) {
-		this.ecosystemPlugins = ecosystem;
-		this.domainPlugins = domain;
-	}
-	/** Find the ecosystem plugin for a package based on its ecosystem name */
-	getEcosystemForPackage(pkg) {
-		return this.ecosystemPlugins.find((p) => p.name === pkg.ecosystem);
-	}
-	/** Find the domain plugin that can handle a bridge artifact */
-	async getDomainForArtifact(artifact, root) {
-		for (const plugin of this.domainPlugins) if (await plugin.detectBridge(artifact, root)) return plugin;
-	}
-	/** Find all ecosystem plugins that can handle a domain artifact across target packages */
-	async findEcosystemHandlers(domain, artifact, targets, root) {
-		const handlers = [];
-		for (const pkg of targets) for (const plugin of this.ecosystemPlugins) {
-			if (!plugin.canHandleDomainArtifact) continue;
-			const capability = await plugin.canHandleDomainArtifact(domain, artifact, pkg, root);
-			if (capability) handlers.push({
-				plugin,
-				pkg,
-				capability
-			});
-		}
-		return handlers;
-	}
-	/** Create an ExecutionContext for plugin execution */
-	createContext(graph, root, packageManager) {
-		return {
-			graph,
-			root,
-			packageManager,
-			findEcosystemHandlers: async (domain, artifact) => {
-				const allTargets = [...graph.packages.values()];
-				return this.findEcosystemHandlers(domain, artifact, allTargets, root);
-			}
-		};
-	}
-};
-//#endregion
 //#region src/watcher/pm-detect.ts
 const LOCKFILE_TO_PM = new Map([
 	["bun.lock", "bun"],
@@ -1928,6 +1599,79 @@ function createDebouncer(callback, delayMs = DEFAULT_DELAY_MS) {
 	};
 }
 //#endregion
+//#region src/watcher/pipeline.ts
+/**
+* Hash a file's contents. Returns empty string if the file doesn't exist.
+*/
+async function hashFile(filePath) {
+	try {
+		const content = await readFile(filePath);
+		return createHash("sha256").update(content).digest("hex");
+	} catch {
+		return "";
+	}
+}
+/**
+* Hash all output files for a step. Returns a map of path → hash.
+*/
+async function hashOutputFiles(root, paths) {
+	const hashes = /* @__PURE__ */ new Map();
+	for (const relPath of paths) {
+		const hash = await hashFile(join(root, relPath));
+		hashes.set(relPath, hash);
+	}
+	return hashes;
+}
+/**
+* Compare before/after hashes to detect changes.
+* Treats files that don't exist in either snapshot as "changed"
+* (the step was expected to create them but didn't).
+*/
+function hasChanges(before, after) {
+	for (const [path, beforeHash] of before) {
+		const afterHash = after.get(path) ?? "";
+		if (!beforeHash && !afterHash) return true;
+		if (afterHash !== beforeHash) return true;
+	}
+	return false;
+}
+/**
+* Execute a pipeline of steps sequentially.
+*
+* - Each step runs after the previous one succeeds
+* - If a step fails, the pipeline stops immediately
+* - Output files are hashed before/after each step for change detection
+* - Returns a full result with per-step timing and change status
+*/
+async function runPipeline(steps, root) {
+	const results = [];
+	let totalDuration = 0;
+	for (const step of steps) {
+		const beforeHashes = step.outputPaths ? await hashOutputFiles(root, step.outputPaths) : /* @__PURE__ */ new Map();
+		const result = await step.execute();
+		totalDuration += result.duration;
+		const afterHashes = step.outputPaths ? await hashOutputFiles(root, step.outputPaths) : /* @__PURE__ */ new Map();
+		const changed = step.outputPaths ? hasChanges(beforeHashes, afterHashes) : true;
+		results.push({
+			step,
+			success: result.success,
+			duration: result.duration,
+			output: result.output,
+			changed
+		});
+		if (!result.success) return {
+			success: false,
+			totalDuration,
+			steps: results
+		};
+	}
+	return {
+		success: true,
+		totalDuration,
+		steps: results
+	};
+}
+//#endregion
 //#region src/watcher/dev.ts
 const MAGENTA = "\x1B[35m";
 const CONFIG_FILENAME = "mido.yml";
@@ -1951,6 +1695,9 @@ function logChange(path) {
 }
 function logWaiting() {
 	log(`${DIM}\u2298${RESET}`, `${DIM}waiting for next change...${RESET}`);
+}
+function logUnchanged(message) {
+	log(`${DIM}\u00B7${RESET}`, `${DIM}${message}${RESET}`);
 }
 function logOutput(output) {
 	const trimmed = output.trim().split("\n").slice(0, 5);
@@ -2025,6 +1772,18 @@ function printStartup(resolved, registry) {
 	printBridgeSummary(resolved, registry);
 	console.log(`  ${DIM}Waiting for changes...${RESET}\n`);
 }
+function printStepResult(stepResult) {
+	if (!stepResult.success) {
+		logFail(`${stepResult.step.description.replace(/\.\.\.$/, "")} failed (${formatMs(stepResult.duration)})`);
+		if (stepResult.output) logOutput(stepResult.output);
+		return;
+	}
+	if (!stepResult.changed) {
+		logUnchanged(`${stepResult.step.description.replace(/\.\.\.$/, "")} \u2014 unchanged`);
+		return;
+	}
+	logSuccess(`${stepResult.step.description.replace(/\.\.\.$/, "")} (${formatMs(stepResult.duration)})`);
+}
 async function executeBridge(resolved, registry, graph, root, pm) {
 	const bridge = resolved.bridge;
 	const context = registry.createContext(graph, root, pm);
@@ -2034,6 +1793,17 @@ async function executeBridge(resolved, registry, graph, root, pm) {
 		return;
 	}
 	if (resolved.domain) {
+		if (resolved.domain.buildPipeline) {
+			const steps = await resolved.domain.buildPipeline(resolved.source, bridge.artifact, resolved.targets, root, context);
+			if (steps.length > 0) {
+				const pipelineResult = await runPipelineWithProgress(steps, root);
+				if (pipelineResult.success) {
+					const stepCount = pipelineResult.steps.length;
+					logSuccess(`${resolved.domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) \u2014 ${stepCount} step(s)`);
+				} else logWaiting();
+				return;
+			}
+		}
 		logStep(`mido-${resolved.domain.name}: exporting spec...`);
 		const exportResult = await resolved.domain.exportArtifact(resolved.source, bridge.artifact, root, context);
 		if (!exportResult.success) {
@@ -2074,6 +1844,14 @@ async function executeBridge(resolved, registry, graph, root, pm) {
 	logFail(`No plugin found for ${bridge.artifact} \u2014 add run: <script> to this bridge`);
 	logWaiting();
 }
+/**
+* Run a pipeline step-by-step, printing progress as each step completes.
+*/
+async function runPipelineWithProgress(steps, root) {
+	const result = await runPipeline(steps, root);
+	for (const stepResult of result.steps) printStepResult(stepResult);
+	return result;
+}
 function printResult(result, label) {
 	if (result.success) logSuccess(`${label}: synced (${formatMs(result.duration)})`);
 	else {
@@ -2084,8 +1862,8 @@ function printResult(result, label) {
 }
 function matchesBridge(relPath, bridge) {
 	for (const pattern of bridge.watchPatterns) {
-		const patternBase = pattern.replace(/\*\*.*/, "");
-		if (relPath.startsWith(patternBase) || pattern.includes("**")) return true;
+		const patternBase = pattern.replace(/\/?\*\*.*$/, "");
+		if (patternBase && relPath.startsWith(patternBase)) return true;
 	}
 	return false;
 }
@@ -2249,4 +2027,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-B7s1vOZr.js.map
+//# sourceMappingURL=dev-CqjzyeDh.js.map

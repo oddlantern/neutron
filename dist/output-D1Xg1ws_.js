@@ -7,6 +7,8 @@ const RED = "\x1B[31m";
 const GREEN = "\x1B[32m";
 const YELLOW = "\x1B[33m";
 const CYAN = "\x1B[36m";
+/** mido brand orange — ANSI 256-color 208 */
+const ORANGE = "\x1B[38;5;208m";
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
 const WARN = `${YELLOW}⚠${RESET}`;
@@ -34,6 +36,6 @@ function formatHeader(workspaceName, packageCount) {
 	return `\n${CYAN}${BOLD}mido${RESET} ${DIM}— workspace: ${workspaceName} (${packageCount} packages)${RESET}\n`;
 }
 //#endregion
-export { RED as a, formatCheckResult as c, GREEN as i, formatHeader as l, CYAN as n, RESET as o, DIM as r, YELLOW as s, BOLD as t, formatSummary as u };
+export { ORANGE as a, YELLOW as c, formatSummary as d, GREEN as i, formatCheckResult as l, CYAN as n, RED as o, DIM as r, RESET as s, BOLD as t, formatHeader as u };
 
-//# sourceMappingURL=output-zdeO_w5V.js.map
+//# sourceMappingURL=output-D1Xg1ws_.js.map

@@ -10,6 +10,49 @@ export interface ExecuteResult {
   readonly output?: string | undefined;
 }
 
+// ─── Pipeline types ──────────────────────────────────────────────────────────
+
+/** Metadata describing a single pipeline step */
+export interface PipelineStep {
+  /** Short identifier (e.g., "export-spec", "prepare-spec", "generate-ts") */
+  readonly name: string;
+  /** Which plugin owns this step (e.g., "openapi", "typescript", "dart") */
+  readonly plugin: string;
+  /** Human-readable description shown during execution */
+  readonly description: string;
+}
+
+/** An executable pipeline step — includes the step metadata plus how to run it */
+export interface ExecutablePipelineStep extends PipelineStep {
+  /** Execute this step */
+  execute(): Promise<ExecuteResult>;
+  /** Output file paths to hash for change detection (relative to root) */
+  readonly outputPaths?: readonly string[] | undefined;
+}
+
+/** Result of a single pipeline step execution */
+export interface PipelineStepResult {
+  readonly step: PipelineStep;
+  readonly success: boolean;
+  readonly duration: number;
+  readonly output?: string | undefined;
+  /** Whether output files changed (true if no outputPaths specified) */
+  readonly changed: boolean;
+}
+
+/** Result of a full pipeline execution */
+export interface PipelineResult {
+  readonly success: boolean;
+  readonly totalDuration: number;
+  readonly steps: readonly PipelineStepResult[];
+}
+
+/** Watch path suggestion returned by plugins during init */
+export interface WatchPathSuggestion {
+  readonly paths: readonly string[];
+  readonly reason: string;
+}
+
 /**
  * Ecosystem plugin — handles language-level operations.
  *
@@ -63,6 +106,13 @@ export interface EcosystemPlugin {
     pkg: WorkspacePackage,
     root: string,
   ): Promise<DomainCapability | null>;
+
+  /**
+   * Suggest watch paths for a bridge during init.
+   * Ecosystem plugins know their package's internal structure
+   * (e.g., TypeScript watches src/**\/*.ts, Dart watches lib/**\/*.dart).
+   */
+  suggestWatchPaths?(pkg: WorkspacePackage, root: string): Promise<WatchPathSuggestion | null>;
 }
 
 /** Returned by canHandleDomainArtifact when the plugin can handle it */
@@ -112,6 +162,31 @@ export interface DomainPlugin {
     root: string,
     context: ExecutionContext,
   ): Promise<readonly ExecuteResult[]>;
+
+  /**
+   * Build the full executable pipeline for a bridge.
+   * Returns an ordered list of steps: export → prepare → downstream generators.
+   * The pipeline runner executes these sequentially with per-step timing and output diffing.
+   */
+  buildPipeline?(
+    source: WorkspacePackage,
+    artifact: string,
+    targets: readonly WorkspacePackage[],
+    root: string,
+    context: ExecutionContext,
+  ): Promise<readonly ExecutablePipelineStep[]>;
+
+  /**
+   * Suggest watch paths for a bridge during init.
+   * Domain plugins can inspect the workspace to find the real source of changes
+   * (e.g., Elysia routes in apps/server/src/routes/ for an OpenAPI bridge).
+   */
+  suggestWatchPaths?(
+    source: WorkspacePackage,
+    artifact: string,
+    packages: ReadonlyMap<string, WorkspacePackage>,
+    root: string,
+  ): Promise<WatchPathSuggestion | null>;
 }
 
 /**
@@ -122,10 +197,7 @@ export interface ExecutionContext {
   /** The full workspace graph */
   readonly graph: WorkspaceGraph;
   /** Find ecosystem plugins that can handle a domain artifact */
-  findEcosystemHandlers(
-    domain: string,
-    artifact: string,
-  ): Promise<readonly EcosystemHandler[]>;
+  findEcosystemHandlers(domain: string, artifact: string): Promise<readonly EcosystemHandler[]>;
   /** Detected package manager ("bun", "npm", "pnpm", "yarn") */
   readonly packageManager: string;
   /** Workspace root absolute path */

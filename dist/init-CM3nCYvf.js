@@ -1,12 +1,14 @@
 #!/usr/bin/env node
+import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-DBSgOfQT.js";
-import { runCheck } from "./check-DFr71boJ.js";
+import { t as loadConfig } from "./loader-ls4c5R1g.js";
+import { runCheck } from "./check-_9LA8JZy.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-C1i9dp7M.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { cancel, confirm, intro, isCancel, log, multiselect, outro, path, select, spinner, text } from "@clack/prompts";
+import { cancel, confirm, intro, isCancel, log, multiselect, note, outro, path, select, spinner, text } from "@clack/prompts";
 import { execSync } from "node:child_process";
 //#region src/discovery/scanner.ts
 /** Directories to always skip during scanning */
@@ -252,12 +254,18 @@ async function runFirstTime(root, configPath, parsers) {
 	const finalEcosystems = groupByEcosystem(finalSupported);
 	const detectedBridges = [...await detectBridges(root, finalSupported)];
 	if (detectedBridges.length > 0) {
-		const bridgeLines = detectedBridges.map((b) => `  ${b.source} \u2192 ${b.target} via ${b.artifact}`).join("\n");
-		log.info(`Detected ${detectedBridges.length} bridge(s):\n${bridgeLines}`);
+		const bridgeLines = detectedBridges.map((b) => `  ${ORANGE}${b.source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${b.target}${RESET} ${DIM}via${RESET} ${BOLD}${b.artifact}${RESET}`).join("\n");
+		log.info(`Detected ${ORANGE}${detectedBridges.length}${RESET} bridge(s):\n${bridgeLines}`);
 	}
+	const { ecosystem, domain } = loadPlugins();
+	const pluginRegistry = new PluginRegistry(ecosystem, domain);
+	const tmpPackageMap = buildPackageMap(finalSupported);
 	const bridgesWithWatch = [];
 	for (const b of detectedBridges) {
-		const watch = await promptWatchPaths(b.source);
+		const sourcePackage = tmpPackageMap.get(b.source);
+		let suggestion = null;
+		if (sourcePackage) suggestion = await pluginRegistry.suggestWatchPaths(sourcePackage, b.artifact, tmpPackageMap, root);
+		const watch = await promptWatchPaths(b.source, suggestion);
 		bridgesWithWatch.push({
 			source: b.source,
 			target: b.target,
@@ -280,21 +288,28 @@ async function runFirstTime(root, configPath, parsers) {
 	});
 	if (isCancel(nameResult)) handleCancel();
 	await writeFile(configPath, renderYaml(buildConfigObject(nameResult || dirName, finalEcosystems, bridgesWithWatch, envFiles)), "utf-8");
-	log.success(`${CONFIG_FILENAME} written`);
+	log.success(`${ORANGE}${CONFIG_FILENAME}${RESET} written`);
 	const installHooks = await confirm({
 		message: "Install git hooks?",
 		initialValue: true
 	});
 	if (isCancel(installHooks)) handleCancel();
+	let hooksInstalled = false;
 	if (installHooks) {
-		const { runInstall } = await import("./install-J5kPjvWO.js");
+		const { runInstall } = await import("./install-DHB3-A6u.js");
 		const installResult = await runInstall(root);
 		if (installResult !== 0) return installResult;
+		hooksInstalled = true;
 	}
 	await cleanupReplacedTooling(root);
-	await runPostInitCheck(parsers);
-	outro("Workspace ready.");
-	return 0;
+	const checksPass = await runPostInitCheck(parsers);
+	return promptNextSteps(parsers, {
+		packageCount: finalSupported.length,
+		ecosystemCount: Object.keys(finalEcosystems).length,
+		bridgeCount: bridgesWithWatch.length,
+		hooksInstalled,
+		checksPass
+	});
 }
 async function runReconciliation(root, configPath, parsers) {
 	printBanner();
@@ -327,12 +342,12 @@ async function runReconciliation(root, configPath, parsers) {
 	const statusLines = [];
 	for (const path of kept) {
 		const eco = existingEcosystemForPath.get(path) ?? "";
-		statusLines.push(`  \u2713 ${path} (${eco})`);
+		statusLines.push(`  ${GREEN}\u2713${RESET} ${path} ${DIM}(${eco})${RESET}`);
 	}
-	for (const pkg of newPackages) statusLines.push(`  + ${pkg.path} (${pkg.ecosystem}) \u2190 NEW`);
+	for (const pkg of newPackages) statusLines.push(`  ${ORANGE}+${RESET} ${ORANGE}${pkg.path}${RESET} ${DIM}(${pkg.ecosystem})${RESET} ${ORANGE}\u2190 NEW${RESET}`);
 	for (const path of missing) {
 		const eco = existingEcosystemForPath.get(path) ?? "";
-		statusLines.push(`  \u26A0 ${path} (${eco}) \u2190 NOT FOUND ON DISK`);
+		statusLines.push(`  ${DIM}\u26A0 ${path} (${eco}) \u2190 NOT FOUND ON DISK${RESET}`);
 	}
 	log.info(`Packages:\n${statusLines.join("\n")}`);
 	let configChanged = false;
@@ -422,29 +437,113 @@ async function runReconciliation(root, configPath, parsers) {
 		await writeFile(configPath, renderYaml(configToObject(existing)), "utf-8");
 		log.success("Config updated");
 	} else log.success("No changes needed");
-	await runPostInitCheck(parsers);
-	outro("Workspace ready.");
-	return 0;
+	const checksPass = await runPostInitCheck(parsers);
+	let totalPackages = 0;
+	for (const group of Object.values(existing.ecosystems)) totalPackages += group.packages.length;
+	return promptNextSteps(parsers, {
+		packageCount: totalPackages,
+		ecosystemCount: Object.keys(existing.ecosystems).length,
+		bridgeCount: updatedBridges.length,
+		hooksInstalled: false,
+		checksPass
+	});
 }
 async function runPostInitCheck(parsers) {
 	if (await runCheck(parsers, { quiet: true }) === 0) {
-		log.success("All checks passed");
-		return;
+		log.success(`${GREEN}All checks passed${RESET}`);
+		return true;
 	}
 	const { config, root } = await loadConfig();
-	const { buildWorkspaceGraph } = await import("./workspace-Zl3e0e5g.js").then((n) => n.n);
-	const { findVersionMismatches } = await import("./versions-BIEdbVj8.js").then((n) => n.r);
+	const { buildWorkspaceGraph } = await import("./workspace-BNr04jHQ.js").then((n) => n.n);
+	const { findVersionMismatches } = await import("./versions-DL21hmPA.js").then((n) => n.r);
 	const { loadLock } = await import("./lock-CzV2VIf4.js").then((n) => n.n);
 	const mismatches = findVersionMismatches(await buildWorkspaceGraph(config, root, parsers), await loadLock(root));
-	if (mismatches.length === 0) return;
+	if (mismatches.length === 0) {
+		log.warn(`${DIM}Some checks failed. Run${RESET} ${BOLD}mido check${RESET} ${DIM}to see details.${RESET}`);
+		return false;
+	}
 	const fix = await confirm({
 		message: `Found ${mismatches.length} version mismatch(es). Fix now?`,
 		initialValue: true
 	});
 	if (isCancel(fix)) handleCancel();
-	if (fix) await runCheck(parsers, { fix: true });
+	if (fix) return await runCheck(parsers, { fix: true }) === 0;
+	return false;
 }
-async function promptWatchPaths(source) {
+const HELP_LINES = [
+	`${BOLD}mido dev${RESET}              ${DIM}Watch bridges and regenerate on changes${RESET}`,
+	`${BOLD}mido check${RESET}            ${DIM}Run all workspace consistency checks${RESET}`,
+	`${BOLD}mido check --fix${RESET}      ${DIM}Interactively resolve version mismatches${RESET}`,
+	`${BOLD}mido install${RESET}          ${DIM}Install git hooks${RESET}`
+].join("\n");
+/**
+* Show a celebratory summary and next-steps menu after init completes.
+* Returns the exit code from the chosen action.
+*/
+async function promptNextSteps(parsers, summary) {
+	const summaryLines = [];
+	summaryLines.push(`${GREEN}${BOLD}${CONFIG_FILENAME}${RESET} ${DIM}written${RESET}`);
+	summaryLines.push(`${DIM}${summary.packageCount} package(s) across ${summary.ecosystemCount} ecosystem(s)${RESET}`);
+	if (summary.bridgeCount > 0) summaryLines.push(`${ORANGE}${summary.bridgeCount}${RESET} ${DIM}bridge(s) configured${RESET}`);
+	if (summary.hooksInstalled) summaryLines.push(`${DIM}git hooks installed${RESET}`);
+	if (summary.checksPass) summaryLines.push(`${GREEN}all checks passed${RESET}`);
+	note(summaryLines.join("\n"), `${ORANGE}${BOLD}Workspace ready${RESET}`);
+	const next = await select({
+		message: "What's next?",
+		options: [
+			{
+				value: "dev",
+				label: "Start watching",
+				hint: "mido dev"
+			},
+			{
+				value: "check",
+				label: "Check workspace health",
+				hint: "mido check"
+			},
+			{
+				value: "help",
+				label: "View help",
+				hint: "mido help"
+			},
+			{
+				value: "exit",
+				label: "Exit"
+			}
+		]
+	});
+	if (isCancel(next)) {
+		outro(`${DIM}Happy coding!${RESET}`);
+		return 0;
+	}
+	switch (next) {
+		case "dev": {
+			outro(`${ORANGE}Starting watcher...${RESET}`);
+			const { runDev } = await import("./dev-CqjzyeDh.js");
+			return runDev(parsers, {});
+		}
+		case "check":
+			outro(`${ORANGE}Running checks...${RESET}`);
+			return runCheck(parsers, {});
+		case "help":
+			note(HELP_LINES, `${ORANGE}${BOLD}Commands${RESET}`);
+			outro(`${DIM}Happy coding!${RESET}`);
+			return 0;
+		default:
+			outro(`${DIM}Happy coding!${RESET}`);
+			return 0;
+	}
+}
+async function promptWatchPaths(source, suggestion) {
+	if (suggestion) {
+		const suggestedValue = suggestion.paths.join(", ");
+		const useIt = await confirm({
+			message: `${suggestion.reason}. Watch ${suggestedValue}?`,
+			initialValue: true
+		});
+		if (isCancel(useIt)) handleCancel();
+		if (useIt) return suggestion.paths;
+	}
 	const watchResult = await text({
 		message: `What files trigger regeneration?`,
 		placeholder: `${source}/**`,
@@ -556,7 +655,7 @@ async function promptAdditionalBridges(root, packagePaths) {
 			artifact: relArtifact,
 			watch
 		});
-		log.step(`Bridge: ${source} \u2192 ${target} via ${relArtifact}`);
+		log.step(`Bridge: ${ORANGE}${source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${target}${RESET} ${DIM}via${RESET} ${BOLD}${relArtifact}${RESET}`);
 		const another = await confirm({
 			message: "Add another bridge?",
 			initialValue: false
@@ -565,6 +664,23 @@ async function promptAdditionalBridges(root, packagePaths) {
 		adding = another;
 	}
 	return result;
+}
+/**
+* Build a lightweight WorkspacePackage map from discovered packages.
+* Used during init to provide context to plugin watch path suggestions
+* before the full workspace graph is built.
+*/
+function buildPackageMap(packages) {
+	const map = /* @__PURE__ */ new Map();
+	for (const pkg of packages) map.set(pkg.path, {
+		name: pkg.path.split("/").pop() ?? pkg.path,
+		path: pkg.path,
+		ecosystem: pkg.ecosystem,
+		version: void 0,
+		dependencies: [],
+		localDependencies: []
+	});
+	return map;
 }
 function getAllPackagePaths(config) {
 	const paths = [];
@@ -646,8 +762,8 @@ function renderYaml(config) {
 function formatEcosystemList(ecosystems) {
 	const lines = [];
 	for (const [name, group] of Object.entries(ecosystems)) {
-		lines.push(`  ${name} (${group.packages.length} packages)`);
-		for (const pkg of group.packages) lines.push(`    ${pkg}`);
+		lines.push(`  ${ORANGE}${BOLD}${name}${RESET} ${DIM}(${group.packages.length} packages)${RESET}`);
+		for (const pkg of group.packages) lines.push(`    ${DIM}${pkg}${RESET}`);
 	}
 	return lines.join("\n");
 }
@@ -748,4 +864,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-Bj_4_bZU.js.map
+//# sourceMappingURL=init-CM3nCYvf.js.map

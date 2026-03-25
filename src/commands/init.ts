@@ -10,6 +10,7 @@ import {
   isCancel,
   log,
   multiselect,
+  note,
   outro,
   path as clackPath,
   select,
@@ -23,8 +24,12 @@ import { loadConfig } from '../config/loader.js';
 import { scanRepo, type DiscoveredPackage } from '../discovery/scanner.js';
 import { detectBridges, detectEnvFiles, type BridgeCandidate } from '../discovery/heuristics.js';
 import { printBanner } from '../banner.js';
+import { BOLD, DIM, GREEN, ORANGE, RESET } from '../output.js';
 import { runCheck } from './check.js';
 import type { ParserRegistry } from '../graph/workspace.js';
+import { loadPlugins } from '../plugins/loader.js';
+import { PluginRegistry } from '../plugins/registry.js';
+import type { WatchPathSuggestion } from '../plugins/types.js';
 
 const CONFIG_FILENAME = 'mido.yml';
 
@@ -63,7 +68,11 @@ export async function runInit(root: string, parsers: ParserRegistry): Promise<nu
 
 // ─── First-time init ────────────────────────────────────────────────────────
 
-async function runFirstTime(root: string, configPath: string, parsers: ParserRegistry): Promise<number> {
+async function runFirstTime(
+  root: string,
+  configPath: string,
+  parsers: ParserRegistry,
+): Promise<number> {
   printBanner();
   intro('mido init');
 
@@ -94,7 +103,9 @@ async function runFirstTime(root: string, configPath: string, parsers: ParserReg
   // Group by ecosystem and display
   const ecosystems = groupByEcosystem(supported);
   const packageLines = formatEcosystemList(ecosystems);
-  log.info(`Found ${supported.length} packages across ${Object.keys(ecosystems).length} ecosystems:\n${packageLines}`);
+  log.info(
+    `Found ${supported.length} packages across ${Object.keys(ecosystems).length} ecosystems:\n${packageLines}`,
+  );
 
   // Confirm or adjust packages
   const adjustPackages = await select({
@@ -133,19 +144,44 @@ async function runFirstTime(root: string, configPath: string, parsers: ParserReg
   const detectedBridges: BridgeCandidate[] = [...(await detectBridges(root, finalSupported))];
 
   if (detectedBridges.length > 0) {
-    const bridgeLines = detectedBridges.map((b) => `  ${b.source} \u2192 ${b.target} via ${b.artifact}`).join('\n');
-    log.info(`Detected ${detectedBridges.length} bridge(s):\n${bridgeLines}`);
+    const bridgeLines = detectedBridges
+      .map(
+        (b) =>
+          `  ${ORANGE}${b.source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${b.target}${RESET} ${DIM}via${RESET} ${BOLD}${b.artifact}${RESET}`,
+      )
+      .join('\n');
+    log.info(`Detected ${ORANGE}${detectedBridges.length}${RESET} bridge(s):\n${bridgeLines}`);
   }
 
-  // Prompt for watch paths on detected bridges
+  // Load plugins to get watch path suggestions
+  const { ecosystem, domain } = loadPlugins();
+  const pluginRegistry = new PluginRegistry(ecosystem, domain);
+
+  // Build a temporary package map for plugin suggestions
+  const tmpPackageMap = buildPackageMap(finalSupported);
+
+  // Prompt for watch paths on detected bridges (with plugin suggestions)
   const bridgesWithWatch: BridgeWithWatch[] = [];
   for (const b of detectedBridges) {
-    const watch = await promptWatchPaths(b.source);
+    const sourcePackage = tmpPackageMap.get(b.source);
+    let suggestion: WatchPathSuggestion | null = null;
+    if (sourcePackage) {
+      suggestion = await pluginRegistry.suggestWatchPaths(
+        sourcePackage,
+        b.artifact,
+        tmpPackageMap,
+        root,
+      );
+    }
+    const watch = await promptWatchPaths(b.source, suggestion);
     bridgesWithWatch.push({ source: b.source, target: b.target, artifact: b.artifact, watch });
   }
 
   // Prompt for additional bridges (includes watch prompt)
-  const manualBridges = await promptAdditionalBridges(root, finalSupported.map((p) => p.path));
+  const manualBridges = await promptAdditionalBridges(
+    root,
+    finalSupported.map((p) => p.path),
+  );
   bridgesWithWatch.push(...manualBridges);
 
   // Detect env files
@@ -171,7 +207,7 @@ async function runFirstTime(root: string, configPath: string, parsers: ParserReg
   const config = buildConfigObject(name, finalEcosystems, bridgesWithWatch, envFiles);
   const yaml = renderYaml(config);
   await writeFile(configPath, yaml, 'utf-8');
-  log.success(`${CONFIG_FILENAME} written`);
+  log.success(`${ORANGE}${CONFIG_FILENAME}${RESET} written`);
 
   // Offer hooks
   const installHooks = await confirm({ message: 'Install git hooks?', initialValue: true });
@@ -179,27 +215,38 @@ async function runFirstTime(root: string, configPath: string, parsers: ParserReg
     handleCancel();
   }
 
+  let hooksInstalled = false;
   if (installHooks) {
     const { runInstall } = await import('./install.js');
     const installResult = await runInstall(root);
     if (installResult !== 0) {
       return installResult;
     }
+    hooksInstalled = true;
   }
 
   // Clean up replaced tooling
   await cleanupReplacedTooling(root);
 
   // Run health check and offer to fix mismatches
-  await runPostInitCheck(parsers);
+  const checksPass = await runPostInitCheck(parsers);
 
-  outro('Workspace ready.');
-  return 0;
+  return promptNextSteps(parsers, {
+    packageCount: finalSupported.length,
+    ecosystemCount: Object.keys(finalEcosystems).length,
+    bridgeCount: bridgesWithWatch.length,
+    hooksInstalled,
+    checksPass,
+  });
 }
 
 // ─── Reconciliation mode ────────────────────────────────────────────────────
 
-async function runReconciliation(root: string, configPath: string, parsers: ParserRegistry): Promise<number> {
+async function runReconciliation(
+  root: string,
+  configPath: string,
+  parsers: ParserRegistry,
+): Promise<number> {
   printBanner();
   intro('mido init \u2014 reconciling with existing config');
 
@@ -256,14 +303,16 @@ async function runReconciliation(root: string, configPath: string, parsers: Pars
   const statusLines: string[] = [];
   for (const path of kept) {
     const eco = existingEcosystemForPath.get(path) ?? '';
-    statusLines.push(`  \u2713 ${path} (${eco})`);
+    statusLines.push(`  ${GREEN}\u2713${RESET} ${path} ${DIM}(${eco})${RESET}`);
   }
   for (const pkg of newPackages) {
-    statusLines.push(`  + ${pkg.path} (${pkg.ecosystem}) \u2190 NEW`);
+    statusLines.push(
+      `  ${ORANGE}+${RESET} ${ORANGE}${pkg.path}${RESET} ${DIM}(${pkg.ecosystem})${RESET} ${ORANGE}\u2190 NEW${RESET}`,
+    );
   }
   for (const path of missing) {
     const eco = existingEcosystemForPath.get(path) ?? '';
-    statusLines.push(`  \u26A0 ${path} (${eco}) \u2190 NOT FOUND ON DISK`);
+    statusLines.push(`  ${DIM}\u26A0 ${path} (${eco}) \u2190 NOT FOUND ON DISK${RESET}`);
   }
   log.info(`Packages:\n${statusLines.join('\n')}`);
 
@@ -391,21 +440,32 @@ async function runReconciliation(root: string, configPath: string, parsers: Pars
   }
 
   // Run health check and offer to fix mismatches
-  await runPostInitCheck(parsers);
+  const checksPass = await runPostInitCheck(parsers);
 
-  outro('Workspace ready.');
-  return 0;
+  // Count packages and ecosystems from the final config
+  let totalPackages = 0;
+  for (const group of Object.values(existing.ecosystems)) {
+    totalPackages += group.packages.length;
+  }
+
+  return promptNextSteps(parsers, {
+    packageCount: totalPackages,
+    ecosystemCount: Object.keys(existing.ecosystems).length,
+    bridgeCount: updatedBridges.length,
+    hooksInstalled: false,
+    checksPass,
+  });
 }
 
 // ─── Post-init health check ─────────────────────────────────────────────────
 
-async function runPostInitCheck(parsers: ParserRegistry): Promise<void> {
+async function runPostInitCheck(parsers: ParserRegistry): Promise<boolean> {
   // Run check quietly to detect issues
   const checkResult = await runCheck(parsers, { quiet: true });
 
   if (checkResult === 0) {
-    log.success('All checks passed');
-    return;
+    log.success(`${GREEN}All checks passed${RESET}`);
+    return true;
   }
 
   // There are failures — check specifically for version mismatches
@@ -419,7 +479,10 @@ async function runPostInitCheck(parsers: ParserRegistry): Promise<void> {
   const mismatches = findVersionMismatches(graph, lock);
 
   if (mismatches.length === 0) {
-    return;
+    log.warn(
+      `${DIM}Some checks failed. Run${RESET} ${BOLD}mido check${RESET} ${DIM}to see details.${RESET}`,
+    );
+    return false;
   }
 
   const fix = await confirm({
@@ -431,13 +494,113 @@ async function runPostInitCheck(parsers: ParserRegistry): Promise<void> {
   }
 
   if (fix) {
-    await runCheck(parsers, { fix: true });
+    const fixResult = await runCheck(parsers, { fix: true });
+    return fixResult === 0;
   }
+
+  return false;
+}
+
+// ─── Next steps ──────────────────────────────────────────────────────────────
+
+const HELP_LINES = [
+  `${BOLD}mido dev${RESET}              ${DIM}Watch bridges and regenerate on changes${RESET}`,
+  `${BOLD}mido check${RESET}            ${DIM}Run all workspace consistency checks${RESET}`,
+  `${BOLD}mido check --fix${RESET}      ${DIM}Interactively resolve version mismatches${RESET}`,
+  `${BOLD}mido install${RESET}          ${DIM}Install git hooks${RESET}`,
+].join('\n');
+
+/**
+ * Show a celebratory summary and next-steps menu after init completes.
+ * Returns the exit code from the chosen action.
+ */
+async function promptNextSteps(parsers: ParserRegistry, summary: InitSummary): Promise<number> {
+  // Build a styled summary of what was created
+  const summaryLines: string[] = [];
+  summaryLines.push(`${GREEN}${BOLD}${CONFIG_FILENAME}${RESET} ${DIM}written${RESET}`);
+  summaryLines.push(
+    `${DIM}${summary.packageCount} package(s) across ${summary.ecosystemCount} ecosystem(s)${RESET}`,
+  );
+  if (summary.bridgeCount > 0) {
+    summaryLines.push(`${ORANGE}${summary.bridgeCount}${RESET} ${DIM}bridge(s) configured${RESET}`);
+  }
+  if (summary.hooksInstalled) {
+    summaryLines.push(`${DIM}git hooks installed${RESET}`);
+  }
+  if (summary.checksPass) {
+    summaryLines.push(`${GREEN}all checks passed${RESET}`);
+  }
+
+  note(summaryLines.join('\n'), `${ORANGE}${BOLD}Workspace ready${RESET}`);
+
+  const next = await select({
+    message: "What's next?",
+    options: [
+      { value: 'dev', label: 'Start watching', hint: 'mido dev' },
+      { value: 'check', label: 'Check workspace health', hint: 'mido check' },
+      { value: 'help', label: 'View help', hint: 'mido help' },
+      { value: 'exit', label: 'Exit' },
+    ],
+  });
+
+  if (isCancel(next)) {
+    outro(`${DIM}Happy coding!${RESET}`);
+    return 0;
+  }
+
+  switch (next) {
+    case 'dev': {
+      outro(`${ORANGE}Starting watcher...${RESET}`);
+      const { runDev } = await import('../watcher/dev.js');
+      return runDev(parsers, {});
+    }
+    case 'check': {
+      outro(`${ORANGE}Running checks...${RESET}`);
+      return runCheck(parsers, {});
+    }
+    case 'help': {
+      note(HELP_LINES, `${ORANGE}${BOLD}Commands${RESET}`);
+      outro(`${DIM}Happy coding!${RESET}`);
+      return 0;
+    }
+    case 'exit':
+    default: {
+      outro(`${DIM}Happy coding!${RESET}`);
+      return 0;
+    }
+  }
+}
+
+interface InitSummary {
+  readonly packageCount: number;
+  readonly ecosystemCount: number;
+  readonly bridgeCount: number;
+  readonly hooksInstalled: boolean;
+  readonly checksPass: boolean;
 }
 
 // ─── Bridge prompts ─────────────────────────────────────────────────────────
 
-async function promptWatchPaths(source: string): Promise<readonly string[] | undefined> {
+async function promptWatchPaths(
+  source: string,
+  suggestion?: WatchPathSuggestion | null,
+): Promise<readonly string[] | undefined> {
+  // If a plugin suggested watch paths, present them for confirmation
+  if (suggestion) {
+    const suggestedValue = suggestion.paths.join(', ');
+    const useIt = await confirm({
+      message: `${suggestion.reason}. Watch ${suggestedValue}?`,
+      initialValue: true,
+    });
+    if (isCancel(useIt)) {
+      handleCancel();
+    }
+    if (useIt) {
+      return suggestion.paths;
+    }
+    // User declined — fall through to manual prompt
+  }
+
   const defaultWatch = `${source}/**`;
   const watchResult = await text({
     message: `What files trigger regeneration?`,
@@ -586,7 +749,9 @@ async function promptAdditionalBridges(
 
     const watch = await promptWatchPaths(source);
     result.push({ source, target, artifact: relArtifact, watch });
-    log.step(`Bridge: ${source} \u2192 ${target} via ${relArtifact}`);
+    log.step(
+      `Bridge: ${ORANGE}${source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${target}${RESET} ${DIM}via${RESET} ${BOLD}${relArtifact}${RESET}`,
+    );
 
     const another = await confirm({ message: 'Add another bridge?', initialValue: false });
     if (isCancel(another)) {
@@ -596,6 +761,32 @@ async function promptAdditionalBridges(
   }
 
   return result;
+}
+
+// ─── Package map helper ─────────────────────────────────────────────────────
+
+/**
+ * Build a lightweight WorkspacePackage map from discovered packages.
+ * Used during init to provide context to plugin watch path suggestions
+ * before the full workspace graph is built.
+ */
+function buildPackageMap(
+  packages: readonly DiscoveredPackage[],
+): ReadonlyMap<string, import('../graph/types.js').WorkspacePackage> {
+  const map = new Map<string, import('../graph/types.js').WorkspacePackage>();
+
+  for (const pkg of packages) {
+    map.set(pkg.path, {
+      name: pkg.path.split('/').pop() ?? pkg.path,
+      path: pkg.path,
+      ecosystem: pkg.ecosystem,
+      version: undefined,
+      dependencies: [],
+      localDependencies: [],
+    });
+  }
+
+  return map;
 }
 
 // ─── Config helpers ─────────────────────────────────────────────────────────
@@ -618,10 +809,11 @@ function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): void {
       typescript: 'package.json',
       dart: 'pubspec.yaml',
     };
-    (config.ecosystems as Record<string, { manifest: string; packages: string[] }>)[pkg.ecosystem] = {
-      manifest: manifestNames[pkg.ecosystem] ?? pkg.manifest,
-      packages: [pkg.path],
-    };
+    (config.ecosystems as Record<string, { manifest: string; packages: string[] }>)[pkg.ecosystem] =
+      {
+        manifest: manifestNames[pkg.ecosystem] ?? pkg.manifest,
+        packages: [pkg.path],
+      };
   }
 }
 
@@ -723,17 +915,17 @@ function renderYaml(config: Record<string, unknown>): string {
 function formatEcosystemList(ecosystems: Record<string, EcosystemGroup>): string {
   const lines: string[] = [];
   for (const [name, group] of Object.entries(ecosystems)) {
-    lines.push(`  ${name} (${group.packages.length} packages)`);
+    lines.push(
+      `  ${ORANGE}${BOLD}${name}${RESET} ${DIM}(${group.packages.length} packages)${RESET}`,
+    );
     for (const pkg of group.packages) {
-      lines.push(`    ${pkg}`);
+      lines.push(`    ${DIM}${pkg}${RESET}`);
     }
   }
   return lines.join('\n');
 }
 
-function groupByEcosystem(
-  packages: readonly DiscoveredPackage[],
-): Record<string, EcosystemGroup> {
+function groupByEcosystem(packages: readonly DiscoveredPackage[]): Record<string, EcosystemGroup> {
   const groups: Record<string, EcosystemGroup> = {};
 
   const manifestNames: Record<string, string> = {
