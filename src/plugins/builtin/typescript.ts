@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { WorkspacePackage } from '../../graph/types.js';
@@ -7,60 +7,76 @@ import type {
   EcosystemPlugin,
   ExecuteResult,
   ExecutionContext,
+  WatchPathSuggestion,
 } from '../types.js';
-import { isRecord, runCommand } from './exec.js';
+import { getScripts, hasDep, readPackageJson, runCommand } from './exec.js';
 
-const WATCH_PATTERNS: readonly string[] = [
-  'src/**/*.ts',
-  'src/**/*.tsx',
-];
+const WATCH_PATTERNS: readonly string[] = ['src/**/*.ts', 'src/**/*.tsx'];
 
-const WELL_KNOWN_ACTIONS: readonly string[] = [
-  'generate',
-  'build',
-  'dev',
-  'codegen',
-];
+const WELL_KNOWN_ACTIONS: readonly string[] = ['generate', 'build', 'dev', 'codegen'];
 
-async function readPackageJson(
+/**
+ * Parse an openapi-typescript invocation from a package script to extract
+ * the input artifact path and output path.
+ *
+ * Example script: "openapi-typescript ../openapi.prepared.json -o generated/api.d.ts"
+ * Returns: { input: "../openapi.prepared.json", output: "generated/api.d.ts" }
+ */
+function parseOpenapiTsScript(
+  scriptValue: string,
+): { readonly input: string; readonly output: string } | null {
+  // Match: openapi-typescript <input> [flags...] -o <output>
+  // Allows arbitrary flags between input and -o (e.g., --enum, --path-params-as-types)
+  const pattern = /openapi-typescript\s+(\S+).*?\s(?:-o|--output)\s+(\S+)/;
+  const match = pattern.exec(scriptValue);
+  if (!match) {
+    return null;
+  }
+  const input = match[1];
+  const output = match[2];
+  if (!input || !output) {
+    return null;
+  }
+  return { input, output };
+}
+
+/**
+ * Detect the openapi-typescript invocation parameters from the package's scripts.
+ * Searches generate, openapi:generate, and other scripts for openapi-typescript usage.
+ */
+async function detectOpenapiTsConfig(
   pkg: WorkspacePackage,
   root: string,
-): Promise<Record<string, unknown>> {
-  const manifestPath = join(root, pkg.path, 'package.json');
-  const content = await readFile(manifestPath, 'utf-8');
-  const parsed: unknown = JSON.parse(content);
-  if (!isRecord(parsed)) {
-    throw new Error(`Expected object in ${manifestPath}`);
-  }
-  return parsed;
-}
+): Promise<{ readonly input: string; readonly output: string } | null> {
+  try {
+    const manifest = await readPackageJson(pkg.path, root);
+    const scripts = getScripts(manifest);
 
-function getScripts(manifest: Record<string, unknown>): Record<string, string> {
-  const scripts = manifest['scripts'];
-  if (!isRecord(scripts)) {
-    return {};
-  }
-  const result: Record<string, string> = {};
-  for (const [key, value] of Object.entries(scripts)) {
-    if (typeof value === 'string') {
-      result[key] = value;
+    // Check scripts in priority order
+    const scriptNames = ['generate', 'openapi:generate', 'generate:ts', 'codegen'];
+    for (const name of scriptNames) {
+      const script = scripts[name];
+      if (!script) {
+        continue;
+      }
+      const parsed = parseOpenapiTsScript(script);
+      if (parsed) {
+        return parsed;
+      }
     }
-  }
-  return result;
-}
 
-function hasDep(
-  manifest: Record<string, unknown>,
-  name: string,
-): boolean {
-  const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
-  for (const field of fields) {
-    const deps = manifest[field];
-    if (isRecord(deps) && name in deps) {
-      return true;
+    // Fallback: check all scripts
+    for (const script of Object.values(scripts)) {
+      const parsed = parseOpenapiTsScript(script);
+      if (parsed) {
+        return parsed;
+      }
     }
+  } catch {
+    // manifest unreadable
   }
-  return false;
+
+  return null;
 }
 
 export const typescriptPlugin: EcosystemPlugin = {
@@ -78,7 +94,7 @@ export const typescriptPlugin: EcosystemPlugin = {
 
   async getActions(pkg: WorkspacePackage, root: string): Promise<readonly string[]> {
     try {
-      const manifest = await readPackageJson(pkg, root);
+      const manifest = await readPackageJson(pkg.path, root);
       const scripts = getScripts(manifest);
       const actions: string[] = [];
 
@@ -109,6 +125,24 @@ export const typescriptPlugin: EcosystemPlugin = {
   ): Promise<ExecuteResult> {
     const cwd = join(root, pkg.path);
     const pm = context.packageManager;
+
+    // Direct openapi-typescript invocation
+    if (action === 'generate-openapi-ts') {
+      const config = await detectOpenapiTsConfig(pkg, root);
+
+      if (config) {
+        // Run openapi-typescript directly with detected paths
+        return runCommand(
+          pm === 'bun' ? 'bunx' : 'npx',
+          ['openapi-typescript', config.input, '-o', config.output],
+          cwd,
+        );
+      }
+
+      // Fallback: try running the generate script
+      return runCommand(pm, ['run', 'generate'], cwd);
+    }
+
     return runCommand(pm, ['run', action], cwd);
   },
 
@@ -123,7 +157,7 @@ export const typescriptPlugin: EcosystemPlugin = {
     }
 
     try {
-      const manifest = await readPackageJson(pkg, root);
+      const manifest = await readPackageJson(pkg.path, root);
       if (hasDep(manifest, 'openapi-typescript')) {
         return {
           action: 'generate-openapi-ts',
@@ -144,5 +178,23 @@ export const typescriptPlugin: EcosystemPlugin = {
     }
 
     return null;
+  },
+
+  async suggestWatchPaths(
+    pkg: WorkspacePackage,
+    root: string,
+  ): Promise<WatchPathSuggestion | null> {
+    const srcDir = join(root, pkg.path, 'src');
+    if (existsSync(srcDir)) {
+      return {
+        paths: [`${pkg.path}/src/**`],
+        reason: `Source directory in ${pkg.path}`,
+      };
+    }
+
+    return {
+      paths: [`${pkg.path}/**`],
+      reason: `Package root of ${pkg.path}`,
+    };
   },
 };
