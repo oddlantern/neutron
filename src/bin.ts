@@ -2,6 +2,7 @@ import { packageJsonParser } from './parsers/package-json.js';
 import { pubspecParser } from './parsers/pubspec.js';
 import type { ManifestParser } from './parsers/types.js';
 import { printBanner } from './banner.js';
+import { VERSION } from './version.js';
 
 // Parser registry — add new ecosystem parsers here
 const parsers = new Map<string, ManifestParser>([
@@ -33,7 +34,6 @@ Options:
   --version, -v    Show version
 `;
 
-const VERSION = '0.0.10';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

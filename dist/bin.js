@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { parse } from "yaml";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 //#region src/parsers/package-json.ts
 const DEP_FIELDS$1 = [
 	["dependencies", "production"],
@@ -123,8 +125,11 @@ const pubspecParser = {
 	}
 };
 //#endregion
+//#region src/version.ts
+const packageJsonPath = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+const VERSION = JSON.parse(readFileSync(packageJsonPath, "utf-8")).version;
+//#endregion
 //#region src/banner.ts
-const VERSION$1 = "0.0.10";
 const ORANGE = "\x1B[38;5;208m";
 const DIM = "\x1B[2m";
 const RESET = "\x1B[0m";
@@ -138,7 +143,7 @@ const ART = `\
 ░██       ░██ ░██████░███████     ░██████`;
 const ART_WIDTH = 43;
 function printBanner() {
-	const versionLine = `v${VERSION$1}`.padStart(ART_WIDTH);
+	const versionLine = `v${VERSION}`.padStart(ART_WIDTH);
 	const tagLine = "workspace guardian".padStart(Math.floor((ART_WIDTH + 18) / 2));
 	console.log(`\n${ORANGE}${ART}${RESET}\n${DIM}${versionLine}\n${tagLine}${RESET}\n`);
 }
@@ -168,7 +173,6 @@ Options:
   --help, -h       Show help
   --version, -v    Show version
 `;
-const VERSION = "0.0.10";
 async function main() {
 	const args = process.argv.slice(2);
 	const command = args[0];

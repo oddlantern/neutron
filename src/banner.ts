@@ -1,4 +1,4 @@
-const VERSION = '0.0.10';
+import { VERSION } from './version.js';
 
 // ANSI 256-color: \x1b[38;5;208m = warm orange
 const ORANGE = '\x1b[38;5;208m';
