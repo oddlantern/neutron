@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { parse } from "yaml";
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { createServer } from "node:net";
 //#region src/plugins/builtin/exec.ts
 /** Maximum bytes of stdout/stderr to accumulate per process */
-const MAX_OUTPUT_BYTES = 1024 * 1024;
+const MAX_OUTPUT_BYTES$1 = 1024 * 1024;
 function isRecord(value) {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -60,13 +61,13 @@ function runCommand(command, args, cwd) {
 		const chunks = [];
 		let totalBytes = 0;
 		child.stdout.on("data", (data) => {
-			if (totalBytes < MAX_OUTPUT_BYTES) {
+			if (totalBytes < MAX_OUTPUT_BYTES$1) {
 				chunks.push(data.toString());
 				totalBytes += data.length;
 			}
 		});
 		child.stderr.on("data", (data) => {
-			if (totalBytes < MAX_OUTPUT_BYTES) {
+			if (totalBytes < MAX_OUTPUT_BYTES$1) {
 				chunks.push(data.toString());
 				totalBytes += data.length;
 			}
@@ -125,29 +126,44 @@ function parseOpenapiTsScript(scriptValue) {
 	};
 }
 /**
-* Detect the openapi-typescript invocation parameters from the package's scripts.
+* Detect the openapi-typescript output path from existing scripts.
 * Searches generate, openapi:generate, and other scripts for openapi-typescript usage.
+* Returns the output path if found in a script.
 */
-async function detectOpenapiTsConfig(pkg, root) {
-	try {
-		const scripts = getScripts(await readPackageJson(pkg.path, root));
-		for (const name of [
-			"generate",
-			"openapi:generate",
-			"generate:ts",
-			"codegen"
-		]) {
-			const script = scripts[name];
-			if (!script) continue;
-			const parsed = parseOpenapiTsScript(script);
-			if (parsed) return parsed;
-		}
-		for (const script of Object.values(scripts)) {
-			const parsed = parseOpenapiTsScript(script);
-			if (parsed) return parsed;
-		}
-	} catch {}
+function detectOutputFromScripts(scripts) {
+	for (const name of [
+		"generate",
+		"openapi:generate",
+		"generate:ts",
+		"codegen"
+	]) {
+		const script = scripts[name];
+		if (!script) continue;
+		const parsed = parseOpenapiTsScript(script);
+		if (parsed) return parsed.output;
+	}
+	for (const script of Object.values(scripts)) {
+		const parsed = parseOpenapiTsScript(script);
+		if (parsed) return parsed.output;
+	}
 	return null;
+}
+/** Well-known output paths for openapi-typescript, checked in order */
+const WELL_KNOWN_OUTPUT_PATHS = [
+	"generated/api.d.ts",
+	"src/generated/api.d.ts",
+	"src/api.d.ts"
+];
+/**
+* Resolve the output path for openapi-typescript.
+* Priority: existing scripts → existing well-known files → default.
+*/
+function resolveOutputPath(pkg, root, scripts) {
+	const fromScript = detectOutputFromScripts(scripts);
+	if (fromScript) return fromScript;
+	const pkgDir = join(root, pkg.path);
+	for (const candidate of WELL_KNOWN_OUTPUT_PATHS) if (existsSync(join(pkgDir, candidate))) return candidate;
+	return "generated/api.d.ts";
 }
 const typescriptPlugin = {
 	type: "ecosystem",
@@ -174,14 +190,27 @@ const typescriptPlugin = {
 		const cwd = join(root, pkg.path);
 		const pm = context.packageManager;
 		if (action === "generate-openapi-ts") {
-			const config = await detectOpenapiTsConfig(pkg, root);
-			if (config) return runCommand(pm === "bun" ? "bunx" : "npx", [
+			let scripts = {};
+			try {
+				scripts = getScripts(await readPackageJson(pkg.path, root));
+			} catch {}
+			const artifactPath = context.artifactPath;
+			if (!artifactPath) {
+				if (scripts["generate"]) return runCommand(pm, ["run", "generate"], cwd);
+				return {
+					success: false,
+					duration: 0,
+					summary: `No artifact path provided and no generate script found in ${pkg.path}`
+				};
+			}
+			const artifactRelative = relative(join(root, pkg.path), join(root, artifactPath));
+			const outputPath = resolveOutputPath(pkg, root, scripts);
+			return runCommand(pm === "bun" ? "bunx" : "npx", [
 				"openapi-typescript",
-				config.input,
+				artifactRelative,
 				"-o",
-				config.output
+				outputPath
 			], cwd);
-			return runCommand(pm, ["run", "generate"], cwd);
 		}
 		return runCommand(pm, ["run", action], cwd);
 	},
@@ -314,7 +343,293 @@ const dartPlugin = {
 	}
 };
 //#endregion
-//#region src/plugins/builtin/openapi.ts
+//#region src/plugins/builtin/openapi/exporter.ts
+/** Default timeout waiting for server to accept connections (ms) */
+const DEFAULT_STARTUP_TIMEOUT = 15e3;
+/** How often to poll the server during startup (ms) */
+const POLL_INTERVAL = 500;
+/** Max time to wait for graceful shutdown before SIGKILL (ms) */
+const KILL_TIMEOUT = 3e3;
+/** Maximum bytes of child output to capture */
+const MAX_OUTPUT_BYTES = 256 * 1024;
+/** Maximum bytes of HTTP response body to consume from spec endpoint */
+const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
+/**
+* Assert that a resolved path stays within the workspace root.
+* Prevents path traversal via malicious config values.
+*/
+function assertWithinRoot(resolved, root) {
+	const normalizedRoot = root.endsWith("/") ? root : `${root}/`;
+	if (!(resolved.endsWith("/") ? resolved : `${resolved}/`).startsWith(normalizedRoot) && resolved !== root) throw new Error(`Path "${resolved}" escapes workspace root "${root}"`);
+}
+/** Find a free port by binding to port 0 and closing immediately */
+async function findFreePort() {
+	return new Promise((resolve, reject) => {
+		const server = createServer();
+		server.listen(0, () => {
+			const address = server.address();
+			if (!address || typeof address === "string") {
+				server.close();
+				reject(/* @__PURE__ */ new Error("Could not allocate a free port"));
+				return;
+			}
+			const port = address.port;
+			server.close(() => resolve(port));
+		});
+		server.on("error", reject);
+	});
+}
+/** Well-known entry files checked in order */
+const ENTRY_CANDIDATES = [
+	"src/index.ts",
+	"src/main.ts",
+	"src/app.ts",
+	"index.ts",
+	"main.ts",
+	"app.ts"
+];
+/**
+* Parse an entry file from a script value.
+* Handles patterns like: "bun run --watch src/index.ts", "tsx src/index.ts",
+* "node dist/index.js", "ts-node src/main.ts"
+*/
+function parseEntryFromScript(script) {
+	return /(?:^|\s)(\S+\.(?:ts|js|mjs|mts))(?:\s|$)/.exec(script)?.[1] ?? null;
+}
+/**
+* Auto-detect the server entry file from an absolute package directory.
+* Priority: main field → dev script → start script → well-known paths.
+*/
+async function detectEntryFile(packageDir) {
+	try {
+		const content = await readFile(join(packageDir, "package.json"), "utf-8");
+		const parsed = JSON.parse(content);
+		if (!isRecord(parsed)) throw new Error("Expected object");
+		const main = parsed["main"];
+		if (typeof main === "string" && existsSync(join(packageDir, main))) return main;
+		const scripts = getScripts(parsed);
+		for (const scriptName of ["dev", "start"]) {
+			const script = scripts[scriptName];
+			if (!script) continue;
+			const entry = parseEntryFromScript(script);
+			if (entry && existsSync(join(packageDir, entry))) return entry;
+		}
+	} catch {}
+	for (const candidate of ENTRY_CANDIDATES) if (existsSync(join(packageDir, candidate))) return candidate;
+	return null;
+}
+/** Kill a child process gracefully, then forcefully if needed */
+function killProcess(child) {
+	return new Promise((resolve) => {
+		if (!child.pid) {
+			resolve();
+			return;
+		}
+		let resolved = false;
+		const cleanup = () => {
+			if (!resolved) {
+				resolved = true;
+				resolve();
+			}
+		};
+		child.on("exit", cleanup);
+		child.on("error", cleanup);
+		child.kill("SIGTERM");
+		setTimeout(() => {
+			if (!resolved && child.pid) try {
+				child.kill("SIGKILL");
+			} catch {}
+			cleanup();
+		}, KILL_TIMEOUT);
+	});
+}
+/**
+* Poll until the server responds on the given port.
+* Returns true if the server started, false on timeout.
+*/
+async function waitForServer(port, timeout) {
+	const deadline = Date.now() + timeout;
+	while (Date.now() < deadline) {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 2e3);
+		try {
+			(await fetch(`http://127.0.0.1:${String(port)}/`, {
+				signal: controller.signal,
+				redirect: "error"
+			})).body?.cancel();
+			return true;
+		} catch {} finally {
+			clearTimeout(timer);
+		}
+		await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+	}
+	return false;
+}
+/**
+* Try fetching the spec from a list of paths.
+* Returns the parsed JSON and the path that worked, or null.
+*/
+async function fetchSpec(port, paths) {
+	for (const specPath of paths) {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 1e4);
+		try {
+			const response = await fetch(`http://127.0.0.1:${String(port)}${specPath}`, {
+				signal: controller.signal,
+				redirect: "error"
+			});
+			if (!response.ok) {
+				response.body?.cancel();
+				continue;
+			}
+			const contentLength = response.headers.get("content-length");
+			if (contentLength && Number(contentLength) > MAX_RESPONSE_BYTES) {
+				response.body?.cancel();
+				continue;
+			}
+			const text = await response.text();
+			if (text.length > MAX_RESPONSE_BYTES) continue;
+			const body = JSON.parse(text);
+			if (!isRecord(body)) continue;
+			if (!("openapi" in body) && !("swagger" in body)) continue;
+			return {
+				spec: body,
+				path: specPath
+			};
+		} catch {
+			continue;
+		} finally {
+			clearTimeout(timer);
+		}
+	}
+	return null;
+}
+/**
+* Export an OpenAPI spec by booting the server, fetching the spec endpoint,
+* writing it to disk, and killing the server.
+*/
+async function exportSpec(options) {
+	const { packageDir, pm, adapter, outputPath, startupTimeout = DEFAULT_STARTUP_TIMEOUT } = options;
+	const start = performance.now();
+	const entryFile = options.entryFile ?? await detectEntryFile(packageDir);
+	if (!entryFile) return {
+		success: false,
+		duration: Math.round(performance.now() - start),
+		summary: `Could not detect entry file in ${packageDir}. Set entryFile on the bridge.`
+	};
+	let port;
+	try {
+		port = await findFreePort();
+	} catch {
+		return {
+			success: false,
+			duration: Math.round(performance.now() - start),
+			summary: "Port allocation failed. Check if another mido dev instance is running."
+		};
+	}
+	const child = spawn(pm === "bun" ? "bun" : "npx", pm === "bun" ? ["run", entryFile] : ["tsx", entryFile], {
+		cwd: packageDir,
+		stdio: [
+			"ignore",
+			"pipe",
+			"pipe"
+		],
+		env: {
+			...process.env,
+			PORT: String(port)
+		}
+	});
+	const exitHandler = () => {
+		try {
+			child.kill("SIGKILL");
+		} catch {}
+	};
+	process.on("exit", exitHandler);
+	const outputChunks = [];
+	let totalBytes = 0;
+	const collectOutput = (data) => {
+		if (totalBytes < MAX_OUTPUT_BYTES) {
+			outputChunks.push(data.toString());
+			totalBytes += data.length;
+		}
+	};
+	child.stdout?.on("data", collectOutput);
+	child.stderr?.on("data", collectOutput);
+	let earlyExit = false;
+	child.on("exit", () => {
+		earlyExit = true;
+	});
+	try {
+		if (!await waitForServer(port, startupTimeout) || earlyExit) {
+			const output = outputChunks.join("");
+			const timeoutSec = Math.round(startupTimeout / 1e3);
+			return {
+				success: false,
+				duration: Math.round(performance.now() - start),
+				summary: earlyExit ? `Server exited before becoming ready. Entry: ${entryFile}` : `Server didn't start within ${String(timeoutSec)}s. Entry: ${entryFile}`,
+				output
+			};
+		}
+		const specPathOverride = options.specPath;
+		const normalize = (p) => p.startsWith("/") ? p : `/${p}`;
+		const pathsToTry = specPathOverride ? [normalize(specPathOverride)] : [adapter.defaultSpecPath, ...adapter.fallbackSpecPaths];
+		const result = await fetchSpec(port, pathsToTry);
+		if (!result) {
+			const tried = pathsToTry.join(", ");
+			return {
+				success: false,
+				duration: Math.round(performance.now() - start),
+				summary: `Could not find OpenAPI spec. Tried: ${tried}. Add an openapi:export script as fallback.`
+			};
+		}
+		try {
+			const outputDir = dirname(outputPath);
+			if (!existsSync(outputDir)) await mkdir(outputDir, { recursive: true });
+			await writeFile(outputPath, JSON.stringify(result.spec, null, 2) + "\n", "utf-8");
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			return {
+				success: false,
+				duration: Math.round(performance.now() - start),
+				summary: `Failed to write spec: ${msg}`
+			};
+		}
+		return {
+			success: true,
+			duration: Math.round(performance.now() - start),
+			summary: `exported from ${result.path}`
+		};
+	} finally {
+		await killProcess(child);
+		process.removeListener("exit", exitHandler);
+	}
+}
+/**
+* Detect a framework adapter for a package.
+* Reads the package.json and checks all adapters.
+*/
+async function detectFrameworkAdapter(pkgPath, root) {
+	const { detectAdapter } = await import("./adapters-DlQP7ll8.js");
+	try {
+		const manifest = await readPackageJson(pkgPath, root);
+		const allDeps = {};
+		for (const field of [
+			"dependencies",
+			"devDependencies",
+			"peerDependencies"
+		]) {
+			const deps = manifest[field];
+			if (isRecord(deps)) {
+				for (const [name, version] of Object.entries(deps)) if (typeof version === "string") allDeps[name] = version;
+			}
+		}
+		return detectAdapter(allDeps);
+	} catch {
+		return null;
+	}
+}
+//#endregion
+//#region src/plugins/builtin/openapi/plugin.ts
 const OPENAPI_FILENAMES = new Set([
 	"openapi.json",
 	"openapi.yaml",
@@ -328,7 +643,8 @@ const SERVER_FRAMEWORKS = new Map([
 	["express", ["src/routes/**", "routes/**"]],
 	["fastify", ["src/routes/**", "routes/**"]],
 	["hono", ["src/routes/**", "src/**/*.ts"]],
-	["koa", ["src/routes/**", "routes/**"]]
+	["koa", ["src/routes/**", "routes/**"]],
+	["@nestjs/core", ["src/**/*.controller.ts", "src/**/*.ts"]]
 ]);
 /** Patterns in script values that indicate spec preparation */
 const PREPARE_SCRIPT_PATTERNS = [
@@ -362,6 +678,22 @@ async function detectPrepareScript(source, root) {
 }
 /**
 * Find which package in the workspace has the server framework that
+* actually produces the routes. Returns the package and its adapter.
+* Only scans TypeScript packages — other ecosystems are not yet supported.
+*/
+async function findServerPackage(packages, root) {
+	for (const [, pkg] of packages) {
+		if (pkg.ecosystem !== "typescript") continue;
+		const adapter = await detectFrameworkAdapter(pkg.path, root);
+		if (adapter) return {
+			path: pkg.path,
+			adapter
+		};
+	}
+	return null;
+}
+/**
+* Find which package in the workspace has the server framework that
 * actually produces the routes. Returns watch path suggestions.
 */
 async function findRouteSource(packages, root) {
@@ -387,6 +719,33 @@ function resolveArtifactForDownstream(artifact, root) {
 	if (existsSync(join(root, preparedPath))) return preparedPath;
 	return artifact;
 }
+/**
+* Try exporting the spec using the adapter-based exporter.
+* Scans workspace packages for a server framework, boots it, and fetches the spec.
+*/
+async function tryAdapterExport(source, artifact, root, context) {
+	let adapter = await detectFrameworkAdapter(source.path, root);
+	let serverPkgPath = source.path;
+	if (!adapter) {
+		const serverInfo = await findServerPackage(context.graph.packages, root);
+		if (!serverInfo) return null;
+		adapter = serverInfo.adapter;
+		serverPkgPath = serverInfo.path;
+	}
+	const packageDir = resolve(root, serverPkgPath);
+	const outputPath = resolve(root, artifact);
+	assertWithinRoot(packageDir, root);
+	assertWithinRoot(outputPath, root);
+	const bridge = context.graph.bridges.find((b) => b.source === source.path && b.artifact === artifact);
+	return exportSpec({
+		packageDir,
+		pm: context.packageManager,
+		adapter,
+		outputPath,
+		entryFile: bridge?.entryFile,
+		specPath: bridge?.specPath
+	});
+}
 const openapiPlugin = {
 	type: "domain",
 	name: "openapi",
@@ -395,6 +754,8 @@ const openapiPlugin = {
 		return OPENAPI_FILENAMES.has(filename);
 	},
 	async exportArtifact(source, artifact, root, context) {
+		const adapterResult = await tryAdapterExport(source, artifact, root, context);
+		if (adapterResult) return adapterResult;
 		const sourceHandler = (await context.findEcosystemHandlers("openapi", artifact)).find((h) => h.pkg.path === source.path);
 		if (sourceHandler) return sourceHandler.plugin.execute(sourceHandler.capability.action, source, root, context);
 		try {
@@ -408,7 +769,7 @@ const openapiPlugin = {
 		return {
 			success: false,
 			duration: 0,
-			summary: `No export method found for ${source.path} — add a "generate" script or install an OpenAPI export plugin`
+			summary: `No export method found for ${source.path} — install an OpenAPI plugin for your framework or add an openapi:export script`
 		};
 	},
 	async generateDownstream(artifact, targets, root, context) {
@@ -417,9 +778,13 @@ const openapiPlugin = {
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 		if (relevantHandlers.length === 0) return [];
+		const ctxWithArtifact = {
+			...context,
+			artifactPath: resolvedArtifact
+		};
 		const results = [];
 		for (const handler of relevantHandlers) {
-			const result = await handler.plugin.execute(handler.capability.action, handler.pkg, root, context);
+			const result = await handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact);
 			results.push(result);
 		}
 		return results;
@@ -451,11 +816,15 @@ const openapiPlugin = {
 		const handlers = await context.findEcosystemHandlers("openapi", downstreamArtifact);
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
+		const ctxWithArtifact = {
+			...context,
+			artifactPath: downstreamArtifact
+		};
 		for (const handler of relevantHandlers) steps.push({
 			name: `generate-${handler.plugin.name}`,
 			plugin: handler.plugin.name,
 			description: `${handler.capability.description}...`,
-			execute: () => handler.plugin.execute(handler.capability.action, handler.pkg, root, context)
+			execute: () => handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact)
 		});
 		return steps;
 	},
@@ -549,4 +918,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, PluginRegistry as t };
 
-//# sourceMappingURL=registry-C1i9dp7M.js.map
+//# sourceMappingURL=registry-NVI0NOK-.js.map

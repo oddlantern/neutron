@@ -42,6 +42,10 @@ export interface Bridge {
   readonly run: string | undefined;
   /** Override: watch these paths instead of plugin defaults */
   readonly watch: readonly string[] | undefined;
+  /** Override: server entry file relative to the server package dir */
+  readonly entryFile: string | undefined;
+  /** Override: OpenAPI spec endpoint path (e.g., /custom/openapi/endpoint) */
+  readonly specPath: string | undefined;
 }
 
 /**

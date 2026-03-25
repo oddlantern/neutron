@@ -1,0 +1,12 @@
+{
+  "name": "fixture-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "elysia": "*",
+    "@elysiajs/openapi": "*"
+  }
+}

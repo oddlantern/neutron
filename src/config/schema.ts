@@ -12,6 +12,8 @@ const bridgeSchema = z.object({
   artifact: z.string(),
   run: z.string().optional(),
   watch: z.array(z.string()).optional(),
+  entryFile: z.string().optional(),
+  specPath: z.string().optional(),
 });
 
 const envSchema = z.object({

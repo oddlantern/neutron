@@ -187,7 +187,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-_9LA8JZy.js");
+		const { runCheck } = await import("./check-sFZYG_SJ.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -195,13 +195,13 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-DvgfXW_u.js");
+		const { runInit } = await import("./init-DGqmCuhB.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-CqjzyeDh.js");
+		const { runDev } = await import("./dev-BYiqtNak.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
@@ -216,7 +216,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-DGrd83OH.js");
+		const { runCommitMsg } = await import("./commit-msg-CdrzcMDi.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-ls4c5R1g.js";
-import { runCheck } from "./check-_9LA8JZy.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-C1i9dp7M.js";
+import { t as loadConfig } from "./loader-Doj3f4_w.js";
+import { runCheck } from "./check-sFZYG_SJ.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-NVI0NOK-.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -471,7 +471,7 @@ async function runPostInitCheck(parsers) {
 		return true;
 	}
 	const { config, root } = await loadConfig();
-	const { buildWorkspaceGraph } = await import("./workspace-BNr04jHQ.js").then((n) => n.n);
+	const { buildWorkspaceGraph } = await import("./workspace-0L_gtkdk.js").then((n) => n.n);
 	const { findVersionMismatches } = await import("./versions-DL21hmPA.js").then((n) => n.r);
 	const { loadLock } = await import("./lock-CzV2VIf4.js").then((n) => n.n);
 	const mismatches = findVersionMismatches(await buildWorkspaceGraph(config, root, parsers), await loadLock(root));
@@ -536,7 +536,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-CqjzyeDh.js");
+			const { runDev } = await import("./dev-BYiqtNak.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -920,4 +920,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-DvgfXW_u.js.map
+//# sourceMappingURL=init-DGqmCuhB.js.map

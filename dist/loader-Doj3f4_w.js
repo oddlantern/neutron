@@ -15,7 +15,9 @@ const bridgeSchema = z.object({
 	target: z.string(),
 	artifact: z.string(),
 	run: z.string().optional(),
-	watch: z.array(z.string()).optional()
+	watch: z.array(z.string()).optional(),
+	entryFile: z.string().optional(),
+	specPath: z.string().optional()
 });
 const envSchema = z.object({
 	shared: z.array(z.string()).min(1),
@@ -138,4 +140,4 @@ async function loadConfig(startDir) {
 //#endregion
 export { DEFAULT_COMMIT_TYPES as n, loadConfig as t };
 
-//# sourceMappingURL=loader-ls4c5R1g.js.map
+//# sourceMappingURL=loader-Doj3f4_w.js.map

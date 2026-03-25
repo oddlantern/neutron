@@ -202,6 +202,8 @@ export interface ExecutionContext {
   readonly packageManager: string;
   /** Workspace root absolute path */
   readonly root: string;
+  /** Artifact path (relative to root) when executing a domain-triggered action */
+  readonly artifactPath?: string | undefined;
 }
 
 export interface EcosystemHandler {

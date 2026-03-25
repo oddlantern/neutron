@@ -61,7 +61,9 @@ async function buildWorkspaceGraph(config, root, parsers) {
 		target: b.target,
 		artifact: b.artifact,
 		run: b.run,
-		watch: b.watch
+		watch: b.watch,
+		entryFile: b.entryFile,
+		specPath: b.specPath
 	}));
 	return {
 		name: config.workspace,
@@ -78,4 +80,4 @@ function isInPackageList(config, relPath) {
 //#endregion
 export { workspace_exports as n, buildWorkspaceGraph as t };
 
-//# sourceMappingURL=workspace-BNr04jHQ.js.map
+//# sourceMappingURL=workspace-0L_gtkdk.js.map

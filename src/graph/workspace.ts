@@ -97,6 +97,8 @@ export async function buildWorkspaceGraph(
     artifact: b.artifact,
     run: b.run,
     watch: b.watch,
+    entryFile: b.entryFile,
+    specPath: b.specPath,
   }));
 
   return {

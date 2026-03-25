@@ -1,15 +1,17 @@
 import { existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
-import type { WorkspacePackage } from '../../graph/types.js';
+import type { WorkspacePackage } from '../../../graph/types.js';
 import type {
   DomainPlugin,
   ExecutablePipelineStep,
   ExecuteResult,
   ExecutionContext,
   WatchPathSuggestion,
-} from '../types.js';
-import { getScripts, hasDep, readPackageJson, runCommand } from './exec.js';
+} from '../../types.js';
+import { getScripts, hasDep, readPackageJson, runCommand } from '../exec.js';
+import type { FrameworkAdapter } from './adapters/types.js';
+import { assertWithinRoot, detectFrameworkAdapter, exportSpec } from './exporter.js';
 
 const OPENAPI_FILENAMES: ReadonlySet<string> = new Set([
   'openapi.json',
@@ -26,6 +28,7 @@ const SERVER_FRAMEWORKS: ReadonlyMap<string, readonly string[]> = new Map([
   ['fastify', ['src/routes/**', 'routes/**']],
   ['hono', ['src/routes/**', 'src/**/*.ts']],
   ['koa', ['src/routes/**', 'routes/**']],
+  ['@nestjs/core', ['src/**/*.controller.ts', 'src/**/*.ts']],
 ]);
 
 /** Patterns in script values that indicate spec preparation */
@@ -71,6 +74,29 @@ async function detectPrepareScript(
     }
   } catch {
     // manifest unreadable
+  }
+
+  return null;
+}
+
+/**
+ * Find which package in the workspace has the server framework that
+ * actually produces the routes. Returns the package and its adapter.
+ * Only scans TypeScript packages — other ecosystems are not yet supported.
+ */
+async function findServerPackage(
+  packages: ReadonlyMap<string, WorkspacePackage>,
+  root: string,
+): Promise<{ readonly path: string; readonly adapter: FrameworkAdapter } | null> {
+  for (const [, pkg] of packages) {
+    if (pkg.ecosystem !== 'typescript') {
+      continue;
+    }
+
+    const adapter = await detectFrameworkAdapter(pkg.path, root);
+    if (adapter) {
+      return { path: pkg.path, adapter };
+    }
   }
 
   return null;
@@ -130,6 +156,51 @@ function resolveArtifactForDownstream(artifact: string, root: string): string {
   return artifact;
 }
 
+/**
+ * Try exporting the spec using the adapter-based exporter.
+ * Scans workspace packages for a server framework, boots it, and fetches the spec.
+ */
+async function tryAdapterExport(
+  source: WorkspacePackage,
+  artifact: string,
+  root: string,
+  context: ExecutionContext,
+): Promise<ExecuteResult | null> {
+  // Check if the source package itself has a framework adapter
+  let adapter = await detectFrameworkAdapter(source.path, root);
+  let serverPkgPath = source.path;
+
+  // If not, scan the workspace for a server package
+  if (!adapter) {
+    const serverInfo = await findServerPackage(context.graph.packages, root);
+    if (!serverInfo) {
+      return null;
+    }
+    adapter = serverInfo.adapter;
+    serverPkgPath = serverInfo.path;
+  }
+
+  // Validate paths stay within workspace root
+  const packageDir = resolve(root, serverPkgPath);
+  const outputPath = resolve(root, artifact);
+  assertWithinRoot(packageDir, root);
+  assertWithinRoot(outputPath, root);
+
+  // Resolve bridge-level overrides
+  const bridge = context.graph.bridges.find(
+    (b) => b.source === source.path && b.artifact === artifact,
+  );
+
+  return exportSpec({
+    packageDir,
+    pm: context.packageManager,
+    adapter,
+    outputPath,
+    entryFile: bridge?.entryFile,
+    specPath: bridge?.specPath,
+  });
+}
+
 // ─── Plugin ──────────────────────────────────────────────────────────────────
 
 export const openapiPlugin: DomainPlugin = {
@@ -147,14 +218,20 @@ export const openapiPlugin: DomainPlugin = {
     root: string,
     context: ExecutionContext,
   ): Promise<ExecuteResult> {
+    // Primary: adapter-based export (boot server, fetch spec)
+    const adapterResult = await tryAdapterExport(source, artifact, root, context);
+    if (adapterResult) {
+      return adapterResult;
+    }
+
+    // Fallback 1: ecosystem plugin handler
     const handlers = await context.findEcosystemHandlers('openapi', artifact);
     const sourceHandler = handlers.find((h) => h.pkg.path === source.path);
-
     if (sourceHandler) {
       return sourceHandler.plugin.execute(sourceHandler.capability.action, source, root, context);
     }
 
-    // Fallback: look for openapi:export script in source package
+    // Fallback 2: openapi:export or swagger:export script
     try {
       const manifest = await readPackageJson(source.path, root);
       const scripts = getScripts(manifest);
@@ -176,7 +253,7 @@ export const openapiPlugin: DomainPlugin = {
     return {
       success: false,
       duration: 0,
-      summary: `No export method found for ${source.path} — add a "generate" script or install an OpenAPI export plugin`,
+      summary: `No export method found for ${source.path} — install an OpenAPI plugin for your framework or add an openapi:export script`,
     };
   },
 
@@ -197,6 +274,7 @@ export const openapiPlugin: DomainPlugin = {
       return [];
     }
 
+    const ctxWithArtifact = { ...context, artifactPath: resolvedArtifact };
     const results: ExecuteResult[] = [];
 
     for (const handler of relevantHandlers) {
@@ -204,7 +282,7 @@ export const openapiPlugin: DomainPlugin = {
         handler.capability.action,
         handler.pkg,
         root,
-        context,
+        ctxWithArtifact,
       );
       results.push(result);
     }
@@ -255,13 +333,14 @@ export const openapiPlugin: DomainPlugin = {
     const targetPaths = new Set(targets.map((t) => t.path));
     const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 
+    const ctxWithArtifact = { ...context, artifactPath: downstreamArtifact };
     for (const handler of relevantHandlers) {
       steps.push({
         name: `generate-${handler.plugin.name}`,
         plugin: handler.plugin.name,
         description: `${handler.capability.description}...`,
         execute: () =>
-          handler.plugin.execute(handler.capability.action, handler.pkg, root, context),
+          handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact),
       });
     }
 

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 
 import type { WorkspacePackage } from '../../graph/types.js';
 import type {
@@ -41,42 +41,67 @@ function parseOpenapiTsScript(
 }
 
 /**
- * Detect the openapi-typescript invocation parameters from the package's scripts.
+ * Detect the openapi-typescript output path from existing scripts.
  * Searches generate, openapi:generate, and other scripts for openapi-typescript usage.
+ * Returns the output path if found in a script.
  */
-async function detectOpenapiTsConfig(
-  pkg: WorkspacePackage,
-  root: string,
-): Promise<{ readonly input: string; readonly output: string } | null> {
-  try {
-    const manifest = await readPackageJson(pkg.path, root);
-    const scripts = getScripts(manifest);
-
-    // Check scripts in priority order
-    const scriptNames = ['generate', 'openapi:generate', 'generate:ts', 'codegen'];
-    for (const name of scriptNames) {
-      const script = scripts[name];
-      if (!script) {
-        continue;
-      }
-      const parsed = parseOpenapiTsScript(script);
-      if (parsed) {
-        return parsed;
-      }
+function detectOutputFromScripts(scripts: Record<string, string>): string | null {
+  // Check scripts in priority order
+  const scriptNames = ['generate', 'openapi:generate', 'generate:ts', 'codegen'];
+  for (const name of scriptNames) {
+    const script = scripts[name];
+    if (!script) {
+      continue;
     }
-
-    // Fallback: check all scripts
-    for (const script of Object.values(scripts)) {
-      const parsed = parseOpenapiTsScript(script);
-      if (parsed) {
-        return parsed;
-      }
+    const parsed = parseOpenapiTsScript(script);
+    if (parsed) {
+      return parsed.output;
     }
-  } catch {
-    // manifest unreadable
+  }
+
+  // Check all scripts
+  for (const script of Object.values(scripts)) {
+    const parsed = parseOpenapiTsScript(script);
+    if (parsed) {
+      return parsed.output;
+    }
   }
 
   return null;
+}
+
+/** Well-known output paths for openapi-typescript, checked in order */
+const WELL_KNOWN_OUTPUT_PATHS: readonly string[] = [
+  'generated/api.d.ts',
+  'src/generated/api.d.ts',
+  'src/api.d.ts',
+];
+
+/**
+ * Resolve the output path for openapi-typescript.
+ * Priority: existing scripts → existing well-known files → default.
+ */
+function resolveOutputPath(
+  pkg: WorkspacePackage,
+  root: string,
+  scripts: Record<string, string>,
+): string {
+  // 1. Parse from existing scripts
+  const fromScript = detectOutputFromScripts(scripts);
+  if (fromScript) {
+    return fromScript;
+  }
+
+  // 2. Check well-known output locations
+  const pkgDir = join(root, pkg.path);
+  for (const candidate of WELL_KNOWN_OUTPUT_PATHS) {
+    if (existsSync(join(pkgDir, candidate))) {
+      return candidate;
+    }
+  }
+
+  // 3. Default
+  return 'generated/api.d.ts';
 }
 
 export const typescriptPlugin: EcosystemPlugin = {
@@ -128,19 +153,33 @@ export const typescriptPlugin: EcosystemPlugin = {
 
     // Direct openapi-typescript invocation
     if (action === 'generate-openapi-ts') {
-      const config = await detectOpenapiTsConfig(pkg, root);
-
-      if (config) {
-        // Run openapi-typescript directly with detected paths
-        return runCommand(
-          pm === 'bun' ? 'bunx' : 'npx',
-          ['openapi-typescript', config.input, '-o', config.output],
-          cwd,
-        );
+      let scripts: Record<string, string> = {};
+      try {
+        const manifest = await readPackageJson(pkg.path, root);
+        scripts = getScripts(manifest);
+      } catch {
+        // manifest unreadable — proceed with empty scripts
       }
 
-      // Fallback: try running the generate script
-      return runCommand(pm, ['run', 'generate'], cwd);
+      // Resolve artifact input path (relative to package dir)
+      const artifactPath = context.artifactPath;
+      if (!artifactPath) {
+        // No artifact path from domain plugin — fall back to generate script
+        if (scripts['generate']) {
+          return runCommand(pm, ['run', 'generate'], cwd);
+        }
+        return {
+          success: false,
+          duration: 0,
+          summary: `No artifact path provided and no generate script found in ${pkg.path}`,
+        };
+      }
+
+      const artifactRelative = relative(join(root, pkg.path), join(root, artifactPath));
+      const outputPath = resolveOutputPath(pkg, root, scripts);
+      const runner = pm === 'bun' ? 'bunx' : 'npx';
+
+      return runCommand(runner, ['openapi-typescript', artifactRelative, '-o', outputPath], cwd);
     }
 
     return runCommand(pm, ['run', action], cwd);
@@ -158,6 +197,8 @@ export const typescriptPlugin: EcosystemPlugin = {
 
     try {
       const manifest = await readPackageJson(pkg.path, root);
+
+      // Primary: direct tool invocation via openapi-typescript dependency
       if (hasDep(manifest, 'openapi-typescript')) {
         return {
           action: 'generate-openapi-ts',
@@ -165,7 +206,7 @@ export const typescriptPlugin: EcosystemPlugin = {
         };
       }
 
-      // Check for a generate script as fallback
+      // Fallback: generate script (last resort)
       const scripts = getScripts(manifest);
       if (scripts['generate']) {
         return {
