@@ -173,7 +173,7 @@ async function runFirstTime(
         root,
       );
     }
-    const watch = await promptWatchPaths(b.source, suggestion);
+    const watch = await promptWatchPaths(root, b.source, suggestion);
     bridgesWithWatch.push({ source: b.source, target: b.target, artifact: b.artifact, watch });
   }
 
@@ -382,7 +382,7 @@ async function runReconciliation(
           handleCancel();
         }
         if (addWatch) {
-          const watch = await promptWatchPaths(bridge.source);
+          const watch = await promptWatchPaths(root, bridge.source);
           if (watch) {
             updatedBridges.push({ ...bridge, watch: [...watch] });
             configChanged = true;
@@ -582,44 +582,77 @@ interface InitSummary {
 // ─── Bridge prompts ─────────────────────────────────────────────────────────
 
 async function promptWatchPaths(
+  root: string,
   source: string,
   suggestion?: WatchPathSuggestion | null,
 ): Promise<readonly string[] | undefined> {
-  // If a plugin suggested watch paths, present them for confirmation
+  const defaultWatch = `${source}/**`;
+
+  // Build options: plugin suggestion first (if available), then browse/manual/skip
+  type WatchChoice = 'suggestion' | 'browse' | 'manual' | 'skip';
+  const options: Array<{ value: WatchChoice; label: string; hint?: string }> = [];
+
   if (suggestion) {
-    const suggestedValue = suggestion.paths.join(', ');
-    const useIt = await confirm({
-      message: `${suggestion.reason}. Watch ${suggestedValue}?`,
-      initialValue: true,
+    const suggestedLabel = suggestion.paths.join(', ');
+    options.push({
+      value: 'suggestion',
+      label: suggestedLabel,
+      hint: `suggested by ${suggestion.reason}`,
     });
-    if (isCancel(useIt)) {
-      handleCancel();
-    }
-    if (useIt) {
-      return suggestion.paths;
-    }
-    // User declined — fall through to manual prompt
   }
 
-  const defaultWatch = `${source}/**`;
-  const watchResult = await text({
-    message: `What files trigger regeneration?`,
-    placeholder: defaultWatch,
-    defaultValue: '',
+  options.push(
+    { value: 'browse', label: 'Browse for a path', hint: 'file browser' },
+    { value: 'manual', label: 'Enter manually' },
+    { value: 'skip', label: 'Skip', hint: `use default: ${defaultWatch}` },
+  );
+
+  const choice = await select({
+    message: 'Watch paths for this bridge:',
+    options,
   });
-  if (isCancel(watchResult)) {
+  if (isCancel(choice)) {
     handleCancel();
   }
 
-  if (!watchResult) {
-    return undefined;
+  switch (choice) {
+    case 'suggestion': {
+      return suggestion?.paths;
+    }
+    case 'browse': {
+      const browsed = await clackPath({
+        message: 'Select directory to watch:',
+        root,
+        directory: true,
+        initialValue: source,
+      });
+      if (isCancel(browsed)) {
+        handleCancel();
+      }
+      const relPath = relative(root, join(root, browsed));
+      return [`${relPath}/**`];
+    }
+    case 'manual': {
+      const entered = await text({
+        message: 'Watch paths (comma-separated globs):',
+        placeholder: defaultWatch,
+      });
+      if (isCancel(entered)) {
+        handleCancel();
+      }
+      if (!entered) {
+        return undefined;
+      }
+      return entered
+        .split(/[,\s]+/)
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+    }
+    case 'skip':
+    default: {
+      return undefined;
+    }
   }
-
-  // Split on commas or spaces to allow multiple paths
-  return watchResult
-    .split(/[,\s]+/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
 }
 
 async function promptModifyBridge(
@@ -665,7 +698,7 @@ async function promptModifyBridge(
   // Make artifact relative to root
   const relArtifact = relative(root, join(root, artifact));
 
-  const watch = await promptWatchPaths(source);
+  const watch = await promptWatchPaths(root, source);
 
   return { source, target, artifact: relArtifact, watch };
 }
@@ -747,7 +780,7 @@ async function promptAdditionalBridges(
       }
     }
 
-    const watch = await promptWatchPaths(source);
+    const watch = await promptWatchPaths(root, source);
     result.push({ source, target, artifact: relArtifact, watch });
     log.step(
       `Bridge: ${ORANGE}${source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${target}${RESET} ${DIM}via${RESET} ${BOLD}${relArtifact}${RESET}`,

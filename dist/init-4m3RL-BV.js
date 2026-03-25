@@ -265,7 +265,7 @@ async function runFirstTime(root, configPath, parsers) {
 		const sourcePackage = tmpPackageMap.get(b.source);
 		let suggestion = null;
 		if (sourcePackage) suggestion = await pluginRegistry.suggestWatchPaths(sourcePackage, b.artifact, tmpPackageMap, root);
-		const watch = await promptWatchPaths(b.source, suggestion);
+		const watch = await promptWatchPaths(root, b.source, suggestion);
 		bridgesWithWatch.push({
 			source: b.source,
 			target: b.target,
@@ -401,7 +401,7 @@ async function runReconciliation(root, configPath, parsers) {
 			});
 			if (isCancel(addWatch)) handleCancel();
 			if (addWatch) {
-				const watch = await promptWatchPaths(bridge.source);
+				const watch = await promptWatchPaths(root, bridge.source);
 				if (watch) {
 					updatedBridges.push({
 						...bridge,
@@ -534,24 +534,57 @@ async function promptNextSteps(parsers, summary) {
 			return 0;
 	}
 }
-async function promptWatchPaths(source, suggestion) {
+async function promptWatchPaths(root, source, suggestion) {
+	const defaultWatch = `${source}/**`;
+	const options = [];
 	if (suggestion) {
-		const suggestedValue = suggestion.paths.join(", ");
-		const useIt = await confirm({
-			message: `${suggestion.reason}. Watch ${suggestedValue}?`,
-			initialValue: true
+		const suggestedLabel = suggestion.paths.join(", ");
+		options.push({
+			value: "suggestion",
+			label: suggestedLabel,
+			hint: `suggested by ${suggestion.reason}`
 		});
-		if (isCancel(useIt)) handleCancel();
-		if (useIt) return suggestion.paths;
 	}
-	const watchResult = await text({
-		message: `What files trigger regeneration?`,
-		placeholder: `${source}/**`,
-		defaultValue: ""
+	options.push({
+		value: "browse",
+		label: "Browse for a path",
+		hint: "file browser"
+	}, {
+		value: "manual",
+		label: "Enter manually"
+	}, {
+		value: "skip",
+		label: "Skip",
+		hint: `use default: ${defaultWatch}`
 	});
-	if (isCancel(watchResult)) handleCancel();
-	if (!watchResult) return;
-	return watchResult.split(/[,\s]+/).map((p) => p.trim()).filter((p) => p.length > 0);
+	const choice = await select({
+		message: "Watch paths for this bridge:",
+		options
+	});
+	if (isCancel(choice)) handleCancel();
+	switch (choice) {
+		case "suggestion": return suggestion?.paths;
+		case "browse": {
+			const browsed = await path({
+				message: "Select directory to watch:",
+				root,
+				directory: true,
+				initialValue: source
+			});
+			if (isCancel(browsed)) handleCancel();
+			return [`${relative(root, join(root, browsed))}/**`];
+		}
+		case "manual": {
+			const entered = await text({
+				message: "Watch paths (comma-separated globs):",
+				placeholder: defaultWatch
+			});
+			if (isCancel(entered)) handleCancel();
+			if (!entered) return;
+			return entered.split(/[,\s]+/).map((p) => p.trim()).filter((p) => p.length > 0);
+		}
+		default: return;
+	}
 }
 async function promptModifyBridge(root, config, current) {
 	const allPaths = getAllPackagePaths(config);
@@ -584,7 +617,7 @@ async function promptModifyBridge(root, config, current) {
 		source,
 		target,
 		artifact: relative(root, join(root, artifact)),
-		watch: await promptWatchPaths(source)
+		watch: await promptWatchPaths(root, source)
 	};
 }
 async function promptAdditionalBridges(root, packagePaths) {
@@ -648,7 +681,7 @@ async function promptAdditionalBridges(root, packagePaths) {
 				continue;
 			}
 		}
-		const watch = await promptWatchPaths(source);
+		const watch = await promptWatchPaths(root, source);
 		result.push({
 			source,
 			target,
@@ -864,4 +897,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-CM3nCYvf.js.map
+//# sourceMappingURL=init-4m3RL-BV.js.map
