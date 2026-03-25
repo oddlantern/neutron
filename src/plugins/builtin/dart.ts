@@ -11,6 +11,7 @@ import type {
   ExecuteResult,
   WatchPathSuggestion,
 } from '../types.js';
+import { STANDARD_ACTIONS } from '../types.js';
 import { isRecord, runCommand } from './exec.js';
 
 const WATCH_PATTERNS: readonly string[] = ['lib/**/*.dart', 'bin/**/*.dart'];
@@ -62,7 +63,14 @@ export const dartPlugin: EcosystemPlugin = {
       const manifest = await readPubspec(pkg, root);
       const actions: string[] = ['pub-get'];
 
+      // Standard actions — always available for Dart packages
+      actions.push(STANDARD_ACTIONS.LINT);
+      actions.push(STANDARD_ACTIONS.FORMAT);
+      actions.push(STANDARD_ACTIONS.FORMAT_CHECK);
+
+      // Build — only if build_runner is available
       if (hasDep(manifest, 'build_runner')) {
+        actions.push(STANDARD_ACTIONS.BUILD);
         actions.push('codegen');
       }
 
@@ -88,8 +96,42 @@ export const dartPlugin: EcosystemPlugin = {
 
     const flutter = isFlutterPackage(manifest);
     const dartCmd = flutter ? 'flutter' : 'dart';
+    const analyzeCmd = flutter ? 'flutter' : 'dart';
 
     switch (action) {
+      case STANDARD_ACTIONS.LINT:
+        return runCommand(analyzeCmd, ['analyze', '.'], cwd);
+
+      case STANDARD_ACTIONS.LINT_FIX:
+        return runCommand('dart', ['fix', '--apply', '.'], cwd);
+
+      case STANDARD_ACTIONS.FORMAT: {
+        const libDir = join(cwd, 'lib');
+        const binDir = join(cwd, 'bin');
+        const targets = [libDir];
+        if (existsSync(binDir)) {
+          targets.push(binDir);
+        }
+        return runCommand('dart', ['format', ...targets], cwd);
+      }
+
+      case STANDARD_ACTIONS.FORMAT_CHECK: {
+        const libDir = join(cwd, 'lib');
+        const binDir = join(cwd, 'bin');
+        const targets = [libDir];
+        if (existsSync(binDir)) {
+          targets.push(binDir);
+        }
+        return runCommand('dart', ['format', '--set-exit-if-changed', ...targets], cwd);
+      }
+
+      case STANDARD_ACTIONS.BUILD:
+        return runCommand(
+          'dart',
+          ['run', 'build_runner', 'build', '--delete-conflicting-outputs'],
+          cwd,
+        );
+
       case 'pub-get':
         return runCommand(dartCmd, ['pub', 'get'], cwd);
 

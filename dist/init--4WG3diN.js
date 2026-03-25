@@ -2,14 +2,14 @@
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-Doj3f4_w.js";
-import { runCheck } from "./check-sFZYG_SJ.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-qCqsgyzq.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-CDmbyiyb.js";
+import { runCheck } from "./check-3iJQzFNi.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { cancel, confirm, intro, isCancel, log, multiselect, note, outro, path, select, spinner, text } from "@clack/prompts";
 import { execSync } from "node:child_process";
+import { cancel, confirm, intro, isCancel, log, multiselect, note, outro, path, select, spinner, text } from "@clack/prompts";
 //#region src/discovery/scanner.ts
 /** Directories to always skip during scanning */
 const SKIP_DIRS = new Set([
@@ -296,7 +296,7 @@ async function runFirstTime(root, configPath, parsers) {
 	if (isCancel(installHooks)) handleCancel();
 	let hooksInstalled = false;
 	if (installHooks) {
-		const { runInstall } = await import("./install-DHB3-A6u.js");
+		const { runInstall } = await import("./install-B80ymP9V.js");
 		const installResult = await runInstall(root);
 		if (installResult !== 0) return installResult;
 		hooksInstalled = true;
@@ -473,7 +473,7 @@ async function runPostInitCheck(parsers) {
 	const { config, root } = await loadConfig();
 	const { buildWorkspaceGraph } = await import("./workspace-0L_gtkdk.js").then((n) => n.n);
 	const { findVersionMismatches } = await import("./versions-DL21hmPA.js").then((n) => n.r);
-	const { loadLock } = await import("./lock-CzV2VIf4.js").then((n) => n.n);
+	const { loadLock } = await import("./lock-DcZeaTjn.js").then((n) => n.n);
 	const mismatches = findVersionMismatches(await buildWorkspaceGraph(config, root, parsers), await loadLock(root));
 	if (mismatches.length === 0) {
 		log.warn(`${DIM}Some checks failed. Run${RESET} ${BOLD}mido check${RESET} ${DIM}to see details.${RESET}`);
@@ -536,7 +536,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-ChLGUaHk.js");
+			const { runDev } = await import("./dev-ECNjBcQI.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -920,4 +920,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-Cln0yHb4.js.map
+//# sourceMappingURL=init--4WG3diN.js.map

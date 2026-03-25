@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { t as confirmAction } from "./prompt-C6NRendz.js";
+import { t as confirmAction } from "./prompt-o1AuH_9k.js";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -9,7 +9,7 @@ const HOOKS = [
 	{
 		name: "pre-commit",
 		content: `#!/usr/bin/env sh
-mido check --quiet
+mido pre-commit
 `
 	},
 	{
@@ -72,4 +72,4 @@ async function runInstall(root) {
 //#endregion
 export { runInstall };
 
-//# sourceMappingURL=install-DHB3-A6u.js.map
+//# sourceMappingURL=install-B80ymP9V.js.map

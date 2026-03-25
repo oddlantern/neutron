@@ -7,7 +7,7 @@ import { confirmAction } from '../prompt.js';
 const HOOKS_DIR = '.git/hooks';
 
 const HOOK_PRE_COMMIT = `#!/usr/bin/env sh
-mido check --quiet
+mido pre-commit
 `;
 
 const HOOK_COMMIT_MSG = `#!/usr/bin/env sh

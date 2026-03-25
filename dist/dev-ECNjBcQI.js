@@ -2,10 +2,10 @@
 import { c as YELLOW, i as GREEN, n as CYAN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as loadConfig } from "./loader-Doj3f4_w.js";
 import { t as buildWorkspaceGraph } from "./workspace-0L_gtkdk.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-qCqsgyzq.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-CDmbyiyb.js";
+import { t as detectPackageManager } from "./pm-detect-DP5d3aJk.js";
 import { lstat, readFile, readdir, realpath, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
-import { existsSync } from "node:fs";
 import { stat as stat$1, unwatchFile, watch, watchFile } from "fs";
 import { lstat as lstat$1, open, readdir as readdir$1, realpath as realpath$1, stat as stat$2 } from "fs/promises";
 import { EventEmitter } from "events";
@@ -1560,20 +1560,6 @@ var esm_default = {
 	FSWatcher
 };
 //#endregion
-//#region src/watcher/pm-detect.ts
-const LOCKFILE_TO_PM = new Map([
-	["bun.lock", "bun"],
-	["bun.lockb", "bun"],
-	["pnpm-lock.yaml", "pnpm"],
-	["yarn.lock", "yarn"],
-	["package-lock.json", "npm"]
-]);
-/** Detect package manager from lockfiles in the workspace root */
-function detectPackageManager(root) {
-	for (const [lockfile, pm] of LOCKFILE_TO_PM) if (existsSync(join(root, lockfile))) return pm;
-	return "npm";
-}
-//#endregion
 //#region src/watcher/debouncer.ts
 const DEFAULT_DELAY_MS = 2e3;
 /**
@@ -2030,4 +2016,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-ChLGUaHk.js.map
+//# sourceMappingURL=dev-ECNjBcQI.js.map

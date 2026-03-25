@@ -218,7 +218,11 @@ async function fetchSpec(
   port: number,
   paths: readonly string[],
 ): Promise<
-  | { readonly spec: Record<string, unknown>; readonly path: string; readonly attempts: readonly FetchAttempt[] }
+  | {
+      readonly spec: Record<string, unknown>;
+      readonly path: string;
+      readonly attempts: readonly FetchAttempt[];
+    }
   | { readonly spec: null; readonly path: null; readonly attempts: readonly FetchAttempt[] }
 > {
   const attempts: FetchAttempt[] = [];
@@ -249,7 +253,11 @@ async function fetchSpec(
 
       const text = await response.text();
       if (text.length > MAX_RESPONSE_BYTES) {
-        attempts.push({ path: specPath, status: response.status, error: 'response body too large' });
+        attempts.push({
+          path: specPath,
+          status: response.status,
+          error: 'response body too large',
+        });
         continue;
       }
 
@@ -262,13 +270,21 @@ async function fetchSpec(
       }
 
       if (!isRecord(body)) {
-        attempts.push({ path: specPath, status: response.status, error: 'response is not a JSON object' });
+        attempts.push({
+          path: specPath,
+          status: response.status,
+          error: 'response is not a JSON object',
+        });
         continue;
       }
 
       // Validate it looks like an OpenAPI spec
       if (!('openapi' in body) && !('swagger' in body)) {
-        attempts.push({ path: specPath, status: response.status, error: 'missing openapi/swagger key' });
+        attempts.push({
+          path: specPath,
+          status: response.status,
+          error: 'missing openapi/swagger key',
+        });
         continue;
       }
 
@@ -341,9 +357,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
   }
 
   // 3. Boot the server
-  const runnerArgs = pm === 'bun'
-    ? ['run', entryFile]
-    : ['tsx', entryFile];
+  const runnerArgs = pm === 'bun' ? ['run', entryFile] : ['tsx', entryFile];
   const runner = pm === 'bun' ? 'bun' : 'npx';
 
   debug?.(`spawning: ${runner} ${runnerArgs.join(' ')} (cwd: ${packageDir})`);
@@ -424,7 +438,9 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
       const attemptDetails = formatAttempts(result.attempts);
       const details = [
         attemptDetails ? `Endpoints tried:\n${attemptDetails}` : '',
-        serverOutput ? `Server output:\n${serverOutput.trim().split('\n').slice(0, 10).join('\n')}` : '',
+        serverOutput
+          ? `Server output:\n${serverOutput.trim().split('\n').slice(0, 10).join('\n')}`
+          : '',
       ]
         .filter(Boolean)
         .join('\n');

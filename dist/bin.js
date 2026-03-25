@@ -148,6 +148,12 @@ function printBanner() {
 //#endregion
 //#region src/bin.ts
 const parsers = new Map([[packageJsonParser.manifestName, packageJsonParser], [pubspecParser.manifestName, pubspecParser]]);
+/** Extract the value following a --flag from the args list */
+function getFlagValue(args, flag) {
+	const idx = args.indexOf(flag);
+	if (idx === -1 || idx + 1 >= args.length) return;
+	return args[idx + 1];
+}
 const HELP = `
 mido — cross-ecosystem monorepo workspace tool
 
@@ -160,9 +166,22 @@ Commands:
   check             Run all workspace consistency checks
   check --fix       Interactively resolve version mismatches and update mido.lock
   check --quiet     Silent mode — only output on failure (for hooks)
-  dev [--verbose]    Watch bridges and regenerate on changes
+  dev [--verbose]   Watch bridges and regenerate on changes
+  lint              Run linters across all packages
+  lint --fix        Auto-fix lint issues
+  fmt               Format all packages
+  fmt --check       Check formatting without fixing
+  build             Build all packages
+  pre-commit        Run full pre-commit validation suite
   commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
+
+Flags (lint, fmt, build):
+  --quiet              Only show failures
+  --package <path>     Target a specific package
+
+Flags (lint, fmt):
+  --ecosystem <name>   Target a specific ecosystem (typescript, dart)
 
 Config:
   mido.yml          Workspace config (searched upward from cwd)
@@ -187,7 +206,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-sFZYG_SJ.js");
+		const { runCheck } = await import("./check-3iJQzFNi.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -195,19 +214,62 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-Cln0yHb4.js");
+		const { runInit } = await import("./init--4WG3diN.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-ChLGUaHk.js");
+		const { runDev } = await import("./dev-ECNjBcQI.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-DHB3-A6u.js");
+		const { runInstall } = await import("./install-B80ymP9V.js");
 		const exitCode = await runInstall(process.cwd());
+		process.exit(exitCode);
+	}
+	if (command === "lint") {
+		const fix = args.includes("--fix");
+		const quiet = args.includes("--quiet");
+		const pkg = getFlagValue(args, "--package");
+		const ecosystem = getFlagValue(args, "--ecosystem");
+		const { runLint } = await import("./lint-CS1Lv7zR.js");
+		const exitCode = await runLint(parsers, {
+			fix,
+			quiet,
+			package: pkg,
+			ecosystem
+		});
+		process.exit(exitCode);
+	}
+	if (command === "fmt") {
+		const check = args.includes("--check");
+		const quiet = args.includes("--quiet");
+		const pkg = getFlagValue(args, "--package");
+		const ecosystem = getFlagValue(args, "--ecosystem");
+		const { runFmt } = await import("./fmt-DpBJslOF.js");
+		const exitCode = await runFmt(parsers, {
+			check,
+			quiet,
+			package: pkg,
+			ecosystem
+		});
+		process.exit(exitCode);
+	}
+	if (command === "build") {
+		const quiet = args.includes("--quiet");
+		const pkg = getFlagValue(args, "--package");
+		const { runBuild } = await import("./build-BISynLeh.js");
+		const exitCode = await runBuild(parsers, {
+			quiet,
+			package: pkg
+		});
+		process.exit(exitCode);
+	}
+	if (command === "pre-commit") {
+		const { runPreCommit } = await import("./pre-commit-tWEt2iBD.js");
+		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
 	if (command === "commit-msg") {
@@ -216,7 +278,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-CdrzcMDi.js");
+		const { runCommitMsg } = await import("./commit-msg-DEmvnDGl.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}

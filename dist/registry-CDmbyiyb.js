@@ -5,6 +5,18 @@ import { parse } from "yaml";
 import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+//#region src/plugins/types.ts
+/** Standard action names shared across ecosystem plugins */
+const STANDARD_ACTIONS = {
+	LINT: "lint",
+	LINT_FIX: "lint:fix",
+	FORMAT: "format",
+	FORMAT_CHECK: "format:check",
+	BUILD: "build",
+	TYPECHECK: "typecheck",
+	CODEGEN: "codegen"
+};
+//#endregion
 //#region src/plugins/builtin/exec.ts
 /** Maximum bytes of stdout/stderr to accumulate per process */
 const MAX_OUTPUT_BYTES$1 = 1024 * 1024;
@@ -148,6 +160,36 @@ function detectOutputFromScripts(scripts) {
 	}
 	return null;
 }
+/**
+* Resolve a binary from node_modules/.bin/ or fall back to PATH.
+* Returns the bin name if found, null if not available.
+*/
+function resolveBin(name, root) {
+	const localBin = join(root, "node_modules", ".bin", name);
+	if (existsSync(localBin)) return localBin;
+	return null;
+}
+/**
+* Find the source directory for a TS package.
+* Prefers src/, falls back to lib/, then package root.
+* When falling back to root, returns it so the caller can decide
+* whether to add glob filters for tools that scan recursively.
+*/
+function findSourceDir(pkg, root) {
+	const pkgDir = join(root, pkg.path);
+	if (existsSync(join(pkgDir, "src"))) return {
+		dir: join(pkgDir, "src"),
+		isRoot: false
+	};
+	if (existsSync(join(pkgDir, "lib"))) return {
+		dir: join(pkgDir, "lib"),
+		isRoot: false
+	};
+	return {
+		dir: pkgDir,
+		isRoot: true
+	};
+}
 /** Well-known output paths for openapi-typescript, checked in order */
 const WELL_KNOWN_OUTPUT_PATHS = [
 	"generated/api.d.ts",
@@ -177,9 +219,15 @@ const typescriptPlugin = {
 	},
 	async getActions(pkg, root) {
 		try {
-			const scripts = getScripts(await readPackageJson(pkg.path, root));
+			const manifest = await readPackageJson(pkg.path, root);
+			const scripts = getScripts(manifest);
 			const actions = [];
-			for (const action of WELL_KNOWN_ACTIONS) if (scripts[action]) actions.push(action);
+			actions.push(STANDARD_ACTIONS.LINT);
+			actions.push(STANDARD_ACTIONS.FORMAT);
+			actions.push(STANDARD_ACTIONS.FORMAT_CHECK);
+			if (scripts["build"]) actions.push(STANDARD_ACTIONS.BUILD);
+			if (hasDep$1(manifest, "typescript") || existsSync(join(root, pkg.path, "tsconfig.json"))) actions.push(STANDARD_ACTIONS.TYPECHECK);
+			for (const action of WELL_KNOWN_ACTIONS) if (scripts[action] && !actions.includes(action)) actions.push(action);
 			for (const key of Object.keys(scripts)) if (!actions.includes(key) && !key.startsWith("pre") && !key.startsWith("post")) actions.push(key);
 			return actions;
 		} catch {
@@ -189,6 +237,61 @@ const typescriptPlugin = {
 	async execute(action, pkg, root, context) {
 		const cwd = join(root, pkg.path);
 		const pm = context.packageManager;
+		if (action === STANDARD_ACTIONS.LINT || action === STANDARD_ACTIONS.LINT_FIX) {
+			const fix = action === STANDARD_ACTIONS.LINT_FIX;
+			const { dir } = findSourceDir(pkg, root);
+			const oxlint = resolveBin("oxlint", root);
+			if (oxlint) return runCommand(oxlint, fix ? ["--fix", dir] : [dir], cwd);
+			const eslint = resolveBin("eslint", root);
+			if (eslint) return runCommand(eslint, fix ? ["--fix", dir] : [dir], cwd);
+			return {
+				success: true,
+				duration: 0,
+				summary: `No linter found for ${pkg.path}. Install oxlint or eslint.`
+			};
+		}
+		if (action === STANDARD_ACTIONS.FORMAT) {
+			const { dir, isRoot } = findSourceDir(pkg, root);
+			const oxfmt = resolveBin("oxfmt", root);
+			if (oxfmt) return runCommand(oxfmt, isRoot ? [
+				"--no-error-on-unmatched-pattern",
+				join(dir, "**/*.ts"),
+				join(dir, "**/*.tsx")
+			] : [dir], cwd);
+			const prettier = resolveBin("prettier", root);
+			if (prettier) return runCommand(prettier, ["--write", dir], cwd);
+			return {
+				success: true,
+				duration: 0,
+				summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.`
+			};
+		}
+		if (action === STANDARD_ACTIONS.FORMAT_CHECK) {
+			const { dir, isRoot } = findSourceDir(pkg, root);
+			const oxfmt = resolveBin("oxfmt", root);
+			if (oxfmt) return runCommand(oxfmt, isRoot ? [
+				"--check",
+				"--no-error-on-unmatched-pattern",
+				join(dir, "**/*.ts"),
+				join(dir, "**/*.tsx")
+			] : ["--check", dir], cwd);
+			const prettier = resolveBin("prettier", root);
+			if (prettier) return runCommand(prettier, ["--check", dir], cwd);
+			return {
+				success: true,
+				duration: 0,
+				summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.`
+			};
+		}
+		if (action === STANDARD_ACTIONS.BUILD) return runCommand(pm, ["run", "build"], cwd);
+		if (action === STANDARD_ACTIONS.TYPECHECK) {
+			let scripts = {};
+			try {
+				scripts = getScripts(await readPackageJson(pkg.path, root));
+			} catch {}
+			if (scripts["typecheck"]) return runCommand(pm, ["run", "typecheck"], cwd);
+			return runCommand(pm === "bun" ? "bunx" : "npx", ["tsc", "--noEmit"], cwd);
+		}
 		if (action === "generate-openapi-ts") {
 			let scripts = {};
 			try {
@@ -279,7 +382,13 @@ const dartPlugin = {
 		try {
 			const manifest = await readPubspec(pkg, root);
 			const actions = ["pub-get"];
-			if (hasDep(manifest, "build_runner")) actions.push("codegen");
+			actions.push(STANDARD_ACTIONS.LINT);
+			actions.push(STANDARD_ACTIONS.FORMAT);
+			actions.push(STANDARD_ACTIONS.FORMAT_CHECK);
+			if (hasDep(manifest, "build_runner")) {
+				actions.push(STANDARD_ACTIONS.BUILD);
+				actions.push("codegen");
+			}
 			if (hasDep(manifest, "swagger_parser")) actions.push("generate-api");
 			return actions;
 		} catch {
@@ -294,8 +403,40 @@ const dartPlugin = {
 		} catch {
 			manifest = {};
 		}
-		const dartCmd = isFlutterPackage(manifest) ? "flutter" : "dart";
+		const flutter = isFlutterPackage(manifest);
+		const dartCmd = flutter ? "flutter" : "dart";
+		const analyzeCmd = flutter ? "flutter" : "dart";
 		switch (action) {
+			case STANDARD_ACTIONS.LINT: return runCommand(analyzeCmd, ["analyze", "."], cwd);
+			case STANDARD_ACTIONS.LINT_FIX: return runCommand("dart", [
+				"fix",
+				"--apply",
+				"."
+			], cwd);
+			case STANDARD_ACTIONS.FORMAT: {
+				const libDir = join(cwd, "lib");
+				const binDir = join(cwd, "bin");
+				const targets = [libDir];
+				if (existsSync(binDir)) targets.push(binDir);
+				return runCommand("dart", ["format", ...targets], cwd);
+			}
+			case STANDARD_ACTIONS.FORMAT_CHECK: {
+				const libDir = join(cwd, "lib");
+				const binDir = join(cwd, "bin");
+				const targets = [libDir];
+				if (existsSync(binDir)) targets.push(binDir);
+				return runCommand("dart", [
+					"format",
+					"--set-exit-if-changed",
+					...targets
+				], cwd);
+			}
+			case STANDARD_ACTIONS.BUILD: return runCommand("dart", [
+				"run",
+				"build_runner",
+				"build",
+				"--delete-conflicting-outputs"
+			], cwd);
 			case "pub-get": return runCommand(dartCmd, ["pub", "get"], cwd);
 			case "codegen": return runCommand("dart", [
 				"run",
@@ -692,7 +833,7 @@ async function exportSpec(options) {
 * Reads the package.json and checks all adapters.
 */
 async function detectFrameworkAdapter(pkgPath, root) {
-	const { detectAdapter } = await import("./adapters-DlQP7ll8.js");
+	const { detectAdapter } = await import("./adapters-D6NhuRRj.js");
 	try {
 		const manifest = await readPackageJson(pkgPath, root);
 		const allDeps = {};
@@ -1001,6 +1142,6 @@ var PluginRegistry = class {
 	}
 };
 //#endregion
-export { loadPlugins as n, PluginRegistry as t };
+export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-qCqsgyzq.js.map
+//# sourceMappingURL=registry-CDmbyiyb.js.map

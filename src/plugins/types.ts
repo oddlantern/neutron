@@ -1,5 +1,24 @@
 import type { WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
 
+/** Standard action names shared across ecosystem plugins */
+export const STANDARD_ACTIONS: {
+  readonly LINT: 'lint';
+  readonly LINT_FIX: 'lint:fix';
+  readonly FORMAT: 'format';
+  readonly FORMAT_CHECK: 'format:check';
+  readonly BUILD: 'build';
+  readonly TYPECHECK: 'typecheck';
+  readonly CODEGEN: 'codegen';
+} = {
+  LINT: 'lint',
+  LINT_FIX: 'lint:fix',
+  FORMAT: 'format',
+  FORMAT_CHECK: 'format:check',
+  BUILD: 'build',
+  TYPECHECK: 'typecheck',
+  CODEGEN: 'codegen',
+};
+
 /** Result of a plugin execution */
 export interface ExecuteResult {
   readonly success: boolean;

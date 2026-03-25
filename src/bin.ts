@@ -10,6 +10,15 @@ const parsers = new Map<string, ManifestParser>([
   [pubspecParser.manifestName, pubspecParser],
 ]);
 
+/** Extract the value following a --flag from the args list */
+function getFlagValue(args: readonly string[], flag: string): string | undefined {
+  const idx = args.indexOf(flag);
+  if (idx === -1 || idx + 1 >= args.length) {
+    return undefined;
+  }
+  return args[idx + 1];
+}
+
 const HELP = `
 mido — cross-ecosystem monorepo workspace tool
 
@@ -22,9 +31,22 @@ Commands:
   check             Run all workspace consistency checks
   check --fix       Interactively resolve version mismatches and update mido.lock
   check --quiet     Silent mode — only output on failure (for hooks)
-  dev [--verbose]    Watch bridges and regenerate on changes
+  dev [--verbose]   Watch bridges and regenerate on changes
+  lint              Run linters across all packages
+  lint --fix        Auto-fix lint issues
+  fmt               Format all packages
+  fmt --check       Check formatting without fixing
+  build             Build all packages
+  pre-commit        Run full pre-commit validation suite
   commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
+
+Flags (lint, fmt, build):
+  --quiet              Only show failures
+  --package <path>     Target a specific package
+
+Flags (lint, fmt):
+  --ecosystem <name>   Target a specific ecosystem (typescript, dart)
 
 Config:
   mido.yml          Workspace config (searched upward from cwd)
@@ -74,6 +96,40 @@ async function main(): Promise<void> {
   if (command === 'install') {
     const { runInstall } = await import('./commands/install.js');
     const exitCode = await runInstall(process.cwd());
+    process.exit(exitCode);
+  }
+
+  if (command === 'lint') {
+    const fix = args.includes('--fix');
+    const quiet = args.includes('--quiet');
+    const pkg = getFlagValue(args, '--package');
+    const ecosystem = getFlagValue(args, '--ecosystem');
+    const { runLint } = await import('./commands/lint.js');
+    const exitCode = await runLint(parsers, { fix, quiet, package: pkg, ecosystem });
+    process.exit(exitCode);
+  }
+
+  if (command === 'fmt') {
+    const check = args.includes('--check');
+    const quiet = args.includes('--quiet');
+    const pkg = getFlagValue(args, '--package');
+    const ecosystem = getFlagValue(args, '--ecosystem');
+    const { runFmt } = await import('./commands/fmt.js');
+    const exitCode = await runFmt(parsers, { check, quiet, package: pkg, ecosystem });
+    process.exit(exitCode);
+  }
+
+  if (command === 'build') {
+    const quiet = args.includes('--quiet');
+    const pkg = getFlagValue(args, '--package');
+    const { runBuild } = await import('./commands/build.js');
+    const exitCode = await runBuild(parsers, { quiet, package: pkg });
+    process.exit(exitCode);
+  }
+
+  if (command === 'pre-commit') {
+    const { runPreCommit } = await import('./commands/pre-commit.js');
+    const exitCode = await runPreCommit(parsers);
     process.exit(exitCode);
   }
 

@@ -142,4 +142,4 @@ async function runCommitMsg(filePath) {
 //#endregion
 export { runCommitMsg };
 
-//# sourceMappingURL=commit-msg-CdrzcMDi.js.map
+//# sourceMappingURL=commit-msg-DEmvnDGl.js.map
