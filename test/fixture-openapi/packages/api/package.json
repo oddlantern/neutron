@@ -1,0 +1,7 @@
+{
+  "name": "@test/api",
+  "version": "1.0.0",
+  "dependencies": {
+    "@elysiajs/openapi": "^0.1.0"
+  }
+}

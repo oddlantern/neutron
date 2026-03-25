@@ -1,0 +1,7 @@
+{
+  "name": "@test/server",
+  "version": "1.0.0",
+  "dependencies": {
+    "elysia": "^1.0.0"
+  }
+}
