@@ -1010,8 +1010,8 @@ function renderYaml(config: Record<string, unknown>): string {
     ['ecosystems', ' Language ecosystems and their packages'],
     ['bridges', ' Cross-ecosystem dependencies linked by a shared artifact'],
     ['env', ' Environment variable parity across packages'],
-    ['lint', ' Linter configuration (passed to oxlint)'],
-    ['format', ' Formatter configuration (passed to oxfmt)'],
+    ['lint', ' Linter configuration (rules and ignore patterns)'],
+    ['format', ' Formatter configuration (options and ignore patterns)'],
   ]);
 
   if (isMap(doc.contents)) {

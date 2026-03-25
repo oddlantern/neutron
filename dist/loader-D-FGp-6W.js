@@ -47,10 +47,9 @@ const lintSchema = z.object({
 	ignore: z.array(z.string()).optional()
 });
 /**
-* Format config is a passthrough — all keys from the source
-* (oxfmtrc.json / prettierrc) are preserved and forwarded to
-* oxfmt at runtime. Only `ignore` is handled specially (written
-* to a separate ignore file instead of the config JSON).
+* Format config is a passthrough — tool-specific keys (e.g. from
+* oxfmtrc.json / prettierrc) are forwarded to the formatter at runtime.
+* `ignore` is handled by the central file resolver, not the formatter.
 */
 const formatSchema = z.object({ ignore: z.array(z.string()).optional() }).passthrough();
 const configSchema = z.object({
@@ -153,4 +152,4 @@ async function loadConfig(startDir) {
 //#endregion
 export { DEFAULT_COMMIT_TYPES as n, loadConfig as t };
 
-//# sourceMappingURL=loader-DEIL81UX.js.map
+//# sourceMappingURL=loader-D-FGp-6W.js.map

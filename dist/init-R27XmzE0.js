@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-DEIL81UX.js";
+import { t as loadConfig } from "./loader-D-FGp-6W.js";
 import { n as loadPlugins, t as PluginRegistry } from "./registry-2wPMEgE6.js";
-import { runCheck } from "./check-BfVJls7g.js";
+import { runCheck } from "./check-yCF5--1I.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -551,7 +551,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-Bk0zGvT3.js");
+			const { runDev } = await import("./dev-9UYrenpG.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -824,8 +824,8 @@ function renderYaml(config) {
 		["ecosystems", " Language ecosystems and their packages"],
 		["bridges", " Cross-ecosystem dependencies linked by a shared artifact"],
 		["env", " Environment variable parity across packages"],
-		["lint", " Linter configuration (passed to oxlint)"],
-		["format", " Formatter configuration (passed to oxfmt)"]
+		["lint", " Linter configuration (rules and ignore patterns)"],
+		["format", " Formatter configuration (options and ignore patterns)"]
 	]);
 	if (isMap(doc.contents)) for (const pair of doc.contents.items) {
 		if (!isScalar(pair.key)) continue;
@@ -1136,4 +1136,4 @@ async function migrateLintFormatConfig(root, _configPath) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-BQ62HREZ.js.map
+//# sourceMappingURL=init-R27XmzE0.js.map

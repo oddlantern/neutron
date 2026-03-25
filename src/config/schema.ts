@@ -51,10 +51,9 @@ const lintSchema = z.object({
 });
 
 /**
- * Format config is a passthrough — all keys from the source
- * (oxfmtrc.json / prettierrc) are preserved and forwarded to
- * oxfmt at runtime. Only `ignore` is handled specially (written
- * to a separate ignore file instead of the config JSON).
+ * Format config is a passthrough — tool-specific keys (e.g. from
+ * oxfmtrc.json / prettierrc) are forwarded to the formatter at runtime.
+ * `ignore` is handled by the central file resolver, not the formatter.
  */
 const formatSchema = z
   .object({
