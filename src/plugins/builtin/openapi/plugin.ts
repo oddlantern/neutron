@@ -221,7 +221,7 @@ export const openapiPlugin: DomainPlugin = {
   ): Promise<ExecuteResult> {
     // Primary: adapter-based export (boot server, fetch spec)
     const adapterResult = await tryAdapterExport(source, artifact, root, context);
-    if (adapterResult) {
+    if (adapterResult?.success) {
       return adapterResult;
     }
 

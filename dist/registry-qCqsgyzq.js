@@ -839,7 +839,7 @@ const openapiPlugin = {
 	},
 	async exportArtifact(source, artifact, root, context) {
 		const adapterResult = await tryAdapterExport(source, artifact, root, context);
-		if (adapterResult) return adapterResult;
+		if (adapterResult?.success) return adapterResult;
 		const sourceHandler = (await context.findEcosystemHandlers("openapi", artifact)).find((h) => h.pkg.path === source.path);
 		if (sourceHandler) return sourceHandler.plugin.execute(sourceHandler.capability.action, source, root, context);
 		try {
@@ -1003,4 +1003,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, PluginRegistry as t };
 
-//# sourceMappingURL=registry-Cure8da5.js.map
+//# sourceMappingURL=registry-qCqsgyzq.js.map

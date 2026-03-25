@@ -195,13 +195,13 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-BhtaKlLw.js");
+		const { runInit } = await import("./init-Cln0yHb4.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-rz9i-R-g.js");
+		const { runDev } = await import("./dev-ChLGUaHk.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
