@@ -95,6 +95,8 @@ export async function buildWorkspaceGraph(
     source: b.source,
     target: b.target,
     artifact: b.artifact,
+    run: b.run,
+    watch: b.watch,
   }));
 
   return {

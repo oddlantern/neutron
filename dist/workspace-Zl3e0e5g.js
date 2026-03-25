@@ -59,7 +59,9 @@ async function buildWorkspaceGraph(config, root, parsers) {
 	const bridges = (config.bridges ?? []).map((b) => ({
 		source: b.source,
 		target: b.target,
-		artifact: b.artifact
+		artifact: b.artifact,
+		run: b.run,
+		watch: b.watch
 	}));
 	return {
 		name: config.workspace,
@@ -76,4 +78,4 @@ function isInPackageList(config, relPath) {
 //#endregion
 export { workspace_exports as n, buildWorkspaceGraph as t };
 
-//# sourceMappingURL=workspace-EFJiXFzK.js.map
+//# sourceMappingURL=workspace-Zl3e0e5g.js.map

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-BqgJlGYf.js";
-import { runCheck } from "./check-DGNQGCP2.js";
+import { t as loadConfig } from "./loader-DBSgOfQT.js";
+import { runCheck } from "./check-DFr71boJ.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -277,7 +277,7 @@ async function runFirstTime(root, configPath, parsers) {
 	});
 	if (isCancel(installHooks)) handleCancel();
 	if (installHooks) {
-		const { runInstall } = await import("./install-a0iKVUxi.js");
+		const { runInstall } = await import("./install-J5kPjvWO.js");
 		const installResult = await runInstall(root);
 		if (installResult !== 0) return installResult;
 	}
@@ -405,9 +405,9 @@ async function runPostInitCheck(parsers) {
 		return;
 	}
 	const { config, root } = await loadConfig();
-	const { buildWorkspaceGraph } = await import("./workspace-EFJiXFzK.js").then((n) => n.n);
+	const { buildWorkspaceGraph } = await import("./workspace-Zl3e0e5g.js").then((n) => n.n);
 	const { findVersionMismatches } = await import("./versions-BIEdbVj8.js").then((n) => n.r);
-	const { loadLock } = await import("./lock-BGhC5OeQ.js").then((n) => n.n);
+	const { loadLock } = await import("./lock-CzV2VIf4.js").then((n) => n.n);
 	const mismatches = findVersionMismatches(await buildWorkspaceGraph(config, root, parsers), await loadLock(root));
 	if (mismatches.length === 0) return;
 	const fix = await confirm({
@@ -705,4 +705,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-DgAwDPZU.js.map
+//# sourceMappingURL=init-CUBYRIhg.js.map

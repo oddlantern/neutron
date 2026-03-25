@@ -1,13 +1,13 @@
 import type { CheckIssue, CheckResult } from './checks/types.js';
 
 // ANSI color codes — no dependency needed
-const RESET = '\x1b[0m';
-const BOLD = '\x1b[1m';
-const DIM = '\x1b[2m';
-const RED = '\x1b[31m';
-const GREEN = '\x1b[32m';
-const YELLOW = '\x1b[33m';
-const CYAN = '\x1b[36m';
+export const RESET = '\x1b[0m';
+export const BOLD = '\x1b[1m';
+export const DIM = '\x1b[2m';
+export const RED = '\x1b[31m';
+export const GREEN = '\x1b[32m';
+export const YELLOW = '\x1b[33m';
+export const CYAN = '\x1b[36m';
 
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;

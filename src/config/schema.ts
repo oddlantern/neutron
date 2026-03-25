@@ -10,6 +10,8 @@ const bridgeSchema = z.object({
   source: z.string(),
   target: z.string(),
   artifact: z.string(),
+  run: z.string().optional(),
+  watch: z.array(z.string()).optional(),
 });
 
 const envSchema = z.object({

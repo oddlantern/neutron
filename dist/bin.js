@@ -162,6 +162,7 @@ Commands:
   check             Run all workspace consistency checks
   check --fix       Interactively resolve version mismatches and update mido.lock
   check --quiet     Silent mode — only output on failure (for hooks)
+  dev               Watch bridges and regenerate on changes
   commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
 
@@ -188,7 +189,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-DGNQGCP2.js");
+		const { runCheck } = await import("./check-DFr71boJ.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -196,12 +197,17 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-DgAwDPZU.js");
+		const { runInit } = await import("./init-CUBYRIhg.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
+	if (command === "dev") {
+		const { runDev } = await import("./dev-Cwea1HoZ.js");
+		const exitCode = await runDev(parsers);
+		process.exit(exitCode);
+	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-a0iKVUxi.js");
+		const { runInstall } = await import("./install-J5kPjvWO.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
@@ -211,7 +217,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-CWPzfTFm.js");
+		const { runCommitMsg } = await import("./commit-msg-Budjr_jl.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}

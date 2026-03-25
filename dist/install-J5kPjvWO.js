@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { t as confirmAction } from "./prompt-Bvq7Up0I.js";
+import { t as confirmAction } from "./prompt-C6NRendz.js";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -72,4 +72,4 @@ async function runInstall(root) {
 //#endregion
 export { runInstall };
 
-//# sourceMappingURL=install-a0iKVUxi.js.map
+//# sourceMappingURL=install-J5kPjvWO.js.map

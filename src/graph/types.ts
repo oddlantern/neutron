@@ -38,6 +38,10 @@ export interface Bridge {
   readonly target: string;
   /** Path to the bridge artifact (e.g., openapi.json) */
   readonly artifact: string;
+  /** Override: skip plugin detection, run this script directly */
+  readonly run: string | undefined;
+  /** Override: watch these paths instead of plugin defaults */
+  readonly watch: readonly string[] | undefined;
 }
 
 /**

@@ -287,7 +287,13 @@ async function runReconciliation(root: string, configPath: string, parsers: Pars
 
   // Handle existing bridges
   const existingBridges = existing.bridges ?? [];
-  const updatedBridges: Array<{ source: string; target: string; artifact: string }> = [];
+  const updatedBridges: Array<{
+    source: string;
+    target: string;
+    artifact: string;
+    run?: string | undefined;
+    watch?: string[] | undefined;
+  }> = [];
 
   for (const bridge of existingBridges) {
     const action = await select({

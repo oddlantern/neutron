@@ -1,0 +1,141 @@
+import type { WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
+
+/** Result of a plugin execution */
+export interface ExecuteResult {
+  readonly success: boolean;
+  readonly duration: number;
+  /** Human-readable summary (e.g., "generated 3 Dart files") */
+  readonly summary: string;
+  /** Captured stdout/stderr for error display */
+  readonly output?: string | undefined;
+}
+
+/**
+ * Ecosystem plugin — handles language-level operations.
+ *
+ * Examples: mido-typescript, mido-dart, mido-rust
+ */
+export interface EcosystemPlugin {
+  readonly type: 'ecosystem';
+  /** Unique identifier (e.g., "typescript", "dart") */
+  readonly name: string;
+  /** Manifest filename this plugin understands */
+  readonly manifest: string;
+
+  /**
+   * Can this plugin handle the given package?
+   * Inspect dependencies, file structure, etc.
+   */
+  detect(pkg: WorkspacePackage, root: string): Promise<boolean>;
+
+  /**
+   * What file patterns should be watched for this package?
+   * Return glob patterns relative to the package root.
+   */
+  getWatchPatterns(pkg: WorkspacePackage, root: string): Promise<readonly string[]>;
+
+  /**
+   * Get available actions for this package.
+   * Inspects manifest scripts, dependencies, etc.
+   * Returns action names this plugin can execute (e.g., "generate", "build", "codegen").
+   */
+  getActions(pkg: WorkspacePackage, root: string): Promise<readonly string[]>;
+
+  /**
+   * Execute an action on the package.
+   * The action name comes from getActions() or from a domain plugin request.
+   */
+  execute(
+    action: string,
+    pkg: WorkspacePackage,
+    root: string,
+    context: ExecutionContext,
+  ): Promise<ExecuteResult>;
+
+  /**
+   * Can this plugin generate a client/output from a domain artifact?
+   * Domain plugins call this to discover which ecosystems can produce output.
+   * Returns null if it can't handle it, or a description of what it would produce.
+   */
+  canHandleDomainArtifact?(
+    domain: string,
+    artifact: string,
+    pkg: WorkspacePackage,
+    root: string,
+  ): Promise<DomainCapability | null>;
+}
+
+/** Returned by canHandleDomainArtifact when the plugin can handle it */
+export interface DomainCapability {
+  /** Action name to pass to execute() */
+  readonly action: string;
+  /** Human-readable description */
+  readonly description: string;
+}
+
+/**
+ * Domain plugin — handles protocol/spec-level operations.
+ * Delegates actual code generation to ecosystem plugins.
+ *
+ * Examples: mido-openapi, mido-graphql, mido-protobuf
+ */
+export interface DomainPlugin {
+  readonly type: 'domain';
+  /** Unique identifier (e.g., "openapi", "graphql") */
+  readonly name: string;
+
+  /**
+   * Can this plugin handle the given bridge?
+   * Inspect the artifact file extension, content, etc.
+   */
+  detectBridge(artifact: string, root: string): Promise<boolean>;
+
+  /**
+   * Export/produce the artifact from the source package.
+   * Uses ecosystem plugins to run the actual export command.
+   */
+  exportArtifact(
+    source: WorkspacePackage,
+    artifact: string,
+    root: string,
+    context: ExecutionContext,
+  ): Promise<ExecuteResult>;
+
+  /**
+   * Generate all downstream outputs from the artifact.
+   * Discovers ecosystem plugins that can handle this domain,
+   * then delegates to each one.
+   */
+  generateDownstream(
+    artifact: string,
+    targets: readonly WorkspacePackage[],
+    root: string,
+    context: ExecutionContext,
+  ): Promise<readonly ExecuteResult[]>;
+}
+
+/**
+ * Execution context provided by mido core to plugins.
+ * Gives plugins access to the registry without importing other plugins directly.
+ */
+export interface ExecutionContext {
+  /** The full workspace graph */
+  readonly graph: WorkspaceGraph;
+  /** Find ecosystem plugins that can handle a domain artifact */
+  findEcosystemHandlers(
+    domain: string,
+    artifact: string,
+  ): Promise<readonly EcosystemHandler[]>;
+  /** Detected package manager ("bun", "npm", "pnpm", "yarn") */
+  readonly packageManager: string;
+  /** Workspace root absolute path */
+  readonly root: string;
+}
+
+export interface EcosystemHandler {
+  readonly plugin: EcosystemPlugin;
+  readonly pkg: WorkspacePackage;
+  readonly capability: DomainCapability;
+}
+
+export type MidoPlugin = EcosystemPlugin | DomainPlugin;
