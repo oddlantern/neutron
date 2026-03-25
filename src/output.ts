@@ -8,6 +8,8 @@ export const RED = '\x1b[31m';
 export const GREEN = '\x1b[32m';
 export const YELLOW = '\x1b[33m';
 export const CYAN = '\x1b[36m';
+/** mido brand orange — ANSI 256-color 208 */
+export const ORANGE = '\x1b[38;5;208m';
 
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;

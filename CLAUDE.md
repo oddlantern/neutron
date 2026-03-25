@@ -21,6 +21,15 @@ src/
     types.ts             # ManifestParser interface (plugin boundary)
     package-json.ts      # npm/yarn/pnpm/bun manifest parser
     pubspec.ts           # Dart/Flutter manifest parser
+  plugins/
+    types.ts             # Plugin interfaces, pipeline types, execution context
+    registry.ts          # Plugin registry, context factory, watch path suggestions
+    loader.ts            # Load builtin (and future external) plugins
+    builtin/
+      exec.ts            # Shared runCommand helper + isRecord guard
+      openapi.ts         # Domain plugin: OpenAPI spec export, prepare, downstream delegation
+      typescript.ts      # Ecosystem plugin: TS actions, openapi-typescript direct invocation
+      dart.ts            # Ecosystem plugin: Dart actions, swagger_parser + build_runner
   checks/
     types.ts             # CheckResult, CheckIssue, Severity
     versions.ts          # Cross-package version consistency
@@ -28,12 +37,17 @@ src/
     env.ts               # Shared env key parity
   commands/
     check.ts             # Orchestrates all checks, --fix flow, --quiet mode
-    init.ts              # Scan repo, generate mido.yml interactively
+    init.ts              # Scan repo, generate mido.yml interactively (with plugin watch suggestions)
     install.ts           # Write git hooks to .git/hooks/
     commit-msg.ts        # Validate commit message against conventional commit rules
   discovery/
     scanner.ts           # Filesystem scanning for ecosystem markers
     heuristics.ts        # Bridge and ecosystem detection heuristics
+  watcher/
+    dev.ts               # File watcher daemon, bridge execution with pipeline support
+    pipeline.ts          # Pipeline runner: step sequences, output hashing, change detection
+    debouncer.ts         # Debounce file events before triggering bridges
+    pm-detect.ts         # Package manager detection from lockfiles
   commit/
     validator.ts         # Conventional commit parsing and validation
 ```
@@ -47,6 +61,10 @@ src/
 - **Config auto-migration.** The loader detects old schema formats (e.g., `from/to/via` bridges) and rewrites them in place, preserving YAML formatting.
 - **Node.js target for distribution.** The published CLI must run on plain Node.js (>=20.19). No Bun-specific APIs in source. `#!/usr/bin/env node` shebang. Development uses Bun.
 - **CLI UX uses `@clack/prompts`.** No other prompt/UI libraries. ANSI color codes in `src/output.ts` are still raw (no chalk) — `@clack/prompts` handles its own styling.
+- **Plugins own pipeline steps.** Domain plugins (e.g., mido-openapi) decompose bridges into discrete steps via `buildPipeline()`. The pipeline runner executes steps sequentially with per-step timing and SHA-256 output hashing for change detection. The `run` field on bridges is a fallback for when no plugin claims the bridge.
+- **Prepare step is auto-detected.** The openapi plugin checks source package scripts for spec preparation (e.g., `openapi:prepare`, or `prepare` containing "spec"/"openapi"/"dart"). This runs between export and downstream generation as a discrete pipeline step.
+- **Plugins inform watch paths during init.** Domain plugins suggest watch paths based on framework detection (e.g., mido-openapi finds Elysia routes). Ecosystem plugins suggest based on package structure. Suggestions are presented for user confirmation, not applied blindly.
+- **Ecosystem plugins invoke tools directly.** The TypeScript plugin parses existing `generate` scripts to extract `openapi-typescript` invocation parameters (input/output paths) and runs the tool directly instead of delegating to a shell script.
 
 ## Bridge Fields
 
@@ -94,7 +112,7 @@ Each group separated by a blank line. Always use `.js` extensions on internal im
 Conventional commits enforced by `mido commit-msg` (via git hook).
 
 - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `cli`, `ci`, `deps`, `init`, `hooks`, `commit`
+- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `plugins`, `cli`, `ci`, `deps`, `init`, `hooks`, `commit`, `dev`
 - Max header: 100 chars
 
 ## Build

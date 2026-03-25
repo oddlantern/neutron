@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import type { ExecuteResult } from '../types.js';
 
@@ -7,6 +9,51 @@ const MAX_OUTPUT_BYTES = 1024 * 1024;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Read and parse a package.json file from a package directory.
+ * @param pkgPath — package path relative to workspace root
+ * @param root — workspace root absolute path
+ */
+export async function readPackageJson(
+  pkgPath: string,
+  root: string,
+): Promise<Record<string, unknown>> {
+  const manifestPath = join(root, pkgPath, 'package.json');
+  const content = await readFile(manifestPath, 'utf-8');
+  const parsed: unknown = JSON.parse(content);
+  if (!isRecord(parsed)) {
+    throw new Error(`Expected object in ${manifestPath}`);
+  }
+  return parsed;
+}
+
+/** Extract the scripts record from a parsed package.json */
+export function getScripts(manifest: Record<string, unknown>): Record<string, string> {
+  const scripts = manifest['scripts'];
+  if (!isRecord(scripts)) {
+    return {};
+  }
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(scripts)) {
+    if (typeof value === 'string') {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/** Check if a package.json has a dependency in any dependency group */
+export function hasDep(manifest: Record<string, unknown>, name: string): boolean {
+  const fields = ['dependencies', 'devDependencies', 'peerDependencies'];
+  for (const field of fields) {
+    const deps = manifest[field];
+    if (isRecord(deps) && name in deps) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

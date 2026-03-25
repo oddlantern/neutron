@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { a as ORANGE, r as DIM, s as RESET } from "./output-D1Xg1ws_.js";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
@@ -130,9 +131,6 @@ const packageJsonPath = join(dirname(fileURLToPath(import.meta.url)), "..", "pac
 const VERSION = JSON.parse(readFileSync(packageJsonPath, "utf-8")).version;
 //#endregion
 //#region src/banner.ts
-const ORANGE = "\x1B[38;5;208m";
-const DIM = "\x1B[2m";
-const RESET = "\x1B[0m";
 const ART = `\
 ░███     ░███ ░██████░███████     ░██████
 ░████   ░████   ░██  ░██   ░██   ░██   ░██
@@ -189,7 +187,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-DFr71boJ.js");
+		const { runCheck } = await import("./check-_9LA8JZy.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -197,18 +195,18 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-Bj_4_bZU.js");
+		const { runInit } = await import("./init-CM3nCYvf.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-B7s1vOZr.js");
+		const { runDev } = await import("./dev-CqjzyeDh.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-J5kPjvWO.js");
+		const { runInstall } = await import("./install-DHB3-A6u.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
@@ -218,7 +216,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-Budjr_jl.js");
+		const { runCommitMsg } = await import("./commit-msg-DGrd83OH.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}
