@@ -420,7 +420,7 @@ async function runPostInitCheck(parsers) {
 async function promptModifyBridge(root, config, current) {
 	const allPaths = getAllPackagePaths(config);
 	const source = await select({
-		message: "Source (who generates the file):",
+		message: `Source (currently: ${current.source}):`,
 		options: allPaths.map((p) => ({
 			value: p,
 			label: p
@@ -428,9 +428,10 @@ async function promptModifyBridge(root, config, current) {
 		initialValue: current.source
 	});
 	if (isCancel(source)) handleCancel();
+	const targetPaths = allPaths.filter((p) => p !== source);
 	const target = await select({
-		message: "Target (who depends on it):",
-		options: allPaths.filter((p) => p !== source).map((p) => ({
+		message: `Target (currently: ${current.target}):`,
+		options: targetPaths.map((p) => ({
 			value: p,
 			label: p
 		})),
@@ -438,7 +439,7 @@ async function promptModifyBridge(root, config, current) {
 	});
 	if (isCancel(target)) handleCancel();
 	const artifact = await path({
-		message: "Artifact (shared file):",
+		message: `Artifact (currently: ${current.artifact}):`,
 		root,
 		initialValue: current.artifact
 	});
@@ -704,4 +705,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-C0jYQYLV.js.map
+//# sourceMappingURL=init-DgAwDPZU.js.map

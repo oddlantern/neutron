@@ -33,7 +33,7 @@ Options:
   --version, -v    Show version
 `;
 
-const VERSION = '0.0.8';
+const VERSION = '0.0.10';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
