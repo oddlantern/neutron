@@ -34,7 +34,10 @@ const DEFAULT_COMMIT_TYPES = [
 ] as const;
 
 const commitsSchema = z.object({
-  types: z.array(z.string()).min(1).default([...DEFAULT_COMMIT_TYPES]),
+  types: z
+    .array(z.string())
+    .min(1)
+    .default([...DEFAULT_COMMIT_TYPES]),
   scopes: z.array(z.string()).optional(),
   header_max_length: z.number().int().positive().default(100),
   body_max_line_length: z.number().int().positive().default(200),

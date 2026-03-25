@@ -74,7 +74,10 @@ export async function runInstall(root: string): Promise<number> {
       }
 
       // Non-mido hook — warn and ask
-      const overwrite = await confirmAction(`Existing ${hook.name} hook found (not owned by mido). Overwrite?`, false);
+      const overwrite = await confirmAction(
+        `Existing ${hook.name} hook found (not owned by mido). Overwrite?`,
+        false,
+      );
 
       if (!overwrite) {
         console.log(`  skipped ${hook.name}`);

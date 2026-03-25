@@ -126,7 +126,13 @@ export function validateCommitMessage(message: string, config: CommitsConfig): C
   const hasErrors = issues.some((i) => i.severity === 'error');
 
   // Attach body to parsed result
-  const body = bodyStart !== -1 ? lines.slice(bodyStart + 1).join('\n').trim() : undefined;
+  const body =
+    bodyStart !== -1
+      ? lines
+          .slice(bodyStart + 1)
+          .join('\n')
+          .trim()
+      : undefined;
   const fullParsed: ParsedCommit = { ...parsed, body: body || undefined };
 
   return { valid: !hasErrors, issues, parsed: fullParsed };

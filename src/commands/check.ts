@@ -19,7 +19,10 @@ export interface CheckOptions {
  *
  * @returns exit code (0 = all passed, 1 = failures found)
  */
-export async function runCheck(parsers: ParserRegistry, options: CheckOptions = {}): Promise<number> {
+export async function runCheck(
+  parsers: ParserRegistry,
+  options: CheckOptions = {},
+): Promise<number> {
   const { fix = false, quiet = false } = options;
   const { config, root } = await loadConfig();
 
