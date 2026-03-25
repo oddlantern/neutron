@@ -398,7 +398,7 @@ async function promptModifyBridge(
   const allPaths = getAllPackagePaths(config);
 
   const source = await select({
-    message: 'Source (who generates the file):',
+    message: `Source (currently: ${current.source}):`,
     options: allPaths.map((p) => ({ value: p, label: p })),
     initialValue: current.source,
   });
@@ -408,7 +408,7 @@ async function promptModifyBridge(
 
   const targetPaths = allPaths.filter((p) => p !== source);
   const target = await select({
-    message: 'Target (who depends on it):',
+    message: `Target (currently: ${current.target}):`,
     options: targetPaths.map((p) => ({ value: p, label: p })),
     initialValue: current.target,
   });
@@ -417,7 +417,7 @@ async function promptModifyBridge(
   }
 
   const artifact = await clackPath({
-    message: 'Artifact (shared file):',
+    message: `Artifact (currently: ${current.artifact}):`,
     root,
     initialValue: current.artifact,
   });

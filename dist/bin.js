@@ -124,7 +124,7 @@ const pubspecParser = {
 };
 //#endregion
 //#region src/banner.ts
-const VERSION$1 = "0.0.8";
+const VERSION$1 = "0.0.10";
 const ORANGE = "\x1B[38;5;208m";
 const DIM = "\x1B[2m";
 const RESET = "\x1B[0m";
@@ -168,7 +168,7 @@ Options:
   --help, -h       Show help
   --version, -v    Show version
 `;
-const VERSION = "0.0.8";
+const VERSION = "0.0.10";
 async function main() {
 	const args = process.argv.slice(2);
 	const command = args[0];
@@ -192,7 +192,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-C0jYQYLV.js");
+		const { runInit } = await import("./init-DgAwDPZU.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}

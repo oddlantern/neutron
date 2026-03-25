@@ -1,4 +1,4 @@
-const VERSION = '0.0.8';
+const VERSION = '0.0.10';
 
 // ANSI 256-color: \x1b[38;5;208m = warm orange
 const ORANGE = '\x1b[38;5;208m';
