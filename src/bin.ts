@@ -35,7 +35,6 @@ Options:
   --version, -v    Show version
 `;
 
-
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0];

@@ -46,7 +46,10 @@ const BRIDGE_FIELD_RENAMES: ReadonlyMap<string, string> = new Map([
  *
  * @returns true if migration was performed, false if no migration needed
  */
-async function migrateConfig(configPath: string, raw: string): Promise<{ migrated: boolean; content: string }> {
+async function migrateConfig(
+  configPath: string,
+  raw: string,
+): Promise<{ migrated: boolean; content: string }> {
   const doc = parseDocument(raw);
   let migrated = false;
 

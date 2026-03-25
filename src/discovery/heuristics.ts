@@ -25,7 +25,11 @@ export function classifyPackage(pkgPath: string): 'app' | 'lib' | null {
   if (pkgPath.startsWith('apps/') || pkgPath.startsWith('app/')) {
     return 'app';
   }
-  if (pkgPath.startsWith('packages/') || pkgPath.startsWith('libs/') || pkgPath.startsWith('lib/')) {
+  if (
+    pkgPath.startsWith('packages/') ||
+    pkgPath.startsWith('libs/') ||
+    pkgPath.startsWith('lib/')
+  ) {
     return 'lib';
   }
   return null;
@@ -150,7 +154,10 @@ function isPlausibleConsumer(producerPath: string, consumerPath: string): boolea
 /**
  * Find .env.example and .env.template files across the repo.
  */
-export function detectEnvFiles(root: string, packages: readonly DiscoveredPackage[]): readonly EnvCandidate[] {
+export function detectEnvFiles(
+  root: string,
+  packages: readonly DiscoveredPackage[],
+): readonly EnvCandidate[] {
   const candidates: EnvCandidate[] = [];
   const envNames = ['.env.example', '.env.template'];
 
