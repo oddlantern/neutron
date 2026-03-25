@@ -192,7 +192,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-CD5Ndc2V.js");
+		const { runInit } = await import("./init-C0jYQYLV.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
