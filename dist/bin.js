@@ -162,7 +162,7 @@ Commands:
   check             Run all workspace consistency checks
   check --fix       Interactively resolve version mismatches and update mido.lock
   check --quiet     Silent mode — only output on failure (for hooks)
-  dev               Watch bridges and regenerate on changes
+  dev [--verbose]    Watch bridges and regenerate on changes
   commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
 
@@ -202,8 +202,9 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
-		const { runDev } = await import("./dev-Cwea1HoZ.js");
-		const exitCode = await runDev(parsers);
+		const verbose = args.includes("--verbose");
+		const { runDev } = await import("./dev-DdtKW5m3.js");
+		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {

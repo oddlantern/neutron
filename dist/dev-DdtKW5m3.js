@@ -1929,6 +1929,7 @@ function createDebouncer(callback, delayMs = DEFAULT_DELAY_MS) {
 }
 //#endregion
 //#region src/watcher/dev.ts
+const MAGENTA = "\x1B[35m";
 function formatMs(ms) {
 	return ms >= 1e3 ? `${(ms / 1e3).toFixed(1)}s` : `${ms}ms`;
 }
@@ -1954,6 +1955,9 @@ function logOutput(output) {
 	const trimmed = output.trim().split("\n").slice(0, 5);
 	for (const line of trimmed) console.log(`    ${DIM}${line}${RESET}`);
 }
+function logDebug(message) {
+	console.log(`  ${MAGENTA}[verbose]${RESET} ${DIM}${message}${RESET}`);
+}
 async function resolveBridges(bridges, packages, registry, root) {
 	const resolved = [];
 	for (const bridge of bridges) {
@@ -1971,8 +1975,7 @@ async function resolveBridges(bridges, packages, registry, root) {
 		const sourcePlugin = registry.getEcosystemForPackage(source);
 		let watchPatterns;
 		if (bridge.watch?.length) watchPatterns = bridge.watch;
-		else if (sourcePlugin) watchPatterns = (await sourcePlugin.getWatchPatterns(source, root)).map((p) => join(source.path, p));
-		else watchPatterns = [join(source.path, "**/*")];
+		else watchPatterns = [join(source.path, "**")];
 		resolved.push({
 			bridge,
 			watchPatterns,
@@ -1990,6 +1993,7 @@ function printStartup(resolved, registry) {
 		const artifact = r.bridge.artifact;
 		const sourceLabel = r.source.path;
 		const targetLabels = r.targets.map((t) => t.path).join(", ");
+		const watchLabels = r.watchPatterns.join(", ");
 		if (r.domain) {
 			const plugins = [`mido-${r.domain.name}`];
 			if (r.sourcePlugin) plugins.push(`mido-${r.sourcePlugin.name}`);
@@ -1998,13 +2002,16 @@ function printStartup(resolved, registry) {
 				if (eco && !plugins.includes(`mido-${eco.name}`)) plugins.push(`mido-${eco.name}`);
 			}
 			console.log(`  ${BOLD}${r.domain.name}:${RESET} ${sourceLabel} \u2192 ${artifact}`);
+			console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
 			console.log(`    ${DIM}targets: ${targetLabels}${RESET}`);
 			console.log(`    ${DIM}plugins: ${plugins.join(", ")}${RESET}`);
 		} else if (r.bridge.run) {
 			console.log(`  ${BOLD}bridge:${RESET} ${sourceLabel} \u2192 ${artifact}`);
+			console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
 			console.log(`    ${DIM}run: ${r.bridge.run}${RESET}`);
 		} else if (r.sourcePlugin) {
 			console.log(`  ${BOLD}${r.sourcePlugin.name}:${RESET} ${sourceLabel} \u2192 ${artifact}`);
+			console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
 			console.log(`    ${DIM}targets: ${targetLabels}${RESET}`);
 		} else {
 			console.log(`  ${YELLOW}${BOLD}unmatched:${RESET} ${artifact}`);
@@ -2084,10 +2091,16 @@ function matchesBridge(relPath, bridge) {
 * Loads config, builds graph, discovers plugins, watches files,
 * and re-runs bridge pipelines on changes.
 */
-async function runDev(parsers) {
+async function runDev(parsers, options = {}) {
+	const verbose = options.verbose ?? false;
 	const { config, root } = await loadConfig();
 	const graph = await buildWorkspaceGraph(config, root, parsers);
 	const pm = detectPackageManager(root);
+	if (verbose) {
+		logDebug(`workspace root: ${root}`);
+		logDebug(`package manager: ${pm}`);
+		logDebug(`packages in graph: ${graph.packages.size}`);
+	}
 	const { ecosystem, domain } = loadPlugins();
 	const registry = new PluginRegistry(ecosystem, domain);
 	if (graph.bridges.length === 0) {
@@ -2100,8 +2113,16 @@ async function runDev(parsers) {
 		return 1;
 	}
 	printStartup(resolved, registry);
-	const allPatterns = [];
-	for (const r of resolved) for (const pattern of r.watchPatterns) allPatterns.push(join(root, pattern));
+	const watchDirs = /* @__PURE__ */ new Set();
+	for (const r of resolved) for (const pattern of r.watchPatterns) {
+		const absDir = join(root, pattern.replace(/\/?\*\*.*$/, "") || ".");
+		watchDirs.add(absDir);
+	}
+	const allWatchPaths = [...watchDirs];
+	if (verbose) {
+		logDebug(`chokidar watching ${allWatchPaths.length} dir(s):`);
+		for (const p of allWatchPaths) logDebug(`  ${p}`);
+	}
 	let running = false;
 	let pending = /* @__PURE__ */ new Set();
 	async function processPending() {
@@ -2117,12 +2138,13 @@ async function runDev(parsers) {
 	const bridgeDebouncers = /* @__PURE__ */ new Map();
 	for (const r of resolved) {
 		const debouncer = createDebouncer(() => {
+			if (verbose) logDebug(`debouncer fired for bridge: ${r.bridge.source} \u2192 ${r.bridge.target}`);
 			pending.add(r);
 			processPending();
 		});
 		bridgeDebouncers.set(r, debouncer);
 	}
-	const watcher = esm_default.watch(allPatterns, {
+	const watcher = esm_default.watch(allWatchPaths, {
 		ignoreInitial: true,
 		ignored: [
 			"**/node_modules/**",
@@ -2136,16 +2158,31 @@ async function runDev(parsers) {
 			pollInterval: 100
 		}
 	});
-	function handleFileEvent(filePath) {
+	if (verbose) watcher.on("ready", () => {
+		logDebug("chokidar ready — watcher initialized");
+		const watched = watcher.getWatched();
+		let fileCount = 0;
+		for (const files of Object.values(watched)) fileCount += files.length;
+		logDebug(`chokidar tracking ${Object.keys(watched).length} dir(s), ${fileCount} file(s)`);
+	});
+	function handleFileEvent(event, filePath) {
 		const relPath = relative(root, filePath);
+		if (verbose) logDebug(`chokidar ${event}: ${filePath}`);
 		logChange(relPath);
+		let matched = false;
 		for (const r of resolved) if (matchesBridge(relPath, r)) {
+			matched = true;
+			if (verbose) logDebug(`  matched bridge: ${r.bridge.source} \u2192 ${r.bridge.target} (triggering debouncer)`);
 			const debouncer = bridgeDebouncers.get(r);
 			if (debouncer) debouncer.trigger();
 		}
+		if (verbose && !matched) logDebug(`  no bridge matched for ${relPath}`);
 	}
-	watcher.on("change", handleFileEvent);
-	watcher.on("add", handleFileEvent);
+	watcher.on("change", (path) => handleFileEvent("change", path));
+	watcher.on("add", (path) => handleFileEvent("add", path));
+	watcher.on("unlink", (path) => {
+		if (verbose) logDebug(`chokidar unlink: ${path}`);
+	});
 	return new Promise((resolve) => {
 		const cleanup = () => {
 			console.log(`\n  ${DIM}Shutting down...${RESET}`);
@@ -2160,4 +2197,4 @@ async function runDev(parsers) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-Cwea1HoZ.js.map
+//# sourceMappingURL=dev-DdtKW5m3.js.map

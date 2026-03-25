@@ -13,6 +13,8 @@ import type { DomainPlugin, EcosystemPlugin, ExecuteResult } from '../plugins/ty
 import { detectPackageManager } from './pm-detect.js';
 import { createDebouncer } from './debouncer.js';
 
+const MAGENTA = '\x1b[35m';
+
 interface ResolvedBridge {
   readonly bridge: Bridge;
   readonly watchPatterns: readonly string[];
@@ -20,6 +22,10 @@ interface ResolvedBridge {
   readonly sourcePlugin: EcosystemPlugin | undefined;
   readonly source: WorkspacePackage;
   readonly targets: readonly WorkspacePackage[];
+}
+
+export interface DevOptions {
+  readonly verbose?: boolean | undefined;
 }
 
 function formatMs(ms: number): string {
@@ -57,6 +63,10 @@ function logOutput(output: string): void {
   }
 }
 
+function logDebug(message: string): void {
+  console.log(`  ${MAGENTA}[verbose]${RESET} ${DIM}${message}${RESET}`);
+}
+
 async function resolveBridges(
   bridges: readonly Bridge[],
   packages: ReadonlyMap<string, WorkspacePackage>,
@@ -81,15 +91,17 @@ async function resolveBridges(
     const domain = await registry.getDomainForArtifact(bridge.artifact, root);
     const sourcePlugin = registry.getEcosystemForPackage(source);
 
-    // Resolve watch patterns
+    // Resolve watch patterns — explicit config takes priority, otherwise
+    // fall back to the source package directory. Note: the default watches
+    // the source package root, which may be wrong when the actual trigger
+    // files live in a different package (e.g., apps/server routes that
+    // packages/api exports as an OpenAPI spec). In those cases, the user
+    // must set watch paths explicitly in mido.yml.
     let watchPatterns: readonly string[];
     if (bridge.watch?.length) {
       watchPatterns = bridge.watch;
-    } else if (sourcePlugin) {
-      const patterns = await sourcePlugin.getWatchPatterns(source, root);
-      watchPatterns = patterns.map((p) => join(source.path, p));
     } else {
-      watchPatterns = [join(source.path, '**/*')];
+      watchPatterns = [join(source.path, '**')];
     }
 
     resolved.push({
@@ -117,6 +129,7 @@ function printStartup(
     const artifact = r.bridge.artifact;
     const sourceLabel = r.source.path;
     const targetLabels = r.targets.map((t) => t.path).join(', ');
+    const watchLabels = r.watchPatterns.join(', ');
 
     if (r.domain) {
       const plugins: string[] = [`mido-${r.domain.name}`];
@@ -131,13 +144,16 @@ function printStartup(
       }
 
       console.log(`  ${BOLD}${r.domain.name}:${RESET} ${sourceLabel} \u2192 ${artifact}`);
+      console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
       console.log(`    ${DIM}targets: ${targetLabels}${RESET}`);
       console.log(`    ${DIM}plugins: ${plugins.join(', ')}${RESET}`);
     } else if (r.bridge.run) {
       console.log(`  ${BOLD}bridge:${RESET} ${sourceLabel} \u2192 ${artifact}`);
+      console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
       console.log(`    ${DIM}run: ${r.bridge.run}${RESET}`);
     } else if (r.sourcePlugin) {
       console.log(`  ${BOLD}${r.sourcePlugin.name}:${RESET} ${sourceLabel} \u2192 ${artifact}`);
+      console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
       console.log(`    ${DIM}targets: ${targetLabels}${RESET}`);
     } else {
       console.log(
@@ -287,10 +303,20 @@ function matchesBridge(relPath: string, bridge: ResolvedBridge): boolean {
  * Loads config, builds graph, discovers plugins, watches files,
  * and re-runs bridge pipelines on changes.
  */
-export async function runDev(parsers: ParserRegistry): Promise<number> {
+export async function runDev(
+  parsers: ParserRegistry,
+  options: DevOptions = {},
+): Promise<number> {
+  const verbose = options.verbose ?? false;
   const { config, root } = await loadConfig();
   const graph = await buildWorkspaceGraph(config, root, parsers);
   const pm = detectPackageManager(root);
+
+  if (verbose) {
+    logDebug(`workspace root: ${root}`);
+    logDebug(`package manager: ${pm}`);
+    logDebug(`packages in graph: ${graph.packages.size}`);
+  }
 
   const { ecosystem, domain } = loadPlugins();
   const registry = new PluginRegistry(ecosystem, domain);
@@ -310,11 +336,26 @@ export async function runDev(parsers: ParserRegistry): Promise<number> {
 
   printStartup(resolved, registry);
 
-  // Collect all watch patterns
-  const allPatterns: string[] = [];
+  // Resolve watch patterns to base directories for chokidar.
+  // Chokidar watches directories recursively by default — glob patterns
+  // like "src/**" don't work reliably with ignoreInitial: true.
+  // We strip the glob suffix to get the directory path and let chokidar
+  // handle recursion natively. The full patterns are still used for
+  // matching which bridge a file change belongs to.
+  const watchDirs = new Set<string>();
   for (const r of resolved) {
     for (const pattern of r.watchPatterns) {
-      allPatterns.push(join(root, pattern));
+      const baseDir = pattern.replace(/\/?\*\*.*$/, '') || '.';
+      const absDir = join(root, baseDir);
+      watchDirs.add(absDir);
+    }
+  }
+  const allWatchPaths = [...watchDirs];
+
+  if (verbose) {
+    logDebug(`chokidar watching ${allWatchPaths.length} dir(s):`);
+    for (const p of allWatchPaths) {
+      logDebug(`  ${p}`);
     }
   }
 
@@ -344,6 +385,9 @@ export async function runDev(parsers: ParserRegistry): Promise<number> {
   const bridgeDebouncers = new Map<ResolvedBridge, ReturnType<typeof createDebouncer>>();
   for (const r of resolved) {
     const debouncer = createDebouncer(() => {
+      if (verbose) {
+        logDebug(`debouncer fired for bridge: ${r.bridge.source} \u2192 ${r.bridge.target}`);
+      }
       pending.add(r);
       processPending();
     });
@@ -351,7 +395,7 @@ export async function runDev(parsers: ParserRegistry): Promise<number> {
   }
 
   // Start chokidar watcher
-  const watcher = chokidar.watch(allPatterns, {
+  const watcher = chokidar.watch(allWatchPaths, {
     ignoreInitial: true,
     ignored: [
       '**/node_modules/**',
@@ -366,22 +410,53 @@ export async function runDev(parsers: ParserRegistry): Promise<number> {
     },
   });
 
-  function handleFileEvent(filePath: string): void {
+  if (verbose) {
+    watcher.on('ready', () => {
+      logDebug('chokidar ready \u2014 watcher initialized');
+      const watched = watcher.getWatched();
+      let fileCount = 0;
+      for (const files of Object.values(watched)) {
+        fileCount += files.length;
+      }
+      logDebug(`chokidar tracking ${Object.keys(watched).length} dir(s), ${fileCount} file(s)`);
+    });
+  }
+
+  function handleFileEvent(event: string, filePath: string): void {
     const relPath = relative(root, filePath);
+
+    if (verbose) {
+      logDebug(`chokidar ${event}: ${filePath}`);
+    }
+
     logChange(relPath);
 
+    let matched = false;
     for (const r of resolved) {
       if (matchesBridge(relPath, r)) {
+        matched = true;
+        if (verbose) {
+          logDebug(`  matched bridge: ${r.bridge.source} \u2192 ${r.bridge.target} (triggering debouncer)`);
+        }
         const debouncer = bridgeDebouncers.get(r);
         if (debouncer) {
           debouncer.trigger();
         }
       }
     }
+
+    if (verbose && !matched) {
+      logDebug(`  no bridge matched for ${relPath}`);
+    }
   }
 
-  watcher.on('change', handleFileEvent);
-  watcher.on('add', handleFileEvent);
+  watcher.on('change', (path: string) => handleFileEvent('change', path));
+  watcher.on('add', (path: string) => handleFileEvent('add', path));
+  watcher.on('unlink', (path: string) => {
+    if (verbose) {
+      logDebug(`chokidar unlink: ${path}`);
+    }
+  });
 
   // Handle graceful shutdown — resolve the promise instead of process.exit
   return new Promise<number>((resolve) => {
