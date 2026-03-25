@@ -132,6 +132,7 @@ function writeOxlintConfig(root: string, lint: LintConfig): string | null {
 
 /**
  * Generate a temporary oxfmtrc.json from the mido format config.
+ * All keys except `ignore` are forwarded to the JSON config verbatim.
  * Returns the config path and optional ignore path.
  */
 function writeOxfmtConfig(
@@ -139,14 +140,10 @@ function writeOxfmtConfig(
   format: FormatConfig,
 ): { readonly configPath: string | null; readonly ignorePath: string | null } {
   const opts: Record<string, unknown> = {};
-  if (format.singleQuote !== undefined) {
-    opts['singleQuote'] = format.singleQuote;
-  }
-  if (format.trailingComma !== undefined) {
-    opts['trailingComma'] = format.trailingComma;
-  }
-  if (format.printWidth !== undefined) {
-    opts['printWidth'] = format.printWidth;
+  for (const [key, value] of Object.entries(format)) {
+    if (key !== 'ignore') {
+      opts[key] = value;
+    }
   }
 
   const hasOpts = Object.keys(opts).length > 0;

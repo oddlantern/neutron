@@ -200,13 +200,12 @@ function writeOxlintConfig(root, lint) {
 }
 /**
 * Generate a temporary oxfmtrc.json from the mido format config.
+* All keys except `ignore` are forwarded to the JSON config verbatim.
 * Returns the config path and optional ignore path.
 */
 function writeOxfmtConfig(root, format) {
 	const opts = {};
-	if (format.singleQuote !== void 0) opts["singleQuote"] = format.singleQuote;
-	if (format.trailingComma !== void 0) opts["trailingComma"] = format.trailingComma;
-	if (format.printWidth !== void 0) opts["printWidth"] = format.printWidth;
+	for (const [key, value] of Object.entries(format)) if (key !== "ignore") opts[key] = value;
 	const hasOpts = Object.keys(opts).length > 0;
 	const hasIgnore = format.ignore && format.ignore.length > 0;
 	if (!hasOpts && !hasIgnore) return {
@@ -1226,4 +1225,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-n9grMa4r.js.map
+//# sourceMappingURL=registry-C3Iky15L.js.map

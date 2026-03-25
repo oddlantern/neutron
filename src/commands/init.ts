@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { basename, join, relative } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import {
   cancel,
@@ -1186,124 +1187,316 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Strip single-line (//) and block (/* *​/) comments from JSONC, preserving strings. */
+function stripJsonComments(raw: string): string {
+  return raw.replace(
+    /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
+    (_match, quoted: string | undefined) => quoted ?? '',
+  );
+}
+
+/** Parse JSON or JSONC content. */
+function parseJsonOrJsonc(raw: string): unknown {
+  return JSON.parse(stripJsonComments(raw));
+}
+
+/** Read and parse a JSON/JSONC file if it exists. Returns null on missing or parse error. */
+async function readJsonConfig(
+  filePath: string,
+): Promise<Record<string, unknown> | null> {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+  try {
+    const raw = await readFile(filePath, 'utf-8');
+    const parsed = parseJsonOrJsonc(raw);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Migrate existing .oxlintrc.json and .oxfmtrc.json into mido.yml sections.
- * Prompts the user before removing original files.
+ * Load a JS/TS config file via dynamic import().
+ * Returns the default export if it's an object, null otherwise.
+ * TS files require a loader (tsx) to be available in the runtime.
+ */
+async function loadJsConfig(
+  filePath: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const mod: unknown = await import(pathToFileURL(filePath).href);
+    if (!isRecord(mod)) {
+      return null;
+    }
+    const config = mod['default'] ?? mod;
+    return isRecord(config) ? config : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Read an ignore file (one pattern per line, skip comments and blanks). */
+async function readIgnorePatterns(filePath: string): Promise<readonly string[]> {
+  if (!existsSync(filePath)) {
+    return [];
+  }
+  try {
+    const raw = await readFile(filePath, 'utf-8');
+    return raw
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'));
+  } catch {
+    return [];
+  }
+}
+
+/** Prompt to remove a file. Returns true if removed. */
+async function promptRemoveFile(filePath: string, label: string): Promise<boolean> {
+  const answer = await confirm({
+    message: `Remove ${label}? (config now lives in mido.yml)`,
+    initialValue: true,
+  });
+  if (isCancel(answer)) {
+    handleCancel();
+  }
+  if (answer) {
+    await unlink(filePath);
+    log.step(`Removed ${label}`);
+    return true;
+  }
+  return false;
+}
+
+// ─── Oxlint config files (checked in priority order) ─────────────────────
+
+const OXLINT_JSON_CONFIGS = ['.oxlintrc.json'] as const;
+const OXLINT_JS_CONFIGS = ['oxlint.config.ts', 'oxlint.config.js'] as const;
+
+/**
+ * Extract the mido lint section from an oxlint config object.
+ * Maps `rules` → `rules`, `ignorePatterns` → `ignore`.
+ */
+function extractLintConfig(parsed: Record<string, unknown>): Record<string, unknown> {
+  const lint: Record<string, unknown> = {};
+  if (isRecord(parsed['rules']) && Object.keys(parsed['rules']).length > 0) {
+    lint['rules'] = parsed['rules'];
+  }
+  if (Array.isArray(parsed['ignorePatterns']) && parsed['ignorePatterns'].length > 0) {
+    lint['ignore'] = parsed['ignorePatterns'];
+  }
+  return lint;
+}
+
+// ─── Oxfmt / Prettier config files (checked in priority order) ───────────
+
+const OXFMT_JSON_CONFIGS = [
+  '.oxfmtrc.json',
+  '.oxfmtrc.jsonc',
+  '.prettierrc.json',
+  '.prettierrc',
+] as const;
+
+const IGNORE_FILES = ['.oxfmtignore', '.prettierignore'] as const;
+
+/** Keys to strip when migrating a format config (internal/meta, not formatting options). */
+const FORMAT_META_KEYS = new Set(['$schema']);
+
+/**
+ * Extract all formatting options from an oxfmt/prettier config.
+ * Copies every key except meta keys — the full config is preserved.
+ */
+function extractFormatConfig(parsed: Record<string, unknown>): Record<string, unknown> {
+  const format: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!FORMAT_META_KEYS.has(key)) {
+      format[key] = value;
+    }
+  }
+  return format;
+}
+
+// ─── Stale files to offer removal ────────────────────────────────────────
+
+const STALE_ESLINT_CONFIGS = [
+  '.eslintrc.json',
+  '.eslintrc.js',
+  '.eslintrc.cjs',
+  '.eslintrc.yml',
+  '.eslintrc.yaml',
+  '.eslintrc',
+] as const;
+
+const STALE_PRETTIER_CONFIGS = [
+  '.prettierrc',
+  '.prettierrc.json',
+  '.prettierignore',
+] as const;
+
+/**
+ * Migrate existing lint/format config files into mido.yml sections.
+ *
+ * Detects:
+ *  - oxlint: .oxlintrc.json, oxlint.config.ts, oxlint.config.js
+ *  - oxfmt:  .oxfmtrc.json, .oxfmtrc.jsonc, .prettierrc.json, .prettierrc
+ *  - ignore: .oxfmtignore, .prettierignore
+ *
+ * All keys from format configs are preserved verbatim (passthrough).
+ * After migration, offers to remove stale eslint/prettier config files.
  */
 async function migrateLintFormatConfig(
   root: string,
-  configPath: string,
+  _configPath: string,
 ): Promise<MigratedToolConfig> {
   const migrated: { lint?: Record<string, unknown>; format?: Record<string, unknown> } = {};
+  const removedFiles = new Set<string>();
 
   // ─── Oxlint ────────────────────────────────────────────────────────────
-  const oxlintPath = join(root, '.oxlintrc.json');
-  if (existsSync(oxlintPath)) {
-    try {
-      const raw = await readFile(oxlintPath, 'utf-8');
-      const parsed: unknown = JSON.parse(raw);
-      if (isRecord(parsed)) {
-        const lint: Record<string, unknown> = {};
-        if (isRecord(parsed['rules']) && Object.keys(parsed['rules']).length > 0) {
-          lint['rules'] = parsed['rules'];
-        }
-        if (Array.isArray(parsed['ignorePatterns']) && parsed['ignorePatterns'].length > 0) {
-          lint['ignore'] = parsed['ignorePatterns'];
-        }
+
+  // Try JSON configs first
+  for (const name of OXLINT_JSON_CONFIGS) {
+    const filePath = join(root, name);
+    const parsed = await readJsonConfig(filePath);
+    if (!parsed) {
+      continue;
+    }
+
+    const lint = extractLintConfig(parsed);
+    if (Object.keys(lint).length > 0) {
+      migrated.lint = lint;
+      log.info(`Migrated ${name} into mido.yml lint section`);
+    }
+    const removed = await promptRemoveFile(filePath, name);
+    if (removed) {
+      removedFiles.add(name);
+    }
+    break; // Only migrate the first found
+  }
+
+  // Try JS/TS configs if no JSON config was found
+  if (!migrated.lint) {
+    for (const name of OXLINT_JS_CONFIGS) {
+      const filePath = join(root, name);
+      if (!existsSync(filePath)) {
+        continue;
+      }
+
+      const parsed = await loadJsConfig(filePath);
+      if (parsed) {
+        const lint = extractLintConfig(parsed);
         if (Object.keys(lint).length > 0) {
           migrated.lint = lint;
-          log.info('Migrated oxlint config into mido.yml lint section');
+          log.info(`Migrated ${name} into mido.yml lint section`);
         }
-
-        const remove = await confirm({
-          message: 'Remove .oxlintrc.json? (config now lives in mido.yml)',
-          initialValue: true,
-        });
-        if (isCancel(remove)) {
-          handleCancel();
+        const removed = await promptRemoveFile(filePath, name);
+        if (removed) {
+          removedFiles.add(name);
         }
-        if (remove) {
-          await unlink(oxlintPath);
-          log.step('Removed .oxlintrc.json');
+      } else {
+        log.warn(
+          `Could not load ${name} — migrate manually into the lint section of mido.yml`,
+        );
+        // Still offer removal since the user will migrate manually
+        const removed = await promptRemoveFile(filePath, name);
+        if (removed) {
+          removedFiles.add(name);
         }
       }
-    } catch {
-      log.warn('Could not parse .oxlintrc.json — skipping migration');
+      break;
     }
   }
 
-  // ─── Oxfmt ─────────────────────────────────────────────────────────────
-  const oxfmtPath = join(root, '.oxfmtrc.json');
-  const oxfmtIgnorePath = join(root, '.oxfmtignore');
-  const hasOxfmtConfig = existsSync(oxfmtPath);
-  const hasOxfmtIgnore = existsSync(oxfmtIgnorePath);
+  // ─── Oxfmt / Prettier ─────────────────────────────────────────────────
 
-  if (hasOxfmtConfig) {
-    try {
-      const raw = await readFile(oxfmtPath, 'utf-8');
-      const parsed: unknown = JSON.parse(raw);
-      if (isRecord(parsed)) {
-        const format: Record<string, unknown> = {};
-        if (typeof parsed['singleQuote'] === 'boolean') {
-          format['singleQuote'] = parsed['singleQuote'];
-        }
-        if (typeof parsed['trailingComma'] === 'string') {
-          format['trailingComma'] = parsed['trailingComma'];
-        }
-        if (typeof parsed['printWidth'] === 'number') {
-          format['printWidth'] = parsed['printWidth'];
-        }
-        if (Object.keys(format).length > 0) {
-          migrated.format = format;
-          log.info('Migrated oxfmt config into mido.yml format section');
-        }
+  for (const name of OXFMT_JSON_CONFIGS) {
+    const filePath = join(root, name);
+    const parsed = await readJsonConfig(filePath);
+    if (!parsed) {
+      continue;
+    }
 
-        const remove = await confirm({
-          message: 'Remove .oxfmtrc.json? (config now lives in mido.yml)',
-          initialValue: true,
-        });
-        if (isCancel(remove)) {
-          handleCancel();
-        }
-        if (remove) {
-          await unlink(oxfmtPath);
-          log.step('Removed .oxfmtrc.json');
-        }
-      }
-    } catch {
-      log.warn('Could not parse .oxfmtrc.json — skipping migration');
+    const format = extractFormatConfig(parsed);
+    if (Object.keys(format).length > 0) {
+      migrated.format = format;
+      log.info(`Migrated ${name} into mido.yml format section`);
+    }
+    const removed = await promptRemoveFile(filePath, name);
+    if (removed) {
+      removedFiles.add(name);
+    }
+    break; // Only migrate the first found
+  }
+
+  // ─── Ignore files ─────────────────────────────────────────────────────
+
+  for (const name of IGNORE_FILES) {
+    const filePath = join(root, name);
+    const patterns = await readIgnorePatterns(filePath);
+    if (patterns.length === 0) {
+      continue;
+    }
+
+    if (!migrated.format) {
+      migrated.format = {};
+    }
+    const existing = (migrated.format['ignore'] as string[] | undefined) ?? [];
+    migrated.format['ignore'] = [...existing, ...patterns];
+    log.info(`Migrated ${name} patterns into mido.yml format.ignore`);
+
+    const removed = await promptRemoveFile(filePath, name);
+    if (removed) {
+      removedFiles.add(name);
     }
   }
 
-  if (hasOxfmtIgnore) {
-    try {
-      const raw = await readFile(oxfmtIgnorePath, 'utf-8');
-      const patterns = raw
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith('#'));
-      if (patterns.length > 0) {
-        if (!migrated.format) {
-          migrated.format = {};
-        }
-        const existing = (migrated.format['ignore'] as string[] | undefined) ?? [];
-        migrated.format['ignore'] = [...existing, ...patterns];
-        log.info('Migrated .oxfmtignore patterns into mido.yml format.ignore');
-      }
+  // ─── Stale file cleanup ────────────────────────────────────────────────
 
-      const remove = await confirm({
-        message: 'Remove .oxfmtignore? (patterns now in mido.yml)',
+  // Offer to remove eslint configs if lint was migrated to oxlint
+  if (migrated.lint) {
+    for (const name of STALE_ESLINT_CONFIGS) {
+      if (removedFiles.has(name)) {
+        continue;
+      }
+      const filePath = join(root, name);
+      if (!existsSync(filePath)) {
+        continue;
+      }
+      const answer = await confirm({
+        message: `${name} found — mido now uses oxlint. Remove?`,
         initialValue: true,
       });
-      if (isCancel(remove)) {
+      if (isCancel(answer)) {
         handleCancel();
       }
-      if (remove) {
-        await unlink(oxfmtIgnorePath);
-        log.step('Removed .oxfmtignore');
+      if (answer) {
+        await unlink(filePath);
+        log.step(`Removed ${name}`);
       }
-    } catch {
-      log.warn('Could not read .oxfmtignore — skipping migration');
+    }
+  }
+
+  // Offer to remove prettier configs if format was migrated
+  if (migrated.format) {
+    for (const name of STALE_PRETTIER_CONFIGS) {
+      if (removedFiles.has(name)) {
+        continue;
+      }
+      const filePath = join(root, name);
+      if (!existsSync(filePath)) {
+        continue;
+      }
+      const answer = await confirm({
+        message: `${name} found — mido now uses oxfmt. Remove?`,
+        initialValue: true,
+      });
+      if (isCancel(answer)) {
+        handleCancel();
+      }
+      if (answer) {
+        await unlink(filePath);
+        log.step(`Removed ${name}`);
+      }
     }
   }
 

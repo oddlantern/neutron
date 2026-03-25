@@ -201,7 +201,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-D3ubffXo.js");
+		const { runCheck } = await import("./check-DMsxC53B.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -209,13 +209,13 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-DQB_mmub.js");
+		const { runInit } = await import("./init-Ddgpbb3l.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-CE9IWThB.js");
+		const { runDev } = await import("./dev-Db52tFK_.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
@@ -229,7 +229,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-CK0_B5zV.js");
+		const { runLint } = await import("./lint-BcOmeY6K.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -243,7 +243,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-CSm5v92N.js");
+		const { runFmt } = await import("./fmt-DY_gWwDy.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -255,7 +255,7 @@ async function main() {
 	if (command === "build") {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-BXgbfIFf.js");
+		const { runBuild } = await import("./build-CFNW784j.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			package: pkg
@@ -263,7 +263,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-DOG7ohat.js");
+		const { runPreCommit } = await import("./pre-commit-DXuS6PCd.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
@@ -273,7 +273,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-P4O9l2Dk.js");
+		const { runCommitMsg } = await import("./commit-msg-DcRTPZ_y.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}

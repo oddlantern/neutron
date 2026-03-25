@@ -47,16 +47,13 @@ const lintSchema = z.object({
 	rules: z.record(z.string(), lintRuleValue).optional(),
 	ignore: z.array(z.string()).optional()
 });
-const formatSchema = z.object({
-	singleQuote: z.boolean().optional(),
-	trailingComma: z.enum([
-		"all",
-		"none",
-		"es5"
-	]).optional(),
-	printWidth: z.number().int().positive().optional(),
-	ignore: z.array(z.string()).optional()
-});
+/**
+* Format config is a passthrough — all keys from the source
+* (oxfmtrc.json / prettierrc) are preserved and forwarded to
+* oxfmt at runtime. Only `ignore` is handled specially (written
+* to a separate ignore file instead of the config JSON).
+*/
+const formatSchema = z.object({ ignore: z.array(z.string()).optional() }).passthrough();
 const configSchema = z.object({
 	workspace: z.string(),
 	ecosystems: z.record(z.string(), ecosystemSchema).refine((eco) => Object.keys(eco).length >= 1, { message: "At least one ecosystem must be defined" }),
@@ -157,4 +154,4 @@ async function loadConfig(startDir) {
 //#endregion
 export { DEFAULT_COMMIT_TYPES as n, loadConfig as t };
 
-//# sourceMappingURL=loader-FCfvYc9I.js.map
+//# sourceMappingURL=loader-BO3NzoPs.js.map

@@ -55,12 +55,17 @@ const lintSchema = z.object({
   ignore: z.array(z.string()).optional(),
 });
 
-const formatSchema = z.object({
-  singleQuote: z.boolean().optional(),
-  trailingComma: z.enum(['all', 'none', 'es5']).optional(),
-  printWidth: z.number().int().positive().optional(),
-  ignore: z.array(z.string()).optional(),
-});
+/**
+ * Format config is a passthrough — all keys from the source
+ * (oxfmtrc.json / prettierrc) are preserved and forwarded to
+ * oxfmt at runtime. Only `ignore` is handled specially (written
+ * to a separate ignore file instead of the config JSON).
+ */
+const formatSchema = z
+  .object({
+    ignore: z.array(z.string()).optional(),
+  })
+  .passthrough();
 
 export const configSchema = z.object({
   workspace: z.string(),
