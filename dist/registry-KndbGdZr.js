@@ -560,7 +560,7 @@ async function exportSpec(options) {
 		earlyExit = true;
 	});
 	try {
-		if (!await waitForServer(port, startupTimeout) || earlyExit) {
+		if (!await waitForServer(port, startupTimeout)) {
 			const output = outputChunks.join("");
 			const timeoutSec = Math.round(startupTimeout / 1e3);
 			return {
@@ -918,4 +918,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, PluginRegistry as t };
 
-//# sourceMappingURL=registry-NVI0NOK-.js.map
+//# sourceMappingURL=registry-KndbGdZr.js.map

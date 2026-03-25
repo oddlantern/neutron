@@ -335,7 +335,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
   try {
     // 4. Wait for server to be ready
     const ready = await waitForServer(port, startupTimeout);
-    if (!ready || earlyExit) {
+    if (!ready) {
       const output = outputChunks.join('');
       const timeoutSec = Math.round(startupTimeout / 1000);
       return {
@@ -347,6 +347,8 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
         output,
       };
     }
+    // Server responded — from here, success depends only on fetching and writing
+    // the spec, not on the server process staying alive.
 
     // 5. Fetch the spec
     const specPathOverride = options.specPath;

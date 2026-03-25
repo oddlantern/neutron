@@ -178,6 +178,36 @@ describe('exportSpec', () => {
   );
 
   test(
+    'succeeds even when server exits with non-zero after serving spec',
+    async () => {
+      const tempDir = makeTempDir();
+      tempDirs.push(tempDir);
+      const outputPath = join(tempDir, 'openapi.json');
+
+      // Use a server that exits with code 1 shortly after serving the spec
+      const result = await exportSpec({
+        packageDir: FIXTURE_DIR,
+        pm: 'bun',
+        adapter: elysiaAdapter,
+        outputPath,
+        entryFile: 'src/exit-after-spec.ts',
+        startupTimeout: 15_000,
+      });
+
+      // Export should succeed — the spec was fetched and written before the server died
+      expect(result.success).toBe(true);
+      expect(result.summary).toContain('/openapi/json');
+
+      // Verify the spec is valid
+      expect(existsSync(outputPath)).toBe(true);
+      const spec = JSON.parse(readFileSync(outputPath, 'utf-8')) as Record<string, unknown>;
+      expect(spec['openapi']).toBeDefined();
+      expect(spec['paths']).toBeDefined();
+    },
+    TEST_TIMEOUT,
+  );
+
+  test(
     'handles server startup failure gracefully',
     async () => {
       const tempDir = makeTempDir();
