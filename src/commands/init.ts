@@ -203,8 +203,17 @@ async function runFirstTime(
   }
   const name = nameResult || dirName;
 
+  // Migrate existing lint/format config files
+  const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
+
   // Build and write config
   const config = buildConfigObject(name, finalEcosystems, bridgesWithWatch, envFiles);
+  if (migratedToolConfig.lint) {
+    config['lint'] = migratedToolConfig.lint;
+  }
+  if (migratedToolConfig.format) {
+    config['format'] = migratedToolConfig.format;
+  }
   const yaml = renderYaml(config);
   await writeFile(configPath, yaml, 'utf-8');
   log.success(`${ORANGE}${CONFIG_FILENAME}${RESET} written`);
@@ -461,6 +470,17 @@ async function runReconciliation(
   if (configChanged || updatedBridges.length !== existingBridges.length) {
     (existing as Record<string, unknown>)['bridges'] =
       updatedBridges.length > 0 ? updatedBridges : undefined;
+    configChanged = true;
+  }
+
+  // Migrate existing lint/format config files
+  const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
+  if (migratedToolConfig.lint) {
+    (existing as Record<string, unknown>)['lint'] = migratedToolConfig.lint;
+    configChanged = true;
+  }
+  if (migratedToolConfig.format) {
+    (existing as Record<string, unknown>)['format'] = migratedToolConfig.format;
     configChanged = true;
   }
 
@@ -935,6 +955,12 @@ function configToObject(config: MidoConfig): Record<string, unknown> {
   if (config.commits) {
     obj['commits'] = config.commits;
   }
+  if (config.lint) {
+    obj['lint'] = config.lint;
+  }
+  if (config.format) {
+    obj['format'] = config.format;
+  }
   return obj;
 }
 
@@ -983,6 +1009,8 @@ function renderYaml(config: Record<string, unknown>): string {
     ['ecosystems', ' Language ecosystems and their packages'],
     ['bridges', ' Cross-ecosystem dependencies linked by a shared artifact'],
     ['env', ' Environment variable parity across packages'],
+    ['lint', ' Linter configuration (passed to oxlint)'],
+    ['format', ' Formatter configuration (passed to oxfmt)'],
   ]);
 
   if (isMap(doc.contents)) {
@@ -1145,4 +1173,139 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
     await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + '\n', 'utf-8');
     log.step('Updated scripts.prepare \u2192 "mido install"');
   }
+}
+
+// ─── Lint / format config migration ─────────────────────────────────────────
+
+interface MigratedToolConfig {
+  readonly lint?: Record<string, unknown>;
+  readonly format?: Record<string, unknown>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Migrate existing .oxlintrc.json and .oxfmtrc.json into mido.yml sections.
+ * Prompts the user before removing original files.
+ */
+async function migrateLintFormatConfig(
+  root: string,
+  configPath: string,
+): Promise<MigratedToolConfig> {
+  const migrated: { lint?: Record<string, unknown>; format?: Record<string, unknown> } = {};
+
+  // ─── Oxlint ────────────────────────────────────────────────────────────
+  const oxlintPath = join(root, '.oxlintrc.json');
+  if (existsSync(oxlintPath)) {
+    try {
+      const raw = await readFile(oxlintPath, 'utf-8');
+      const parsed: unknown = JSON.parse(raw);
+      if (isRecord(parsed)) {
+        const lint: Record<string, unknown> = {};
+        if (isRecord(parsed['rules']) && Object.keys(parsed['rules']).length > 0) {
+          lint['rules'] = parsed['rules'];
+        }
+        if (Array.isArray(parsed['ignorePatterns']) && parsed['ignorePatterns'].length > 0) {
+          lint['ignore'] = parsed['ignorePatterns'];
+        }
+        if (Object.keys(lint).length > 0) {
+          migrated.lint = lint;
+          log.info('Migrated oxlint config into mido.yml lint section');
+        }
+
+        const remove = await confirm({
+          message: 'Remove .oxlintrc.json? (config now lives in mido.yml)',
+          initialValue: true,
+        });
+        if (isCancel(remove)) {
+          handleCancel();
+        }
+        if (remove) {
+          await unlink(oxlintPath);
+          log.step('Removed .oxlintrc.json');
+        }
+      }
+    } catch {
+      log.warn('Could not parse .oxlintrc.json — skipping migration');
+    }
+  }
+
+  // ─── Oxfmt ─────────────────────────────────────────────────────────────
+  const oxfmtPath = join(root, '.oxfmtrc.json');
+  const oxfmtIgnorePath = join(root, '.oxfmtignore');
+  const hasOxfmtConfig = existsSync(oxfmtPath);
+  const hasOxfmtIgnore = existsSync(oxfmtIgnorePath);
+
+  if (hasOxfmtConfig) {
+    try {
+      const raw = await readFile(oxfmtPath, 'utf-8');
+      const parsed: unknown = JSON.parse(raw);
+      if (isRecord(parsed)) {
+        const format: Record<string, unknown> = {};
+        if (typeof parsed['singleQuote'] === 'boolean') {
+          format['singleQuote'] = parsed['singleQuote'];
+        }
+        if (typeof parsed['trailingComma'] === 'string') {
+          format['trailingComma'] = parsed['trailingComma'];
+        }
+        if (typeof parsed['printWidth'] === 'number') {
+          format['printWidth'] = parsed['printWidth'];
+        }
+        if (Object.keys(format).length > 0) {
+          migrated.format = format;
+          log.info('Migrated oxfmt config into mido.yml format section');
+        }
+
+        const remove = await confirm({
+          message: 'Remove .oxfmtrc.json? (config now lives in mido.yml)',
+          initialValue: true,
+        });
+        if (isCancel(remove)) {
+          handleCancel();
+        }
+        if (remove) {
+          await unlink(oxfmtPath);
+          log.step('Removed .oxfmtrc.json');
+        }
+      }
+    } catch {
+      log.warn('Could not parse .oxfmtrc.json — skipping migration');
+    }
+  }
+
+  if (hasOxfmtIgnore) {
+    try {
+      const raw = await readFile(oxfmtIgnorePath, 'utf-8');
+      const patterns = raw
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith('#'));
+      if (patterns.length > 0) {
+        if (!migrated.format) {
+          migrated.format = {};
+        }
+        const existing = (migrated.format['ignore'] as string[] | undefined) ?? [];
+        migrated.format['ignore'] = [...existing, ...patterns];
+        log.info('Migrated .oxfmtignore patterns into mido.yml format.ignore');
+      }
+
+      const remove = await confirm({
+        message: 'Remove .oxfmtignore? (patterns now in mido.yml)',
+        initialValue: true,
+      });
+      if (isCancel(remove)) {
+        handleCancel();
+      }
+      if (remove) {
+        await unlink(oxfmtIgnorePath);
+        log.step('Removed .oxfmtignore');
+      }
+    } catch {
+      log.warn('Could not read .oxfmtignore — skipping migration');
+    }
+  }
+
+  return migrated;
 }

@@ -36,7 +36,7 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
   const plugins = loadPlugins();
   const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
   const pm = detectPackageManager(root);
-  const context = registry.createContext(graph, root, pm);
+  const context = registry.createContext(graph, root, pm, config.lint ? { lintConfig: config.lint } : undefined);
 
   const action = fix ? STANDARD_ACTIONS.LINT_FIX : STANDARD_ACTIONS.LINT;
 

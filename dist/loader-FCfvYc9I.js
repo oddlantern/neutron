@@ -42,12 +42,29 @@ const commitsSchema = z.object({
 	header_max_length: z.number().int().positive().default(100),
 	body_max_line_length: z.number().int().positive().default(200)
 });
+const lintRuleValue = z.union([z.string(), z.number()]);
+const lintSchema = z.object({
+	rules: z.record(z.string(), lintRuleValue).optional(),
+	ignore: z.array(z.string()).optional()
+});
+const formatSchema = z.object({
+	singleQuote: z.boolean().optional(),
+	trailingComma: z.enum([
+		"all",
+		"none",
+		"es5"
+	]).optional(),
+	printWidth: z.number().int().positive().optional(),
+	ignore: z.array(z.string()).optional()
+});
 const configSchema = z.object({
 	workspace: z.string(),
 	ecosystems: z.record(z.string(), ecosystemSchema).refine((eco) => Object.keys(eco).length >= 1, { message: "At least one ecosystem must be defined" }),
 	bridges: z.array(bridgeSchema).optional(),
 	env: envSchema.optional(),
-	commits: commitsSchema.optional()
+	commits: commitsSchema.optional(),
+	lint: lintSchema.optional(),
+	format: formatSchema.optional()
 });
 //#endregion
 //#region src/config/loader.ts
@@ -140,4 +157,4 @@ async function loadConfig(startDir) {
 //#endregion
 export { DEFAULT_COMMIT_TYPES as n, loadConfig as t };
 
-//# sourceMappingURL=loader-COqKnZAI.js.map
+//# sourceMappingURL=loader-FCfvYc9I.js.map

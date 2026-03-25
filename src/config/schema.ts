@@ -45,6 +45,23 @@ const commitsSchema = z.object({
   body_max_line_length: z.number().int().positive().default(200),
 });
 
+const lintRuleValue = z.union([
+  z.string(),
+  z.number(),
+]);
+
+const lintSchema = z.object({
+  rules: z.record(z.string(), lintRuleValue).optional(),
+  ignore: z.array(z.string()).optional(),
+});
+
+const formatSchema = z.object({
+  singleQuote: z.boolean().optional(),
+  trailingComma: z.enum(['all', 'none', 'es5']).optional(),
+  printWidth: z.number().int().positive().optional(),
+  ignore: z.array(z.string()).optional(),
+});
+
 export const configSchema = z.object({
   workspace: z.string(),
   ecosystems: z.record(z.string(), ecosystemSchema).refine((eco) => Object.keys(eco).length >= 1, {
@@ -53,6 +70,8 @@ export const configSchema = z.object({
   bridges: z.array(bridgeSchema).optional(),
   env: envSchema.optional(),
   commits: commitsSchema.optional(),
+  lint: lintSchema.optional(),
+  format: formatSchema.optional(),
 });
 
 export type MidoConfig = z.infer<typeof configSchema>;
@@ -60,5 +79,7 @@ export type EcosystemConfig = z.infer<typeof ecosystemSchema>;
 export type BridgeConfig = z.infer<typeof bridgeSchema>;
 export type EnvConfig = z.infer<typeof envSchema>;
 export type CommitsConfig = z.infer<typeof commitsSchema>;
+export type LintConfig = z.infer<typeof lintSchema>;
+export type FormatConfig = z.infer<typeof formatSchema>;
 
 export { DEFAULT_COMMIT_TYPES };

@@ -1,3 +1,4 @@
+import type { FormatConfig, LintConfig } from '../config/schema.js';
 import type { WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
 import type {
   DomainPlugin,
@@ -92,13 +93,19 @@ export class PluginRegistry {
     graph: WorkspaceGraph,
     root: string,
     packageManager: string,
-    verbose?: boolean,
+    options?: {
+      readonly verbose?: boolean;
+      readonly lintConfig?: LintConfig;
+      readonly formatConfig?: FormatConfig;
+    },
   ): ExecutionContext {
     return {
       graph,
       root,
       packageManager,
-      verbose,
+      verbose: options?.verbose,
+      lintConfig: options?.lintConfig,
+      formatConfig: options?.formatConfig,
       findEcosystemHandlers: async (domain: string, artifact: string) => {
         const allTargets = [...graph.packages.values()];
         return this.findEcosystemHandlers(domain, artifact, allTargets, root);

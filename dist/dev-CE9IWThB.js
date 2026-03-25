@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { c as YELLOW, i as GREEN, n as CYAN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
-import { t as loadConfig } from "./loader-COqKnZAI.js";
+import { t as loadConfig } from "./loader-FCfvYc9I.js";
 import { t as buildWorkspaceGraph } from "./workspace-B2H5BXLY.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-BvW7qGue.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-n9grMa4r.js";
 import { t as detectPackageManager } from "./pm-detect-wR8KpsCR.js";
 import { lstat, readFile, readdir, realpath, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
@@ -1775,7 +1775,7 @@ function printStepResult(stepResult) {
 }
 async function executeBridge(resolved, registry, graph, root, pm, verbose) {
 	const bridge = resolved.bridge;
-	const context = registry.createContext(graph, root, pm, verbose);
+	const context = registry.createContext(graph, root, pm, { verbose });
 	if (bridge.run && resolved.sourcePlugin) {
 		logStep(`running "${bridge.run}" on ${resolved.source.name}...`);
 		printResult(await resolved.sourcePlugin.execute(bridge.run, resolved.source, root, context), `${bridge.source} bridge`);
@@ -2016,4 +2016,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-PeMXPKLU.js.map
+//# sourceMappingURL=dev-CE9IWThB.js.map

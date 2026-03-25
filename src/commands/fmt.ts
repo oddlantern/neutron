@@ -36,7 +36,7 @@ export async function runFmt(parsers: ParserRegistry, options: FmtOptions = {}):
   const plugins = loadPlugins();
   const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
   const pm = detectPackageManager(root);
-  const context = registry.createContext(graph, root, pm);
+  const context = registry.createContext(graph, root, pm, config.format ? { formatConfig: config.format } : undefined);
 
   const action = check ? STANDARD_ACTIONS.FORMAT_CHECK : STANDARD_ACTIONS.FORMAT;
 

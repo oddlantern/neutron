@@ -226,7 +226,7 @@ async function executeBridge(
   verbose: boolean,
 ): Promise<void> {
   const bridge = resolved.bridge;
-  const context = registry.createContext(graph, root, pm, verbose);
+  const context = registry.createContext(graph, root, pm, { verbose });
 
   // Escape hatch: explicit run script
   if (bridge.run && resolved.sourcePlugin) {
