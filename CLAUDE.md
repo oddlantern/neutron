@@ -9,7 +9,7 @@ src/
   bin.ts                 # CLI entry point, command router
   output.ts              # ANSI terminal formatting
   lock.ts                # mido.lock read/write/merge
-  prompt.ts              # Interactive readline prompts
+  prompt.ts              # Interactive prompts (@clack/prompts wrappers)
   manifest-writer.ts     # Write version ranges back to manifests
   config/
     schema.ts            # Zod schema for mido.yml (ecosystems, bridges, env, commits)
@@ -46,7 +46,7 @@ src/
 - **mido owns git hooks.** `mido install` writes hooks to `.git/hooks/`. No Husky, no commitlint — mido handles pre-commit, commit-msg, post-merge, and post-checkout.
 - **Config auto-migration.** The loader detects old schema formats (e.g., `from/to/via` bridges) and rewrites them in place, preserving YAML formatting.
 - **Node.js target for distribution.** The published CLI must run on plain Node.js (>=20.19). No Bun-specific APIs in source. `#!/usr/bin/env node` shebang. Development uses Bun.
-- **Zero external deps for CLI UX.** ANSI colors are raw escape codes, prompts use Node `readline`. No chalk, no inquirer, no ora.
+- **CLI UX uses `@clack/prompts`.** No other prompt/UI libraries. ANSI color codes in `src/output.ts` are still raw (no chalk) — `@clack/prompts` handles its own styling.
 
 ## Bridge Fields
 

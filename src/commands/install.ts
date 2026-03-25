@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { ask, closePrompt } from '../prompt.js';
+import { confirmAction } from '../prompt.js';
 
 const HOOKS_DIR = '.git/hooks';
 
@@ -74,10 +74,9 @@ export async function runInstall(root: string): Promise<number> {
       }
 
       // Non-mido hook — warn and ask
-      console.log(`  existing ${hook.name} hook found (not owned by mido)`);
-      const answer = await ask(`  Overwrite ${hook.name}? [y/N] `);
+      const overwrite = await confirmAction(`Existing ${hook.name} hook found (not owned by mido). Overwrite?`, false);
 
-      if (answer.toLowerCase() !== 'y') {
+      if (!overwrite) {
         console.log(`  skipped ${hook.name}`);
         continue;
       }
@@ -87,8 +86,6 @@ export async function runInstall(root: string): Promise<number> {
     await chmod(hookPath, 0o755);
     installed++;
   }
-
-  closePrompt();
 
   console.log(`Installed ${installed} git hook(s)`);
   return 0;

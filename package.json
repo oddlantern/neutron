@@ -1,6 +1,6 @@
 {
   "name": "@oddlantern/mido",
-  "version": "0.0.3",
+  "version": "0.0.8",
   "description": "Cross-ecosystem monorepo workspace tool",
   "type": "module",
   "bin": {
@@ -38,6 +38,7 @@
     "node": ">=20.19.0"
   },
   "dependencies": {
+    "@clack/prompts": "^1.1.0",
     "yaml": "^2.7.1",
     "zod": "^3.25.67"
   },

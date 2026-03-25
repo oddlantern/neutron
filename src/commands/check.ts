@@ -6,7 +6,7 @@ import { checkVersionConsistency, findVersionMismatches } from '../checks/versio
 import { buildWorkspaceGraph, type ParserRegistry } from '../graph/workspace.js';
 import { formatCheckResult, formatHeader, formatSummary } from '../output.js';
 import { loadLock, mergeLock, writeLock } from '../lock.js';
-import { promptVersionResolution, closePrompt, type DepChoice } from '../prompt.js';
+import { promptVersionResolution, type DepChoice } from '../prompt.js';
 import { applyManifestUpdate } from '../manifest-writer.js';
 
 export interface CheckOptions {
@@ -116,8 +116,6 @@ export async function runCheck(parsers: ParserRegistry, options: CheckOptions = 
         }
       }
     }
-
-    closePrompt();
 
     if (Object.keys(resolutions).length > 0) {
       const newLock = mergeLock(lock, resolutions);

@@ -1,6 +1,7 @@
 import { packageJsonParser } from './parsers/package-json.js';
 import { pubspecParser } from './parsers/pubspec.js';
 import type { ManifestParser } from './parsers/types.js';
+import { printBanner } from './banner.js';
 
 // Parser registry — add new ecosystem parsers here
 const parsers = new Map<string, ManifestParser>([
@@ -32,13 +33,14 @@ Options:
   --version, -v    Show version
 `;
 
-const VERSION = '0.0.3';
+const VERSION = '0.0.8';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0];
 
   if (!command || command === 'help' || command === '--help' || command === '-h') {
+    printBanner();
     console.log(HELP);
     process.exit(0);
   }
@@ -58,7 +60,7 @@ async function main(): Promise<void> {
 
   if (command === 'init') {
     const { runInit } = await import('./commands/init.js');
-    const exitCode = await runInit(process.cwd());
+    const exitCode = await runInit(process.cwd(), parsers);
     process.exit(exitCode);
   }
 

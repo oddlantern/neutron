@@ -123,6 +123,26 @@ const pubspecParser = {
 	}
 };
 //#endregion
+//#region src/banner.ts
+const VERSION$1 = "0.0.8";
+const ORANGE = "\x1B[38;5;208m";
+const DIM = "\x1B[2m";
+const RESET = "\x1B[0m";
+const ART = `\
+░███     ░███ ░██████░███████     ░██████
+░████   ░████   ░██  ░██   ░██   ░██   ░██
+░██░██ ░██░██   ░██  ░██    ░██ ░██     ░██
+░██ ░████ ░██   ░██  ░██    ░██ ░██     ░██
+░██  ░██  ░██   ░██  ░██    ░██ ░██     ░██
+░██       ░██   ░██  ░██   ░██   ░██   ░██
+░██       ░██ ░██████░███████     ░██████`;
+const ART_WIDTH = 43;
+function printBanner() {
+	const versionLine = `v${VERSION$1}`.padStart(ART_WIDTH);
+	const tagLine = "workspace guardian".padStart(Math.floor((ART_WIDTH + 18) / 2));
+	console.log(`\n${ORANGE}${ART}${RESET}\n${DIM}${versionLine}\n${tagLine}${RESET}\n`);
+}
+//#endregion
 //#region src/bin.ts
 const parsers = new Map([[packageJsonParser.manifestName, packageJsonParser], [pubspecParser.manifestName, pubspecParser]]);
 const HELP = `
@@ -148,11 +168,12 @@ Options:
   --help, -h       Show help
   --version, -v    Show version
 `;
-const VERSION = "0.0.3";
+const VERSION = "0.0.8";
 async function main() {
 	const args = process.argv.slice(2);
 	const command = args[0];
 	if (!command || command === "help" || command === "--help" || command === "-h") {
+		printBanner();
 		console.log(HELP);
 		process.exit(0);
 	}
@@ -163,7 +184,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-BCNQjr2M.js");
+		const { runCheck } = await import("./check-DGNQGCP2.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -171,12 +192,12 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-CEWznFH-.js");
-		const exitCode = await runInit(process.cwd());
+		const { runInit } = await import("./init-CD5Ndc2V.js");
+		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-cCGe-Me7.js");
+		const { runInstall } = await import("./install-a0iKVUxi.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
@@ -186,7 +207,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-Cchibahc.js");
+		const { runCommitMsg } = await import("./commit-msg-CWPzfTFm.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}
@@ -199,6 +220,6 @@ main().catch((error) => {
 	process.exit(1);
 });
 //#endregion
-export {};
+export { printBanner as t };
 
 //# sourceMappingURL=bin.js.map

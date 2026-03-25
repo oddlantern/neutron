@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { r as closePrompt, t as ask } from "./prompt-IS8nnzAW.js";
+import { t as confirmAction } from "./prompt-Bvq7Up0I.js";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -57,8 +57,7 @@ async function runInstall(root) {
 				installed++;
 				continue;
 			}
-			console.log(`  existing ${hook.name} hook found (not owned by mido)`);
-			if ((await ask(`  Overwrite ${hook.name}? [y/N] `)).toLowerCase() !== "y") {
+			if (!await confirmAction(`Existing ${hook.name} hook found (not owned by mido). Overwrite?`, false)) {
 				console.log(`  skipped ${hook.name}`);
 				continue;
 			}
@@ -67,11 +66,10 @@ async function runInstall(root) {
 		await chmod(hookPath, 493);
 		installed++;
 	}
-	closePrompt();
 	console.log(`Installed ${installed} git hook(s)`);
 	return 0;
 }
 //#endregion
 export { runInstall };
 
-//# sourceMappingURL=install-cCGe-Me7.js.map
+//# sourceMappingURL=install-a0iKVUxi.js.map
