@@ -1,23 +1,23 @@
-import type { FormatConfig, LintConfig } from '../config/schema.js';
-import type { WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
+import type { FormatConfig, LintConfig } from "../config/schema.js";
+import type { WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
 
 /** Standard action names shared across ecosystem plugins */
 export const STANDARD_ACTIONS: {
-  readonly LINT: 'lint';
-  readonly LINT_FIX: 'lint:fix';
-  readonly FORMAT: 'format';
-  readonly FORMAT_CHECK: 'format:check';
-  readonly BUILD: 'build';
-  readonly TYPECHECK: 'typecheck';
-  readonly CODEGEN: 'codegen';
+  readonly LINT: "lint";
+  readonly LINT_FIX: "lint:fix";
+  readonly FORMAT: "format";
+  readonly FORMAT_CHECK: "format:check";
+  readonly BUILD: "build";
+  readonly TYPECHECK: "typecheck";
+  readonly CODEGEN: "codegen";
 } = {
-  LINT: 'lint',
-  LINT_FIX: 'lint:fix',
-  FORMAT: 'format',
-  FORMAT_CHECK: 'format:check',
-  BUILD: 'build',
-  TYPECHECK: 'typecheck',
-  CODEGEN: 'codegen',
+  LINT: "lint",
+  LINT_FIX: "lint:fix",
+  FORMAT: "format",
+  FORMAT_CHECK: "format:check",
+  BUILD: "build",
+  TYPECHECK: "typecheck",
+  CODEGEN: "codegen",
 };
 
 /** Result of a plugin execution */
@@ -79,7 +79,7 @@ export interface WatchPathSuggestion {
  * Examples: mido-typescript, mido-dart, mido-rust
  */
 export interface EcosystemPlugin {
-  readonly type: 'ecosystem';
+  readonly type: "ecosystem";
   /** Unique identifier (e.g., "typescript", "dart") */
   readonly name: string;
   /** Manifest filename this plugin understands */
@@ -150,7 +150,7 @@ export interface DomainCapability {
  * Examples: mido-openapi, mido-graphql, mido-protobuf
  */
 export interface DomainPlugin {
-  readonly type: 'domain';
+  readonly type: "domain";
   /** Unique identifier (e.g., "openapi", "graphql") */
   readonly name: string;
 
@@ -230,6 +230,8 @@ export interface ExecutionContext {
   readonly lintConfig?: LintConfig | undefined;
   /** Format configuration from mido.yml */
   readonly formatConfig?: FormatConfig | undefined;
+  /** Pre-resolved file paths (relative to package root) — plugins use these instead of scanning directories */
+  readonly resolvedFiles?: readonly string[] | undefined;
 }
 
 export interface EcosystemHandler {

@@ -1,16 +1,25 @@
-import { loadConfig } from '../config/loader.js';
-import { buildWorkspaceGraph } from '../graph/workspace.js';
-import type { ParserRegistry } from '../graph/workspace.js';
-import type { WorkspacePackage } from '../graph/types.js';
-import { BOLD, DIM, GREEN, RED, RESET } from '../output.js';
-import { loadPlugins } from '../plugins/loader.js';
-import { PluginRegistry } from '../plugins/registry.js';
-import { STANDARD_ACTIONS } from '../plugins/types.js';
-import type { ExecuteResult } from '../plugins/types.js';
-import { detectPackageManager } from '../watcher/pm-detect.js';
+import { join } from "node:path";
+
+import { loadConfig } from "../config/loader.js";
+import { resolveFiles } from "../files/resolver.js";
+import { buildWorkspaceGraph } from "../graph/workspace.js";
+import type { ParserRegistry } from "../graph/workspace.js";
+import type { WorkspacePackage } from "../graph/types.js";
+import { BOLD, DIM, GREEN, RED, RESET } from "../output.js";
+import { loadPlugins } from "../plugins/loader.js";
+import { PluginRegistry } from "../plugins/registry.js";
+import { STANDARD_ACTIONS } from "../plugins/types.js";
+import type { ExecuteResult } from "../plugins/types.js";
+import { detectPackageManager } from "../watcher/pm-detect.js";
 
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
+
+/** File extensions per ecosystem for lint resolution */
+const LINT_EXTENSIONS: Readonly<Record<string, readonly string[]>> = {
+  typescript: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
+  dart: [".dart"],
+};
 
 export interface LintOptions {
   readonly fix?: boolean | undefined;
@@ -36,7 +45,12 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
   const plugins = loadPlugins();
   const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
   const pm = detectPackageManager(root);
-  const context = registry.createContext(graph, root, pm, config.lint ? { lintConfig: config.lint } : undefined);
+  const context = registry.createContext(
+    graph,
+    root,
+    pm,
+    config.lint ? { lintConfig: config.lint } : undefined,
+  );
 
   const action = fix ? STANDARD_ACTIONS.LINT_FIX : STANDARD_ACTIONS.LINT;
 
@@ -50,6 +64,9 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
         `\n${DIM}◇${RESET} ${BOLD}${ecosystem}${RESET} ${DIM}(${packages.length} packages)${RESET}`,
       );
     }
+
+    // Resolve ignore patterns from config
+    const ignorePatterns = config.lint?.ignore ?? [];
 
     // Run all packages in this ecosystem in parallel
     const results: readonly PackageLintResult[] = await Promise.all(
@@ -65,7 +82,17 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
             },
           };
         }
-        const result = await plugin.execute(action, pkg, root, context);
+
+        // Resolve files centrally — plugins receive pre-filtered lists
+        const extensions = LINT_EXTENSIONS[ecosystem];
+        const pkgContext = extensions
+          ? {
+              ...context,
+              resolvedFiles: resolveFiles(join(root, pkg.path), extensions, ignorePatterns),
+            }
+          : context;
+
+        const result = await plugin.execute(action, pkg, root, pkgContext);
         return { pkg, result };
       }),
     );
@@ -86,9 +113,9 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
         const trimmed = result.output.trim();
         if (trimmed) {
           const indented = trimmed
-            .split('\n')
+            .split("\n")
             .map((line) => `      ${DIM}${line}${RESET}`)
-            .join('\n');
+            .join("\n");
           console.log(indented);
         }
       }
@@ -98,7 +125,7 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
   if (!quiet) {
     const total = [...grouped.values()].reduce((sum, pkgs) => sum + pkgs.length, 0);
     const icon = hasErrors ? FAIL : PASS;
-    console.log(`\n${icon} ${hasErrors ? 'Lint errors found' : `All ${total} package(s) clean`}\n`);
+    console.log(`\n${icon} ${hasErrors ? "Lint errors found" : `All ${total} package(s) clean`}\n`);
   }
 
   return hasErrors ? 1 : 0;

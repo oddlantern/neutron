@@ -185,15 +185,12 @@ function ensureCacheDir(root) {
 }
 /**
 * Generate a temporary oxlintrc.json from the mido lint config.
+* Only writes rules — ignore patterns are handled by the central file resolver.
 * Returns the path to the file, or null if no config is needed.
 */
 function writeOxlintConfig(root, lint) {
-	const hasRules = lint.rules && Object.keys(lint.rules).length > 0;
-	const hasIgnore = lint.ignore && lint.ignore.length > 0;
-	if (!hasRules && !hasIgnore) return null;
-	const config = {};
-	if (hasRules) config["rules"] = lint.rules;
-	if (hasIgnore) config["ignorePatterns"] = lint.ignore;
+	if (!(lint.rules && Object.keys(lint.rules).length > 0)) return null;
+	const config = { rules: lint.rules };
 	const configPath = join(ensureCacheDir(root), "oxlintrc.json");
 	writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
 	return configPath;
@@ -201,32 +198,16 @@ function writeOxlintConfig(root, lint) {
 /**
 * Generate a temporary oxfmtrc.json from the mido format config.
 * All keys except `ignore` are forwarded to the JSON config verbatim.
-* Returns the config path and optional ignore path.
+* Ignore patterns are handled by the central file resolver.
+* Returns the config path, or null if no config is needed.
 */
 function writeOxfmtConfig(root, format) {
 	const opts = {};
 	for (const [key, value] of Object.entries(format)) if (key !== "ignore") opts[key] = value;
-	const hasOpts = Object.keys(opts).length > 0;
-	const hasIgnore = format.ignore && format.ignore.length > 0;
-	if (!hasOpts && !hasIgnore) return {
-		configPath: null,
-		ignorePath: null
-	};
-	const cacheDir = ensureCacheDir(root);
-	let configPath = null;
-	if (hasOpts) {
-		configPath = join(cacheDir, "oxfmtrc.json");
-		writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
-	}
-	let ignorePath = null;
-	if (hasIgnore && format.ignore) {
-		ignorePath = join(cacheDir, "oxfmt-ignore");
-		writeFileSync(ignorePath, format.ignore.join("\n") + "\n", "utf-8");
-	}
-	return {
-		configPath,
-		ignorePath
-	};
+	if (Object.keys(opts).length === 0) return null;
+	const configPath = join(ensureCacheDir(root), "oxfmtrc.json");
+	writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
+	return configPath;
 }
 /**
 * Find the source directory for a TS package.
@@ -298,7 +279,6 @@ const typescriptPlugin = {
 		const pm = context.packageManager;
 		if (action === STANDARD_ACTIONS.LINT || action === STANDARD_ACTIONS.LINT_FIX) {
 			const fix = action === STANDARD_ACTIONS.LINT_FIX;
-			const { dir } = findSourceDir(pkg, root);
 			const oxlint = resolveBin("oxlint", root);
 			if (oxlint) {
 				const args = [];
@@ -307,11 +287,19 @@ const typescriptPlugin = {
 					if (configPath) args.push("--config", configPath);
 				}
 				if (fix) args.push("--fix");
-				args.push(dir);
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
+				else {
+					const { dir } = findSourceDir(pkg, root);
+					args.push(dir);
+				}
 				return runCommand(oxlint, args, cwd);
 			}
 			const eslint = resolveBin("eslint", root);
-			if (eslint) return runCommand(eslint, fix ? ["--fix", dir] : [dir], cwd);
+			if (eslint) {
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand(eslint, fix ? ["--fix", ...context.resolvedFiles] : [...context.resolvedFiles], cwd);
+				const { dir } = findSourceDir(pkg, root);
+				return runCommand(eslint, fix ? ["--fix", dir] : [dir], cwd);
+			}
 			return {
 				success: true,
 				duration: 0,
@@ -319,21 +307,27 @@ const typescriptPlugin = {
 			};
 		}
 		if (action === STANDARD_ACTIONS.FORMAT) {
-			const { dir, isRoot } = findSourceDir(pkg, root);
 			const oxfmt = resolveBin("oxfmt", root);
 			if (oxfmt) {
 				const args = [];
 				if (context.formatConfig) {
-					const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+					const configPath = writeOxfmtConfig(root, context.formatConfig);
 					if (configPath) args.push("--config", configPath);
-					if (ignorePath) args.push("--ignore-path", ignorePath);
 				}
-				if (isRoot) args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
-				else args.push(dir);
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
+				else {
+					const { dir, isRoot } = findSourceDir(pkg, root);
+					if (isRoot) args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
+					else args.push(dir);
+				}
 				return runCommand(oxfmt, args, cwd);
 			}
 			const prettier = resolveBin("prettier", root);
-			if (prettier) return runCommand(prettier, ["--write", dir], cwd);
+			if (prettier) {
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand(prettier, ["--write", ...context.resolvedFiles], cwd);
+				const { dir } = findSourceDir(pkg, root);
+				return runCommand(prettier, ["--write", dir], cwd);
+			}
 			return {
 				success: true,
 				duration: 0,
@@ -341,21 +335,27 @@ const typescriptPlugin = {
 			};
 		}
 		if (action === STANDARD_ACTIONS.FORMAT_CHECK) {
-			const { dir, isRoot } = findSourceDir(pkg, root);
 			const oxfmt = resolveBin("oxfmt", root);
 			if (oxfmt) {
 				const args = ["--check"];
 				if (context.formatConfig) {
-					const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+					const configPath = writeOxfmtConfig(root, context.formatConfig);
 					if (configPath) args.push("--config", configPath);
-					if (ignorePath) args.push("--ignore-path", ignorePath);
 				}
-				if (isRoot) args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
-				else args.push(dir);
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
+				else {
+					const { dir, isRoot } = findSourceDir(pkg, root);
+					if (isRoot) args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
+					else args.push(dir);
+				}
 				return runCommand(oxfmt, args, cwd);
 			}
 			const prettier = resolveBin("prettier", root);
-			if (prettier) return runCommand(prettier, ["--check", dir], cwd);
+			if (prettier) {
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand(prettier, ["--check", ...context.resolvedFiles], cwd);
+				const { dir } = findSourceDir(pkg, root);
+				return runCommand(prettier, ["--check", dir], cwd);
+			}
 			return {
 				success: true,
 				duration: 0,
@@ -474,7 +474,7 @@ const dartPlugin = {
 			return ["pub-get"];
 		}
 	},
-	async execute(action, pkg, root) {
+	async execute(action, pkg, root, context) {
 		const cwd = join(root, pkg.path);
 		let manifest;
 		try {
@@ -486,13 +486,22 @@ const dartPlugin = {
 		const dartCmd = flutter ? "flutter" : "dart";
 		const analyzeCmd = flutter ? "flutter" : "dart";
 		switch (action) {
-			case STANDARD_ACTIONS.LINT: return runCommand(analyzeCmd, ["analyze", "."], cwd);
-			case STANDARD_ACTIONS.LINT_FIX: return runCommand("dart", [
-				"fix",
-				"--apply",
-				"."
-			], cwd);
+			case STANDARD_ACTIONS.LINT:
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand(analyzeCmd, ["analyze", ...context.resolvedFiles], cwd);
+				return runCommand(analyzeCmd, ["analyze", "."], cwd);
+			case STANDARD_ACTIONS.LINT_FIX:
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand("dart", [
+					"fix",
+					"--apply",
+					...context.resolvedFiles
+				], cwd);
+				return runCommand("dart", [
+					"fix",
+					"--apply",
+					"."
+				], cwd);
 			case STANDARD_ACTIONS.FORMAT: {
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand("dart", ["format", ...context.resolvedFiles], cwd);
 				const libDir = join(cwd, "lib");
 				const binDir = join(cwd, "bin");
 				const targets = [libDir];
@@ -500,6 +509,11 @@ const dartPlugin = {
 				return runCommand("dart", ["format", ...targets], cwd);
 			}
 			case STANDARD_ACTIONS.FORMAT_CHECK: {
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand("dart", [
+					"format",
+					"--set-exit-if-changed",
+					...context.resolvedFiles
+				], cwd);
 				const libDir = join(cwd, "lib");
 				const binDir = join(cwd, "bin");
 				const targets = [libDir];
@@ -912,7 +926,7 @@ async function exportSpec(options) {
 * Reads the package.json and checks all adapters.
 */
 async function detectFrameworkAdapter(pkgPath, root) {
-	const { detectAdapter } = await import("./adapters-r5VqmblT.js");
+	const { detectAdapter } = await import("./adapters-D9AtEgas.js");
 	try {
 		const manifest = await readPackageJson(pkgPath, root);
 		const allDeps = {};
@@ -1225,4 +1239,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-C3Iky15L.js.map
+//# sourceMappingURL=registry-2wPMEgE6.js.map

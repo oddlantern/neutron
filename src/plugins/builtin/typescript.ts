@@ -1,23 +1,23 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 
-import type { FormatConfig, LintConfig } from '../../config/schema.js';
+import type { FormatConfig, LintConfig } from "../../config/schema.js";
 
-import type { WorkspacePackage } from '../../graph/types.js';
-import { MIDO_ROOT } from '../../version.js';
+import type { WorkspacePackage } from "../../graph/types.js";
+import { MIDO_ROOT } from "../../version.js";
 import type {
   DomainCapability,
   EcosystemPlugin,
   ExecuteResult,
   ExecutionContext,
   WatchPathSuggestion,
-} from '../types.js';
-import { STANDARD_ACTIONS } from '../types.js';
-import { getScripts, hasDep, readPackageJson, runCommand } from './exec.js';
+} from "../types.js";
+import { STANDARD_ACTIONS } from "../types.js";
+import { getScripts, hasDep, readPackageJson, runCommand } from "./exec.js";
 
-const WATCH_PATTERNS: readonly string[] = ['src/**/*.ts', 'src/**/*.tsx'];
+const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
 
-const WELL_KNOWN_ACTIONS: readonly string[] = ['generate', 'build', 'dev', 'codegen'];
+const WELL_KNOWN_ACTIONS: readonly string[] = ["generate", "build", "dev", "codegen"];
 
 /**
  * Parse an openapi-typescript invocation from a package script to extract
@@ -51,7 +51,7 @@ function parseOpenapiTsScript(
  */
 function detectOutputFromScripts(scripts: Record<string, string>): string | null {
   // Check scripts in priority order
-  const scriptNames = ['generate', 'openapi:generate', 'generate:ts', 'codegen'];
+  const scriptNames = ["generate", "openapi:generate", "generate:ts", "codegen"];
   for (const name of scriptNames) {
     const script = scripts[name];
     if (!script) {
@@ -83,12 +83,12 @@ function detectOutputFromScripts(scripts: Record<string, string>): string | null
  *  3. Fall through (null)        — caller can try bare name on PATH
  */
 export function resolveBin(name: string, workspaceRoot: string): string | null {
-  const workspaceBin = join(workspaceRoot, 'node_modules', '.bin', name);
+  const workspaceBin = join(workspaceRoot, "node_modules", ".bin", name);
   if (existsSync(workspaceBin)) {
     return workspaceBin;
   }
 
-  const bundledBin = join(MIDO_ROOT, 'node_modules', '.bin', name);
+  const bundledBin = join(MIDO_ROOT, "node_modules", ".bin", name);
   if (existsSync(bundledBin)) {
     return bundledBin;
   }
@@ -96,7 +96,7 @@ export function resolveBin(name: string, workspaceRoot: string): string | null {
   return null;
 }
 
-const CACHE_DIR_NAME = 'node_modules/.cache/mido';
+const CACHE_DIR_NAME = "node_modules/.cache/mido";
 
 /** Ensure the cache directory exists and return its absolute path */
 function ensureCacheDir(root: string): string {
@@ -107,67 +107,45 @@ function ensureCacheDir(root: string): string {
 
 /**
  * Generate a temporary oxlintrc.json from the mido lint config.
+ * Only writes rules — ignore patterns are handled by the central file resolver.
  * Returns the path to the file, or null if no config is needed.
  */
 function writeOxlintConfig(root: string, lint: LintConfig): string | null {
   const hasRules = lint.rules && Object.keys(lint.rules).length > 0;
-  const hasIgnore = lint.ignore && lint.ignore.length > 0;
-  if (!hasRules && !hasIgnore) {
+  if (!hasRules) {
     return null;
   }
 
-  const config: Record<string, unknown> = {};
-  if (hasRules) {
-    config['rules'] = lint.rules;
-  }
-  if (hasIgnore) {
-    config['ignorePatterns'] = lint.ignore;
-  }
+  const config: Record<string, unknown> = { rules: lint.rules };
 
   const cacheDir = ensureCacheDir(root);
-  const configPath = join(cacheDir, 'oxlintrc.json');
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  const configPath = join(cacheDir, "oxlintrc.json");
+  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
   return configPath;
 }
 
 /**
  * Generate a temporary oxfmtrc.json from the mido format config.
  * All keys except `ignore` are forwarded to the JSON config verbatim.
- * Returns the config path and optional ignore path.
+ * Ignore patterns are handled by the central file resolver.
+ * Returns the config path, or null if no config is needed.
  */
-function writeOxfmtConfig(
-  root: string,
-  format: FormatConfig,
-): { readonly configPath: string | null; readonly ignorePath: string | null } {
+function writeOxfmtConfig(root: string, format: FormatConfig): string | null {
   const opts: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(format)) {
-    if (key !== 'ignore') {
+    if (key !== "ignore") {
       opts[key] = value;
     }
   }
 
-  const hasOpts = Object.keys(opts).length > 0;
-  const hasIgnore = format.ignore && format.ignore.length > 0;
-
-  if (!hasOpts && !hasIgnore) {
-    return { configPath: null, ignorePath: null };
+  if (Object.keys(opts).length === 0) {
+    return null;
   }
 
   const cacheDir = ensureCacheDir(root);
-
-  let configPath: string | null = null;
-  if (hasOpts) {
-    configPath = join(cacheDir, 'oxfmtrc.json');
-    writeFileSync(configPath, JSON.stringify(opts, null, 2) + '\n', 'utf-8');
-  }
-
-  let ignorePath: string | null = null;
-  if (hasIgnore && format.ignore) {
-    ignorePath = join(cacheDir, 'oxfmt-ignore');
-    writeFileSync(ignorePath, format.ignore.join('\n') + '\n', 'utf-8');
-  }
-
-  return { configPath, ignorePath };
+  const configPath = join(cacheDir, "oxfmtrc.json");
+  writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
+  return configPath;
 }
 
 /**
@@ -181,20 +159,20 @@ function findSourceDir(
   root: string,
 ): { readonly dir: string; readonly isRoot: boolean } {
   const pkgDir = join(root, pkg.path);
-  if (existsSync(join(pkgDir, 'src'))) {
-    return { dir: join(pkgDir, 'src'), isRoot: false };
+  if (existsSync(join(pkgDir, "src"))) {
+    return { dir: join(pkgDir, "src"), isRoot: false };
   }
-  if (existsSync(join(pkgDir, 'lib'))) {
-    return { dir: join(pkgDir, 'lib'), isRoot: false };
+  if (existsSync(join(pkgDir, "lib"))) {
+    return { dir: join(pkgDir, "lib"), isRoot: false };
   }
   return { dir: pkgDir, isRoot: true };
 }
 
 /** Well-known output paths for openapi-typescript, checked in order */
 const WELL_KNOWN_OUTPUT_PATHS: readonly string[] = [
-  'generated/api.d.ts',
-  'src/generated/api.d.ts',
-  'src/api.d.ts',
+  "generated/api.d.ts",
+  "src/generated/api.d.ts",
+  "src/api.d.ts",
 ];
 
 /**
@@ -221,16 +199,16 @@ function resolveOutputPath(
   }
 
   // 3. Default
-  return 'generated/api.d.ts';
+  return "generated/api.d.ts";
 }
 
 export const typescriptPlugin: EcosystemPlugin = {
-  type: 'ecosystem',
-  name: 'typescript',
-  manifest: 'package.json',
+  type: "ecosystem",
+  name: "typescript",
+  manifest: "package.json",
 
   async detect(pkg: WorkspacePackage): Promise<boolean> {
-    return pkg.ecosystem === 'typescript';
+    return pkg.ecosystem === "typescript";
   },
 
   async getWatchPatterns(): Promise<readonly string[]> {
@@ -249,12 +227,12 @@ export const typescriptPlugin: EcosystemPlugin = {
       actions.push(STANDARD_ACTIONS.FORMAT_CHECK);
 
       // Build — only if there's a build script
-      if (scripts['build']) {
+      if (scripts["build"]) {
         actions.push(STANDARD_ACTIONS.BUILD);
       }
 
       // Typecheck — if typescript dep or tsconfig exists
-      if (hasDep(manifest, 'typescript') || existsSync(join(root, pkg.path, 'tsconfig.json'))) {
+      if (hasDep(manifest, "typescript") || existsSync(join(root, pkg.path, "tsconfig.json"))) {
         actions.push(STANDARD_ACTIONS.TYPECHECK);
       }
 
@@ -266,7 +244,7 @@ export const typescriptPlugin: EcosystemPlugin = {
 
       // Include non-well-known scripts too
       for (const key of Object.keys(scripts)) {
-        if (!actions.includes(key) && !key.startsWith('pre') && !key.startsWith('post')) {
+        if (!actions.includes(key) && !key.startsWith("pre") && !key.startsWith("post")) {
           actions.push(key);
         }
       }
@@ -289,25 +267,34 @@ export const typescriptPlugin: EcosystemPlugin = {
     // ─── Standard actions ──────────────────────────────────────────────────
     if (action === STANDARD_ACTIONS.LINT || action === STANDARD_ACTIONS.LINT_FIX) {
       const fix = action === STANDARD_ACTIONS.LINT_FIX;
-      const { dir } = findSourceDir(pkg, root);
-      const oxlint = resolveBin('oxlint', root);
+      const oxlint = resolveBin("oxlint", root);
       if (oxlint) {
         const args: string[] = [];
         if (context.lintConfig) {
           const configPath = writeOxlintConfig(root, context.lintConfig);
           if (configPath) {
-            args.push('--config', configPath);
+            args.push("--config", configPath);
           }
         }
         if (fix) {
-          args.push('--fix');
+          args.push("--fix");
         }
-        args.push(dir);
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          args.push(...context.resolvedFiles);
+        } else {
+          const { dir } = findSourceDir(pkg, root);
+          args.push(dir);
+        }
         return runCommand(oxlint, args, cwd);
       }
-      const eslint = resolveBin('eslint', root);
+      const eslint = resolveBin("eslint", root);
       if (eslint) {
-        const args = fix ? ['--fix', dir] : [dir];
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          const args = fix ? ["--fix", ...context.resolvedFiles] : [...context.resolvedFiles];
+          return runCommand(eslint, args, cwd);
+        }
+        const { dir } = findSourceDir(pkg, root);
+        const args = fix ? ["--fix", dir] : [dir];
         return runCommand(eslint, args, cwd);
       }
       return {
@@ -318,33 +305,38 @@ export const typescriptPlugin: EcosystemPlugin = {
     }
 
     if (action === STANDARD_ACTIONS.FORMAT) {
-      const { dir, isRoot } = findSourceDir(pkg, root);
-      const oxfmt = resolveBin('oxfmt', root);
+      const oxfmt = resolveBin("oxfmt", root);
       if (oxfmt) {
         const args: string[] = [];
         if (context.formatConfig) {
-          const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+          const configPath = writeOxfmtConfig(root, context.formatConfig);
           if (configPath) {
-            args.push('--config', configPath);
-          }
-          if (ignorePath) {
-            args.push('--ignore-path', ignorePath);
+            args.push("--config", configPath);
           }
         }
-        if (isRoot) {
-          args.push(
-            '--no-error-on-unmatched-pattern',
-            join(dir, '**/*.ts'),
-            join(dir, '**/*.tsx'),
-          );
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          args.push(...context.resolvedFiles);
         } else {
-          args.push(dir);
+          const { dir, isRoot } = findSourceDir(pkg, root);
+          if (isRoot) {
+            args.push(
+              "--no-error-on-unmatched-pattern",
+              join(dir, "**/*.ts"),
+              join(dir, "**/*.tsx"),
+            );
+          } else {
+            args.push(dir);
+          }
         }
         return runCommand(oxfmt, args, cwd);
       }
-      const prettier = resolveBin('prettier', root);
+      const prettier = resolveBin("prettier", root);
       if (prettier) {
-        return runCommand(prettier, ['--write', dir], cwd);
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          return runCommand(prettier, ["--write", ...context.resolvedFiles], cwd);
+        }
+        const { dir } = findSourceDir(pkg, root);
+        return runCommand(prettier, ["--write", dir], cwd);
       }
       return {
         success: true,
@@ -354,33 +346,38 @@ export const typescriptPlugin: EcosystemPlugin = {
     }
 
     if (action === STANDARD_ACTIONS.FORMAT_CHECK) {
-      const { dir, isRoot } = findSourceDir(pkg, root);
-      const oxfmt = resolveBin('oxfmt', root);
+      const oxfmt = resolveBin("oxfmt", root);
       if (oxfmt) {
-        const args: string[] = ['--check'];
+        const args: string[] = ["--check"];
         if (context.formatConfig) {
-          const { configPath, ignorePath } = writeOxfmtConfig(root, context.formatConfig);
+          const configPath = writeOxfmtConfig(root, context.formatConfig);
           if (configPath) {
-            args.push('--config', configPath);
-          }
-          if (ignorePath) {
-            args.push('--ignore-path', ignorePath);
+            args.push("--config", configPath);
           }
         }
-        if (isRoot) {
-          args.push(
-            '--no-error-on-unmatched-pattern',
-            join(dir, '**/*.ts'),
-            join(dir, '**/*.tsx'),
-          );
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          args.push(...context.resolvedFiles);
         } else {
-          args.push(dir);
+          const { dir, isRoot } = findSourceDir(pkg, root);
+          if (isRoot) {
+            args.push(
+              "--no-error-on-unmatched-pattern",
+              join(dir, "**/*.ts"),
+              join(dir, "**/*.tsx"),
+            );
+          } else {
+            args.push(dir);
+          }
         }
         return runCommand(oxfmt, args, cwd);
       }
-      const prettier = resolveBin('prettier', root);
+      const prettier = resolveBin("prettier", root);
       if (prettier) {
-        return runCommand(prettier, ['--check', dir], cwd);
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          return runCommand(prettier, ["--check", ...context.resolvedFiles], cwd);
+        }
+        const { dir } = findSourceDir(pkg, root);
+        return runCommand(prettier, ["--check", dir], cwd);
       }
       return {
         success: true,
@@ -390,7 +387,7 @@ export const typescriptPlugin: EcosystemPlugin = {
     }
 
     if (action === STANDARD_ACTIONS.BUILD) {
-      return runCommand(pm, ['run', 'build'], cwd);
+      return runCommand(pm, ["run", "build"], cwd);
     }
 
     if (action === STANDARD_ACTIONS.TYPECHECK) {
@@ -402,15 +399,15 @@ export const typescriptPlugin: EcosystemPlugin = {
       } catch {
         // proceed with fallback
       }
-      if (scripts['typecheck']) {
-        return runCommand(pm, ['run', 'typecheck'], cwd);
+      if (scripts["typecheck"]) {
+        return runCommand(pm, ["run", "typecheck"], cwd);
       }
-      const runner = pm === 'bun' ? 'bunx' : 'npx';
-      return runCommand(runner, ['tsc', '--noEmit'], cwd);
+      const runner = pm === "bun" ? "bunx" : "npx";
+      return runCommand(runner, ["tsc", "--noEmit"], cwd);
     }
 
     // Direct openapi-typescript invocation
-    if (action === 'generate-openapi-ts') {
+    if (action === "generate-openapi-ts") {
       let scripts: Record<string, string> = {};
       try {
         const manifest = await readPackageJson(pkg.path, root);
@@ -423,8 +420,8 @@ export const typescriptPlugin: EcosystemPlugin = {
       const artifactPath = context.artifactPath;
       if (!artifactPath) {
         // No artifact path from domain plugin — fall back to generate script
-        if (scripts['generate']) {
-          return runCommand(pm, ['run', 'generate'], cwd);
+        if (scripts["generate"]) {
+          return runCommand(pm, ["run", "generate"], cwd);
         }
         return {
           success: false,
@@ -435,12 +432,12 @@ export const typescriptPlugin: EcosystemPlugin = {
 
       const artifactRelative = relative(join(root, pkg.path), join(root, artifactPath));
       const outputPath = resolveOutputPath(pkg, root, scripts);
-      const runner = pm === 'bun' ? 'bunx' : 'npx';
+      const runner = pm === "bun" ? "bunx" : "npx";
 
-      return runCommand(runner, ['openapi-typescript', artifactRelative, '-o', outputPath], cwd);
+      return runCommand(runner, ["openapi-typescript", artifactRelative, "-o", outputPath], cwd);
     }
 
-    return runCommand(pm, ['run', action], cwd);
+    return runCommand(pm, ["run", action], cwd);
   },
 
   async canHandleDomainArtifact(
@@ -449,7 +446,7 @@ export const typescriptPlugin: EcosystemPlugin = {
     pkg: WorkspacePackage,
     root: string,
   ): Promise<DomainCapability | null> {
-    if (domain !== 'openapi') {
+    if (domain !== "openapi") {
       return null;
     }
 
@@ -457,19 +454,19 @@ export const typescriptPlugin: EcosystemPlugin = {
       const manifest = await readPackageJson(pkg.path, root);
 
       // Primary: direct tool invocation via openapi-typescript dependency
-      if (hasDep(manifest, 'openapi-typescript')) {
+      if (hasDep(manifest, "openapi-typescript")) {
         return {
-          action: 'generate-openapi-ts',
-          description: 'TypeScript types via openapi-typescript',
+          action: "generate-openapi-ts",
+          description: "TypeScript types via openapi-typescript",
         };
       }
 
       // Fallback: generate script (last resort)
       const scripts = getScripts(manifest);
-      if (scripts['generate']) {
+      if (scripts["generate"]) {
         return {
-          action: 'generate',
-          description: 'Generate via package script',
+          action: "generate",
+          description: "Generate via package script",
         };
       }
     } catch {
@@ -483,7 +480,7 @@ export const typescriptPlugin: EcosystemPlugin = {
     pkg: WorkspacePackage,
     root: string,
   ): Promise<WatchPathSuggestion | null> {
-    const srcDir = join(root, pkg.path, 'src');
+    const srcDir = join(root, pkg.path, "src");
     if (existsSync(srcDir)) {
       return {
         paths: [`${pkg.path}/src/**`],

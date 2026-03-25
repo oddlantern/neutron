@@ -2,7 +2,7 @@
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-DEIL81UX.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-C3Iky15L.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-2wPMEgE6.js";
 import { runCheck } from "./check-BfVJls7g.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -302,7 +302,7 @@ async function runFirstTime(root, configPath, parsers) {
 	if (isCancel(installHooks)) handleCancel();
 	let hooksInstalled = false;
 	if (installHooks) {
-		const { runInstall } = await import("./install-CbBbjtP1.js");
+		const { runInstall } = await import("./install-CYUr_C0X.js");
 		const installResult = await runInstall(root);
 		if (installResult !== 0) return installResult;
 		hooksInstalled = true;
@@ -551,7 +551,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-BVOsLa7-.js");
+			const { runDev } = await import("./dev-Bk0zGvT3.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -1136,4 +1136,4 @@ async function migrateLintFormatConfig(root, _configPath) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-B1BOxKtY.js.map
+//# sourceMappingURL=init-BQ62HREZ.js.map
