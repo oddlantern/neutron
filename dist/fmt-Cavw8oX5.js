@@ -3,15 +3,15 @@ import { i as GREEN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-
 import { t as loadConfig } from "./loader-Byxz0D__.js";
 import { t as groupByEcosystem } from "./group-DG4KFO0Y.js";
 import { t as buildWorkspaceGraph } from "./workspace-BD6E7qqa.js";
-import { i as STANDARD_ACTIONS, n as loadPlugins, t as PluginRegistry } from "./registry-ibd6msB5.js";
+import { i as STANDARD_ACTIONS, n as loadPlugins, t as PluginRegistry } from "./registry-BG_Yc1It.js";
 import { t as detectPackageManager } from "./pm-detect-DB_So8gt.js";
 import { t as resolveFiles } from "./resolver-D9ws54tM.js";
 import { join } from "node:path";
-//#region src/commands/lint.ts
+//#region src/commands/fmt.ts
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
-/** File extensions per ecosystem for lint resolution */
-const LINT_EXTENSIONS = {
+/** File extensions per ecosystem for format resolution */
+const FORMAT_EXTENSIONS = {
 	typescript: [
 		".ts",
 		".tsx",
@@ -23,12 +23,12 @@ const LINT_EXTENSIONS = {
 	dart: [".dart"]
 };
 /**
-* Run linters across all packages in the workspace.
+* Run formatting across all packages in the workspace.
 *
-* @returns exit code (0 = no errors, 1 = errors found)
+* @returns exit code (0 = all formatted, 1 = unformatted files found in check mode)
 */
-async function runLint(parsers, options = {}) {
-	const { fix = false, quiet = false } = options;
+async function runFmt(parsers, options = {}) {
+	const { check = false, quiet = false } = options;
 	const { config, root } = await loadConfig();
 	const graph = await buildWorkspaceGraph(config, root, parsers);
 	const plugins = loadPlugins();
@@ -38,12 +38,12 @@ async function runLint(parsers, options = {}) {
 		...config.lint ? { lintConfig: config.lint } : {},
 		...config.format ? { formatConfig: config.format } : {}
 	} : void 0);
-	const action = fix ? STANDARD_ACTIONS.LINT_FIX : STANDARD_ACTIONS.LINT;
+	const action = check ? STANDARD_ACTIONS.FORMAT_CHECK : STANDARD_ACTIONS.FORMAT;
 	const grouped = groupByEcosystem(graph.packages, options);
 	let hasErrors = false;
 	for (const [ecosystem, packages] of grouped) {
 		if (!quiet) console.log(`\n${DIM}◇${RESET} ${BOLD}${ecosystem}${RESET} ${DIM}(${packages.length} packages)${RESET}`);
-		const ignorePatterns = config.lint?.ignore ?? [];
+		const ignorePatterns = config.format?.ignore ?? [];
 		const results = await Promise.all(packages.map(async (pkg) => {
 			const plugin = registry.getEcosystemForPackage(pkg);
 			if (!plugin) return {
@@ -54,7 +54,7 @@ async function runLint(parsers, options = {}) {
 					summary: `No plugin for ecosystem ${pkg.ecosystem}`
 				}
 			};
-			const extensions = LINT_EXTENSIONS[ecosystem];
+			const extensions = FORMAT_EXTENSIONS[ecosystem];
 			const pkgContext = extensions ? {
 				...context,
 				resolvedFiles: resolveFiles(join(root, pkg.path), extensions, ignorePatterns)
@@ -78,13 +78,10 @@ async function runLint(parsers, options = {}) {
 			}
 		}
 	}
-	if (!quiet) {
-		const total = [...grouped.values()].reduce((sum, pkgs) => sum + pkgs.length, 0);
-		console.log(`\n${hasErrors ? FAIL : PASS} ${hasErrors ? "Lint errors found" : `All ${total} package(s) clean`}\n`);
-	}
+	if (!quiet) console.log(`\n${hasErrors ? FAIL : PASS} ${check ? hasErrors ? "Formatting issues found" : "All files formatted" : hasErrors ? "Formatting failed" : "All formatted"}\n`);
 	return hasErrors ? 1 : 0;
 }
 //#endregion
-export { runLint };
+export { runFmt };
 
-//# sourceMappingURL=lint-CdkwBsux.js.map
+//# sourceMappingURL=fmt-Cavw8oX5.js.map

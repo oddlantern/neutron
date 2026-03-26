@@ -209,13 +209,13 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-CtIVkc-P.js");
+		const { runInit } = await import("./init-C-lfs6dv.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-CBR4aJrc.js");
+		const { runDev } = await import("./dev-C0QOC_FK.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
@@ -229,7 +229,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-CdkwBsux.js");
+		const { runLint } = await import("./lint-CMbFXaXs.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -243,7 +243,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-DKACZx63.js");
+		const { runFmt } = await import("./fmt-Cavw8oX5.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -255,7 +255,7 @@ async function main() {
 	if (command === "build") {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-anMs6KFx.js");
+		const { runBuild } = await import("./build-H30VMWJ5.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			package: pkg
@@ -263,7 +263,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-CR9VJQby.js");
+		const { runPreCommit } = await import("./pre-commit-B1LqLOUR.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}

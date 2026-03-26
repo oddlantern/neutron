@@ -14,6 +14,7 @@ import type {
 } from "../types.js";
 import { STANDARD_ACTIONS } from "../types.js";
 import { getScripts, hasDep, isRecord, readPackageJson, runCommand } from "./exec.js";
+import { generateCSS, generateTS } from "./typescript/token-codegen.js";
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
 
@@ -21,6 +22,9 @@ const WELL_KNOWN_ACTIONS: readonly string[] = ["generate", "build", "dev", "code
 
 /** Action name for direct openapi-typescript invocation */
 const ACTION_GENERATE_OPENAPI_TS = "generate-openapi-ts";
+
+/** Action name for design token CSS/TS generation */
+const ACTION_GENERATE_DESIGN_TOKENS_CSS = "generate-design-tokens-css";
 
 /**
  * Parse an openapi-typescript invocation from a package script to extract
@@ -516,6 +520,50 @@ export const typescriptPlugin: EcosystemPlugin = {
       return runCommand(runner, ["tsc", "--noEmit"], cwd);
     }
 
+    // Design token CSS/TS generation
+    if (action === ACTION_GENERATE_DESIGN_TOKENS_CSS) {
+      const start = performance.now();
+
+      const tokens = context.tokenData;
+      if (!tokens) {
+        return {
+          success: false,
+          duration: 0,
+          summary: "No token data provided — design plugin must validate first",
+        };
+      }
+
+      // Scaffold package.json if first run
+      if (!existsSync(join(cwd, "package.json"))) {
+        mkdirSync(cwd, { recursive: true });
+        const pkgName = pkg.name || "design-tokens";
+        const pkgJson = {
+          name: pkgName,
+          version: "0.0.0",
+          private: true,
+          main: "generated/tokens.css",
+          types: "generated/tokens.ts",
+        };
+        writeFileSync(join(cwd, "package.json"), JSON.stringify(pkgJson, null, 2) + "\n", "utf-8");
+      }
+
+      const generatedDir = join(cwd, "generated");
+      mkdirSync(generatedDir, { recursive: true });
+
+      const cssContent = generateCSS(tokens);
+      const tsContent = generateTS(tokens);
+
+      writeFileSync(join(generatedDir, "tokens.css"), cssContent, "utf-8");
+      writeFileSync(join(generatedDir, "tokens.ts"), tsContent, "utf-8");
+
+      const duration = Math.round(performance.now() - start);
+      return {
+        success: true,
+        duration,
+        summary: "2 files written",
+      };
+    }
+
     // Direct openapi-typescript invocation
     if (action === ACTION_GENERATE_OPENAPI_TS) {
       let scripts: Record<string, string> = {};
@@ -556,6 +604,25 @@ export const typescriptPlugin: EcosystemPlugin = {
     pkg: WorkspacePackage,
     root: string,
   ): Promise<DomainCapability | null> {
+    if (domain === "design-tokens") {
+      // Accept if target is a TS package or doesn't exist yet (first run)
+      const pkgJsonPath = join(root, pkg.path, "package.json");
+      if (!existsSync(pkgJsonPath)) {
+        return {
+          action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
+          description: "CSS custom properties + TS constants",
+        };
+      }
+      // Existing TS package — accept
+      if (pkg.ecosystem === "typescript") {
+        return {
+          action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
+          description: "CSS custom properties + TS constants",
+        };
+      }
+      return null;
+    }
+
     if (domain !== "openapi") {
       return null;
     }
