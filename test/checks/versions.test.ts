@@ -4,6 +4,20 @@ import type { WorkspaceGraph } from '../../src/graph/types.js';
 import type { MidoLock } from '../../src/lock.js';
 import { checkVersionConsistency } from '../../src/checks/versions.js';
 
+function makeLockEntry(range: string): { readonly range: string; readonly integrity: string; readonly ecosystems: readonly string[]; readonly resolvedAt: string } {
+  const { createHash } = require('node:crypto');
+  const hash = createHash('sha256').update(range).digest('hex').slice(0, 16);
+  return { range, integrity: `sha256-${hash}`, ecosystems: ['typescript'], resolvedAt: '2026-03-26T00:00:00.000Z' };
+}
+
+function makeLock(entries: Record<string, string>): MidoLock {
+  const resolved: Record<string, ReturnType<typeof makeLockEntry>> = {};
+  for (const [name, range] of Object.entries(entries)) {
+    resolved[name] = makeLockEntry(range);
+  }
+  return { version: 2, resolved };
+}
+
 function makeGraph(
   packages: Array<{
     name: string;
@@ -72,7 +86,7 @@ describe('checkVersionConsistency', () => {
       { name: 'pkg-a', path: 'packages/a', deps: [{ name: 'zod', range: '^3.0.0' }] },
       { name: 'pkg-b', path: 'packages/b', deps: [{ name: 'zod', range: '^3.0.0' }] },
     ]);
-    const lock: MidoLock = { resolved: { zod: '^3.0.0' } };
+    const lock = makeLock({ zod: '^3.0.0' });
     const result = checkVersionConsistency(graph, lock);
     expect(result.passed).toBe(true);
     expect(result.issues).toHaveLength(0);
@@ -83,7 +97,7 @@ describe('checkVersionConsistency', () => {
       { name: 'pkg-a', path: 'packages/a', deps: [{ name: 'zod', range: '^3.0.0' }] },
       { name: 'pkg-b', path: 'packages/b', deps: [{ name: 'zod', range: '^2.0.0' }] },
     ]);
-    const lock: MidoLock = { resolved: { zod: '^3.0.0' } };
+    const lock = makeLock({ zod: '^3.0.0' });
     const result = checkVersionConsistency(graph, lock);
     expect(result.passed).toBe(false);
     expect(result.issues).toHaveLength(1);

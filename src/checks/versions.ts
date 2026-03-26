@@ -1,5 +1,6 @@
 import type { WorkspaceGraph } from "../graph/types.js";
 import type { CheckIssue, CheckResult } from "./types.js";
+import { getLockedRange } from "../lock.js";
 import type { MidoLock } from "../lock.js";
 
 export interface DepOccurrence {
@@ -63,7 +64,7 @@ export function findVersionMismatches(
       continue;
     }
 
-    const lockedRange = lock?.resolved[depName];
+    const lockedRange = lock ? getLockedRange(lock, depName) : undefined;
 
     if (lockedRange) {
       // Lock-aware: flag any package deviating from locked range

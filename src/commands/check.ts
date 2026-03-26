@@ -6,6 +6,7 @@ import { checkVersionConsistency, findVersionMismatches } from "../checks/versio
 import { buildWorkspaceGraph, type ParserRegistry } from "../graph/workspace.js";
 import { formatCheckResult, formatHeader, formatSummary } from "../output.js";
 import { loadLock, mergeLock, writeLock } from "../lock.js";
+import type { LockUpdate } from "../lock.js";
 import { promptVersionResolution, type DepChoice } from "../prompt.js";
 import { applyManifestUpdate } from "../manifest-writer.js";
 
@@ -77,7 +78,7 @@ export async function runCheck(
       return allPassed ? 0 : 1;
     }
 
-    const resolutions: Record<string, string> = {};
+    const lockUpdates: LockUpdate[] = [];
     let updatedCount = 0;
 
     for (const mismatch of mismatches) {
@@ -98,7 +99,12 @@ export async function runCheck(
         continue;
       }
 
-      resolutions[resolution.depName] = resolution.chosenRange;
+      const ecosystems = [...new Set(mismatch.occurrences.map((o) => o.ecosystem))];
+      lockUpdates.push({
+        depName: resolution.depName,
+        range: resolution.chosenRange,
+        ecosystems,
+      });
 
       // Apply manifest updates for packages that need changing
       for (const target of resolution.targets) {
@@ -120,8 +126,8 @@ export async function runCheck(
       }
     }
 
-    if (Object.keys(resolutions).length > 0) {
-      const newLock = mergeLock(lock, resolutions);
+    if (lockUpdates.length > 0) {
+      const newLock = mergeLock(lock, lockUpdates);
       await writeLock(root, newLock);
       const total = Object.keys(newLock.resolved).length;
       console.log(`\nmido.lock updated (${total} resolved)\n`);
