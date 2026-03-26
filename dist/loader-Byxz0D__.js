@@ -69,8 +69,8 @@ const formatTypescriptSchema = z.object({
 		"cr",
 		"auto"
 	]).optional()
-});
-const formatDartSchema = z.object({ lineLength: z.number().optional() });
+}).passthrough();
+const formatDartSchema = z.object({ lineLength: z.number().optional() }).passthrough();
 const formatSchema = z.object({
 	ignore: z.array(z.string()).optional(),
 	typescript: formatTypescriptSchema.optional(),
@@ -286,4 +286,4 @@ async function loadConfig(startDir) {
 //#endregion
 export { DEFAULT_COMMIT_TYPES as n, loadConfig as t };
 
-//# sourceMappingURL=loader-C6A1wL8l.js.map
+//# sourceMappingURL=loader-Byxz0D__.js.map

@@ -47,25 +47,29 @@ const commitsSchema = z.object({
 
 // ─── Format schemas (per-ecosystem) ──────────────────────────────────────────
 
-const formatTypescriptSchema = z.object({
-  printWidth: z.number().optional(),
-  tabWidth: z.number().optional(),
-  useTabs: z.boolean().optional(),
-  semi: z.boolean().optional(),
-  singleQuote: z.boolean().optional(),
-  jsxSingleQuote: z.boolean().optional(),
-  trailingComma: z.enum(["all", "none", "es5"]).optional(),
-  bracketSpacing: z.boolean().optional(),
-  bracketSameLine: z.boolean().optional(),
-  arrowParens: z.enum(["always", "avoid"]).optional(),
-  proseWrap: z.enum(["preserve", "always", "never"]).optional(),
-  singleAttributePerLine: z.boolean().optional(),
-  endOfLine: z.enum(["lf", "crlf", "cr", "auto"]).optional(),
-});
+const formatTypescriptSchema = z
+  .object({
+    printWidth: z.number().optional(),
+    tabWidth: z.number().optional(),
+    useTabs: z.boolean().optional(),
+    semi: z.boolean().optional(),
+    singleQuote: z.boolean().optional(),
+    jsxSingleQuote: z.boolean().optional(),
+    trailingComma: z.enum(["all", "none", "es5"]).optional(),
+    bracketSpacing: z.boolean().optional(),
+    bracketSameLine: z.boolean().optional(),
+    arrowParens: z.enum(["always", "avoid"]).optional(),
+    proseWrap: z.enum(["preserve", "always", "never"]).optional(),
+    singleAttributePerLine: z.boolean().optional(),
+    endOfLine: z.enum(["lf", "crlf", "cr", "auto"]).optional(),
+  })
+  .passthrough();
 
-const formatDartSchema = z.object({
-  lineLength: z.number().optional(),
-});
+const formatDartSchema = z
+  .object({
+    lineLength: z.number().optional(),
+  })
+  .passthrough();
 
 const formatSchema = z.object({
   ignore: z.array(z.string()).optional(),
