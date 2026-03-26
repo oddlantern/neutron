@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-COlyl5x_.js";
+import { t as loadConfig } from "./loader-C6A1wL8l.js";
 import { n as loadPlugins, r as isRecord, t as PluginRegistry } from "./registry-ibd6msB5.js";
-import { runCheck } from "./check-CGGnlS-1.js";
+import { runCheck } from "./check-B42CgfB2.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -807,7 +807,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-C_tMceEO.js");
+			const { runDev } = await import("./dev-D_igfZYe.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -1235,4 +1235,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-Be7fNsFD.js.map
+//# sourceMappingURL=init-BNoWq2x9.js.map

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { d as formatSummary, l as formatCheckResult, u as formatHeader } from "./output-D1Xg1ws_.js";
 import { n as findVersionMismatches, t as checkVersionConsistency } from "./versions-CAkFDjVW.js";
-import { t as loadConfig } from "./loader-COlyl5x_.js";
+import { t as loadConfig } from "./loader-C6A1wL8l.js";
 import { t as buildWorkspaceGraph } from "./workspace-BD6E7qqa.js";
 import { i as writeLock, r as mergeLock, t as loadLock } from "./lock-BquVeM_6.js";
 import { n as promptVersionResolution } from "./prompt-DrAbRVLz.js";
@@ -239,4 +239,4 @@ async function runCheck(parsers, options = {}) {
 //#endregion
 export { runCheck };
 
-//# sourceMappingURL=check-CGGnlS-1.js.map
+//# sourceMappingURL=check-B42CgfB2.js.map

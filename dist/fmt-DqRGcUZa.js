@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { i as GREEN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
-import { t as loadConfig } from "./loader-COlyl5x_.js";
+import { t as loadConfig } from "./loader-C6A1wL8l.js";
 import { t as groupByEcosystem } from "./group-DG4KFO0Y.js";
 import { t as buildWorkspaceGraph } from "./workspace-BD6E7qqa.js";
 import { i as STANDARD_ACTIONS, n as loadPlugins, t as PluginRegistry } from "./registry-ibd6msB5.js";
@@ -84,4 +84,4 @@ async function runFmt(parsers, options = {}) {
 //#endregion
 export { runFmt };
 
-//# sourceMappingURL=fmt-Cqac1Z_T.js.map
+//# sourceMappingURL=fmt-DqRGcUZa.js.map

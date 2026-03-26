@@ -2,7 +2,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { z } from "zod";
-import { isMap, isSeq, parse, parseDocument } from "yaml";
+import { isMap, isPair, isScalar, isSeq, parse, parseDocument } from "yaml";
 import { existsSync } from "node:fs";
 //#region src/config/schema.ts
 const ecosystemSchema = z.object({
@@ -127,42 +127,129 @@ function findConfigFile(startDir) {
 		current = parent;
 	}
 }
-/** Field renames for bridge schema migration (v0.0.2 → v0.0.3) */
+/** v0.0.2 → v0.0.3: Bridge fields from/to/via → source/target/artifact */
 const BRIDGE_FIELD_RENAMES = new Map([
 	["from", "source"],
 	["to", "target"],
 	["via", "artifact"]
 ]);
-/**
-* Detect and migrate old config formats in place.
-* Uses parseDocument to preserve YAML formatting and comments.
-*
-* @returns true if migration was performed, false if no migration needed
-*/
-async function migrateConfig(configPath, raw) {
-	const doc = parseDocument(raw);
-	let migrated = false;
+function migrateBridgeFields(doc) {
+	let changed = false;
 	const bridges = doc.get("bridges", true);
-	if (isSeq(bridges)) for (const item of bridges.items) {
+	if (!isSeq(bridges)) return false;
+	for (const item of bridges.items) {
 		if (!isMap(item)) continue;
 		for (const [oldKey, newKey] of BRIDGE_FIELD_RENAMES) if (item.has(oldKey)) {
 			const value = item.get(oldKey);
 			item.delete(oldKey);
 			item.set(newKey, value);
-			migrated = true;
+			changed = true;
 		}
 	}
-	if (migrated) {
+	return changed;
+}
+/**
+* v0.0.31 → v0.0.32: Flat lint/format → ecosystem-centric
+*
+* Old format:
+*   lint:
+*     rules: { eqeqeq: "warn" }
+*     ignore: ["dist"]
+*   format:
+*     singleQuote: true
+*     ignore: ["dist"]
+*
+* New format:
+*   lint:
+*     ignore: ["dist"]
+*     typescript:
+*       rules: { eqeqeq: "warn" }
+*   format:
+*     ignore: ["dist"]
+*     typescript:
+*       singleQuote: true
+*/
+function migrateFlatLintFormat(doc) {
+	let changed = false;
+	const lint = doc.get("lint", true);
+	if (isMap(lint)) {
+		if (lint.has("rules") && !lint.has("typescript")) {
+			const rules = lint.get("rules");
+			lint.delete("rules");
+			const tsNode = doc.createNode({ rules });
+			lint.set("typescript", tsNode);
+			changed = true;
+		}
+	}
+	const format = doc.get("format", true);
+	if (isMap(format)) {
+		const ECOSYSTEM_KEYS = new Set([
+			"ignore",
+			"typescript",
+			"dart"
+		]);
+		const formatKeys = [];
+		for (const pair of format.items) {
+			if (!isPair(pair) || !isScalar(pair.key)) continue;
+			const key = String(pair.key.value);
+			if (!ECOSYSTEM_KEYS.has(key)) formatKeys.push(key);
+		}
+		if (formatKeys.length > 0 && !format.has("typescript")) {
+			const tsObj = {};
+			for (const key of formatKeys) {
+				tsObj[key] = format.get(key);
+				format.delete(key);
+			}
+			const tsNode = doc.createNode(tsObj);
+			format.set("typescript", tsNode);
+			changed = true;
+		}
+	}
+	if (isMap(lint) && lint.has("commits") && !doc.has("commits")) {
+		const commits = lint.get("commits", true);
+		lint.delete("commits");
+		doc.set("commits", commits);
+		changed = true;
+	}
+	return changed;
+}
+/** All migrations in order. Each is idempotent. */
+const MIGRATIONS = [{
+	label: "bridge fields from/to/via → source/target/artifact",
+	run: migrateBridgeFields
+}, {
+	label: "flat lint/format → ecosystem-centric",
+	run: migrateFlatLintFormat
+}];
+/**
+* Run all migrations on a parsed YAML document.
+* Returns the list of migrations that were applied.
+*/
+function runMigrations(doc) {
+	const applied = [];
+	for (const migration of MIGRATIONS) if (migration.run(doc)) applied.push(migration.label);
+	return applied;
+}
+/**
+* Detect and migrate old config formats in place.
+* Uses parseDocument to preserve YAML formatting and comments.
+*
+* @returns migration result with applied labels and final content
+*/
+async function migrateConfig(configPath, raw) {
+	const doc = parseDocument(raw);
+	const applied = runMigrations(doc);
+	if (applied.length > 0) {
 		const newContent = doc.toString();
 		await writeFile(configPath, newContent, "utf-8");
-		console.log("migrated mido.yml to v0.0.3 format.");
+		for (const label of applied) console.log(`migrated mido.yml: ${label}`);
 		return {
-			migrated: true,
+			applied,
 			content: newContent
 		};
 	}
 	return {
-		migrated: false,
+		applied: [],
 		content: raw
 	};
 }
@@ -199,4 +286,4 @@ async function loadConfig(startDir) {
 //#endregion
 export { DEFAULT_COMMIT_TYPES as n, loadConfig as t };
 
-//# sourceMappingURL=loader-COlyl5x_.js.map
+//# sourceMappingURL=loader-C6A1wL8l.js.map
