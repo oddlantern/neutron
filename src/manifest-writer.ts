@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { isMap, parseDocument } from "yaml";
 import { z } from "zod";
 
+import { isRecord } from "./guards.js";
+
 const DEFAULT_INDENT = "  ";
 
 const DEP_FIELDS_JSON = [
@@ -61,10 +63,6 @@ async function writePackageJson(root: string, update: ManifestUpdate): Promise<b
 
   await writeFile(filePath, JSON.stringify(manifest, null, indent) + "\n", "utf-8");
   return true;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 async function writePubspec(root: string, update: ManifestUpdate): Promise<boolean> {

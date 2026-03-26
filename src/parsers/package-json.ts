@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import { z } from "zod";
 
+import { isRecord } from "../guards.js";
 import type { Dependency } from "../graph/types.js";
 import type { ManifestParser, ParsedManifest } from "./types.js";
 
@@ -16,10 +17,6 @@ const DEP_FIELDS: readonly (readonly [string, DepType])[] = [
 ] as const;
 
 const manifestSchema = z.record(z.string(), z.unknown());
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function extractDeps(
   manifest: Record<string, unknown>,

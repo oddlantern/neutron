@@ -1,11 +1,8 @@
 import type { ParserRegistry } from "../graph/workspace.js";
-import { GREEN, RED, RESET } from "../output.js";
+import { FAIL, PASS } from "../output.js";
 import { runFmt } from "./fmt.js";
 import { runLint } from "./lint.js";
 import { runCheck } from "./check.js";
-
-const PASS = `${GREEN}✓${RESET}`;
-const FAIL = `${RED}✗${RESET}`;
 
 interface PreCommitStep {
   readonly name: string;

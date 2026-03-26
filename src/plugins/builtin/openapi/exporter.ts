@@ -3,7 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import { existsSync } from "node:fs";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import type { FrameworkAdapter } from "./adapters/types.js";
 import type { ExecuteResult } from "../../types.js";
@@ -28,12 +28,13 @@ const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
  * Assert that a resolved path stays within the workspace root.
  * Prevents path traversal via malicious config values.
  */
-export function assertWithinRoot(resolved: string, root: string): void {
-  // Normalize both to ensure trailing slashes don't cause mismatches
-  const normalizedRoot = root.endsWith("/") ? root : `${root}/`;
+export function assertWithinRoot(filePath: string, root: string): void {
+  const resolved = resolve(filePath);
+  const resolvedRoot = resolve(root);
+  const normalizedRoot = resolvedRoot.endsWith("/") ? resolvedRoot : `${resolvedRoot}/`;
   const normalizedResolved = resolved.endsWith("/") ? resolved : `${resolved}/`;
-  if (!normalizedResolved.startsWith(normalizedRoot) && resolved !== root) {
-    throw new Error(`Path "${resolved}" escapes workspace root "${root}"`);
+  if (!normalizedResolved.startsWith(normalizedRoot) && resolved !== resolvedRoot) {
+    throw new Error(`Path "${filePath}" escapes workspace root "${root}"`);
   }
 }
 
@@ -365,7 +366,12 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
   const child = spawn(runner, runnerArgs, {
     cwd: packageDir,
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, PORT: String(port) },
+    env: {
+      PATH: process.env["PATH"],
+      HOME: process.env["HOME"],
+      NODE_ENV: process.env["NODE_ENV"],
+      PORT: String(port),
+    },
   });
 
   // Safety net: kill child if parent exits unexpectedly

@@ -1,10 +1,16 @@
 #!/usr/bin/env node
-import { a as ORANGE, r as DIM, s as RESET } from "./output-D1Xg1ws_.js";
-import { n as VERSION } from "./version-WDd4fw5u.js";
+import { l as RED, r as DIM, s as ORANGE, u as RESET } from "./output-C8Qm-e8m.js";
+import { n as VERSION } from "./version-TAjFEXRG.js";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { z } from "zod";
 import { parse } from "yaml";
+//#region src/guards.ts
+/** Shared type guards used across the codebase */
+function isRecord(value) {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+//#endregion
 //#region src/parsers/package-json.ts
 const DEP_FIELDS$1 = [
 	["dependencies", "production"],
@@ -13,12 +19,9 @@ const DEP_FIELDS$1 = [
 	["optionalDependencies", "optional"]
 ];
 const manifestSchema$1 = z.record(z.string(), z.unknown());
-function isRecord$1(value) {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 function extractDeps$1(manifest, field, type) {
 	const raw = manifest[field];
-	if (!isRecord$1(raw)) return [];
+	if (!isRecord(raw)) return [];
 	return Object.entries(raw).filter((entry) => typeof entry[1] === "string").map(([name, range]) => ({
 		name,
 		range,
@@ -29,7 +32,7 @@ function extractLocalPaths$1(manifest, manifestDir) {
 	const paths = [];
 	for (const [field] of DEP_FIELDS$1) {
 		const raw = manifest[field];
-		if (!isRecord$1(raw)) continue;
+		if (!isRecord(raw)) continue;
 		for (const value of Object.values(raw)) {
 			if (typeof value !== "string") continue;
 			if (value.startsWith("file:")) paths.push(resolve(manifestDir, value.slice(5)));
@@ -59,9 +62,6 @@ const DEP_FIELDS = [
 	["dependency_overrides", "override"]
 ];
 const manifestSchema = z.record(z.string(), z.unknown());
-function isRecord(value) {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 /**
 * Dart dependency values can be:
 * - A string version constraint: "^1.2.3"
@@ -201,7 +201,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-CyowlyRS.js");
+		const { runCheck } = await import("./check-01QWoVrL.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -209,18 +209,18 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-C-lfs6dv.js");
+		const { runInit } = await import("./init-Da-ztTFK.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-C0QOC_FK.js");
+		const { runDev } = await import("./dev-xmDgyDP-.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-B-rCGJZv.js");
+		const { runInstall } = await import("./install-CpK7z7vW.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
@@ -229,7 +229,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-CMbFXaXs.js");
+		const { runLint } = await import("./lint-BxlUzO7l.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -243,7 +243,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-Cavw8oX5.js");
+		const { runFmt } = await import("./fmt-B7Nk9onT.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -255,7 +255,7 @@ async function main() {
 	if (command === "build") {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-H30VMWJ5.js");
+		const { runBuild } = await import("./build-BffePRlg.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			package: pkg
@@ -263,7 +263,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-B1LqLOUR.js");
+		const { runPreCommit } = await import("./pre-commit-CVK88Rah.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
@@ -273,7 +273,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-DqOwi0yo.js");
+		const { runCommitMsg } = await import("./commit-msg-DPyByimp.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}
@@ -283,10 +283,10 @@ async function main() {
 main().catch((error) => {
 	if (error instanceof Error && error.name === "CancelError") process.exit(0);
 	const message = error instanceof Error ? error.message : String(error);
-	console.error(`\x1b[31merror:\x1b[0m ${message}`);
+	console.error(`${RED}error:${RESET} ${message}`);
 	process.exit(1);
 });
 //#endregion
-export { printBanner as t };
+export { isRecord as n, printBanner as t };
 
 //# sourceMappingURL=bin.js.map

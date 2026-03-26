@@ -2,14 +2,12 @@ import { loadConfig } from "../config/loader.js";
 import { groupByEcosystem } from "./group.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, GREEN, RED, RESET } from "../output.js";
+import { BOLD, DIM, FAIL, PASS, RESET } from "../output.js";
 import { loadPlugins } from "../plugins/loader.js";
 import { PluginRegistry } from "../plugins/registry.js";
 import { STANDARD_ACTIONS } from "../plugins/types.js";
-import { detectPackageManager } from "../watcher/pm-detect.js";
+import { detectPackageManager } from "../pm-detect.js";
 
-const PASS = `${GREEN}✓${RESET}`;
-const FAIL = `${RED}✗${RESET}`;
 const SKIP = `${DIM}·${RESET}`;
 
 export interface BuildOptions {

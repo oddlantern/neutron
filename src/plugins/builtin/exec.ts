@@ -2,14 +2,13 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { isRecord } from "../../guards.js";
 import type { ExecuteResult } from "../types.js";
+
+export { isRecord };
 
 /** Maximum bytes of stdout/stderr to accumulate per process */
 const MAX_OUTPUT_BYTES = 1024 * 1024;
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Read and parse a package.json file from a package directory.
@@ -44,9 +43,18 @@ export function getScripts(manifest: Record<string, unknown>): Record<string, st
   return result;
 }
 
-/** Check if a package.json has a dependency in any dependency group */
-export function hasDep(manifest: Record<string, unknown>, name: string): boolean {
-  const fields = ["dependencies", "devDependencies", "peerDependencies"];
+const DEFAULT_DEP_FIELDS: readonly string[] = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+];
+
+/** Check if a manifest has a dependency in the specified dependency groups */
+export function hasDep(
+  manifest: Record<string, unknown>,
+  name: string,
+  fields: readonly string[] = DEFAULT_DEP_FIELDS,
+): boolean {
   for (const field of fields) {
     const deps = manifest[field];
     if (isRecord(deps) && name in deps) {

@@ -2,16 +2,39 @@ import { readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 
 import type { WorkspacePackage } from "../../../graph/types.js";
+import { RED, RESET, YELLOW } from "../../../output.js";
 import type {
   DomainPlugin,
   ExecutablePipelineStep,
   ExecuteResult,
   ExecutionContext,
 } from "../../types.js";
-import { formatValidationErrors, validateTokens } from "./token-schema.js";
+import { validateTokens } from "./token-schema.js";
+import type { TokenValidationError, TokenValidationWarning } from "./token-schema.js";
 import type { ValidatedTokens } from "./types.js";
 
 const DOMAIN_NAME = "design-tokens";
+
+/**
+ * Format validation errors for terminal output.
+ */
+function formatValidationErrors(
+  errors: readonly TokenValidationError[],
+  warnings: readonly TokenValidationWarning[],
+): string {
+  const lines: string[] = [];
+  lines.push(`${RED}✗ tokens.json validation failed${RESET}`);
+
+  for (const err of errors) {
+    lines.push(`  ${RED}${err.path}: ${err.message}${RESET}`);
+  }
+
+  for (const warn of warnings) {
+    lines.push(`  ${YELLOW}${warn.path}: ${warn.message}${RESET}`);
+  }
+
+  return lines.join("\n");
+}
 
 /**
  * Read and parse a tokens.json file.
@@ -118,7 +141,7 @@ export const designPlugin: DomainPlugin = {
     const ctxWithTokens: ExecutionContext = {
       ...context,
       artifactPath: artifact,
-      tokenData: validation.data,
+      domainData: validation.data,
     };
 
     const results: ExecuteResult[] = [];
@@ -210,7 +233,7 @@ export const designPlugin: DomainPlugin = {
           const ctxWithTokens: ExecutionContext = {
             ...context,
             artifactPath: artifact,
-            tokenData: shared.data,
+            domainData: shared.data,
           };
 
           return handler.plugin.execute(

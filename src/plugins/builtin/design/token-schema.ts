@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { RED, RESET, YELLOW } from "../../../output.js";
-
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 const hexColor = z.string().regex(HEX_COLOR, "invalid hex color (expected #RRGGBB)");
@@ -209,25 +207,4 @@ export function validateTokens(raw: unknown): TokenValidationResult {
   }
 
   return { success: true, data, errors, warnings };
-}
-
-/**
- * Format validation errors for terminal output.
- */
-export function formatValidationErrors(
-  errors: readonly TokenValidationError[],
-  warnings: readonly TokenValidationWarning[],
-): string {
-  const lines: string[] = [];
-  lines.push(`${RED}✗ tokens.json validation failed${RESET}`);
-
-  for (const err of errors) {
-    lines.push(`  ${RED}${err.path}: ${err.message}${RESET}`);
-  }
-
-  for (const warn of warnings) {
-    lines.push(`  ${YELLOW}${warn.path}: ${warn.message}${RESET}`);
-  }
-
-  return lines.join("\n");
 }

@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, join, relative } from "node:path";
@@ -36,7 +36,7 @@ import type { ParserRegistry } from "../graph/workspace.js";
 import { loadPlugins } from "../plugins/loader.js";
 import { PluginRegistry } from "../plugins/registry.js";
 import type { WatchPathSuggestion } from "../plugins/types.js";
-import { isRecord } from "../plugins/builtin/exec.js";
+import { isRecord } from "../guards.js";
 import { mergeMigratedConfig, migrateLintFormatConfig } from "./migrate.js";
 
 const CONFIG_FILENAME = "mido.yml";
@@ -93,7 +93,7 @@ async function runFirstTime(
 
   const s = spinner();
   s.start("Scanning repo...");
-  const discovered = await scanRepo(root);
+  const discovered = scanRepo(root);
   s.stop("Scan complete");
 
   if (discovered.length === 0) {
@@ -272,7 +272,7 @@ async function runReconciliation(
   const s = spinner();
   s.start("Scanning repo and comparing with mido.yml...");
 
-  const discovered = await scanRepo(root);
+  const discovered = scanRepo(root);
   const supported = discovered.filter((p) => p.supported);
 
   let existing: MidoConfig;
@@ -922,8 +922,10 @@ function getAllPackagePaths(config: MidoConfig): string[] {
 function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): void {
   const eco = config.ecosystems[pkg.ecosystem];
   if (eco) {
-    eco.packages.push(pkg.path);
-    eco.packages.sort();
+    config.ecosystems[pkg.ecosystem] = {
+      ...eco,
+      packages: [...eco.packages, pkg.path].sort(),
+    };
   } else {
     const manifestNames: Record<string, string> = {
       typescript: "package.json",
@@ -938,15 +940,17 @@ function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): void {
 
 function removePackageFromConfig(config: MidoConfig, path: string): void {
   for (const [ecoName, group] of Object.entries(config.ecosystems)) {
-    const idx = group.packages.indexOf(path);
-    if (idx !== -1) {
-      group.packages.splice(idx, 1);
-      // Remove ecosystem if no packages left
-      if (group.packages.length === 0) {
-        delete config.ecosystems[ecoName];
-      }
-      return;
+    if (!group.packages.includes(path)) {
+      continue;
     }
+    const remaining = group.packages.filter((p) => p !== path);
+    // Remove ecosystem if no packages left
+    if (remaining.length === 0) {
+      delete config.ecosystems[ecoName];
+    } else {
+      config.ecosystems[ecoName] = { ...group, packages: remaining };
+    }
+    return;
   }
 }
 
@@ -1246,7 +1250,12 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
       const cmd = detectRemoveCommand(root);
       const full = `${cmd} ${depsToRemove.join(" ")}`;
       log.step(`$ ${full}`);
-      execSync(full, { cwd: root, stdio: "inherit" });
+      const parts = cmd.split(" ");
+      const bin = parts[0];
+      const baseArgs = parts.slice(1);
+      if (bin) {
+        spawnSync(bin, [...baseArgs, ...depsToRemove], { cwd: root, stdio: "inherit" });
+      }
     }
   }
 

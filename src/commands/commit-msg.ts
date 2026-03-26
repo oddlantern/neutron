@@ -4,15 +4,7 @@ import { loadConfig } from "../config/loader.js";
 import { DEFAULT_COMMIT_TYPES } from "../config/schema.js";
 import type { CommitsConfig } from "../config/schema.js";
 import { validateCommitMessage } from "../commit/validator.js";
-
-const RESET = "\x1b[0m";
-const BOLD = "\x1b[1m";
-const DIM = "\x1b[2m";
-const RED = "\x1b[31m";
-const YELLOW = "\x1b[33m";
-
-const FAIL = `${RED}✗${RESET}`;
-const WARN = `${YELLOW}⚠${RESET}`;
+import { BOLD, DIM, FAIL, RESET, WARN, YELLOW } from "../output.js";
 
 /** Default config used when no mido.yml commits section exists */
 const FALLBACK_CONFIG: CommitsConfig = {

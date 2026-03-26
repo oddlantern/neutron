@@ -1,5 +1,12 @@
 import { confirm, isCancel, select, text, cancel } from "@clack/prompts";
 
+export class CancelError extends Error {
+  constructor() {
+    super("Aborted.");
+    this.name = "CancelError";
+  }
+}
+
 export interface DepChoice {
   readonly range: string;
   readonly packagePath: string;
@@ -16,7 +23,7 @@ export interface VersionResolution {
 
 function handleCancel(): never {
   cancel("Aborted.");
-  process.exit(0);
+  throw new CancelError();
 }
 
 export async function promptVersionResolution(

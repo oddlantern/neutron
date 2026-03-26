@@ -76,12 +76,12 @@ function loadGitignoreDirs(root: string): Set<string> {
  * Scan a repository root for ecosystem markers.
  * Returns all discovered packages (both supported and unsupported).
  */
-export async function scanRepo(root: string): Promise<readonly DiscoveredPackage[]> {
+export function scanRepo(root: string): readonly DiscoveredPackage[] {
   const gitignoreDirs = loadGitignoreDirs(root);
   const skipAll = new Set([...SKIP_DIRS, ...gitignoreDirs]);
   const packages: DiscoveredPackage[] = [];
 
-  async function walk(dir: string): Promise<void> {
+  function walk(dir: string): void {
     let entries: string[];
     try {
       entries = readdirSync(dir);
@@ -123,11 +123,11 @@ export async function scanRepo(root: string): Promise<readonly DiscoveredPackage
       }
 
       // Recurse into subdirectory
-      await walk(fullPath);
+      walk(fullPath);
     }
   }
 
-  await walk(root);
+  walk(root);
 
   return packages;
 }

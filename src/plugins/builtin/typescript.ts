@@ -13,8 +13,20 @@ import type {
   WatchPathSuggestion,
 } from "../types.js";
 import { STANDARD_ACTIONS } from "../types.js";
+import type { ValidatedTokens } from "./design/types.js";
 import { getScripts, hasDep, isRecord, readPackageJson, runCommand } from "./exec.js";
 import { generateCSS, generateTS } from "./typescript/token-codegen.js";
+
+/**
+ * Narrow unknown domainData to ValidatedTokens.
+ * ValidatedTokens always has a `color` object at the top level.
+ */
+function isValidatedTokens(value: unknown): value is ValidatedTokens {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return typeof value["color"] === "object" && value["color"] !== null;
+}
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
 
@@ -524,14 +536,15 @@ export const typescriptPlugin: EcosystemPlugin = {
     if (action === ACTION_GENERATE_DESIGN_TOKENS_CSS) {
       const start = performance.now();
 
-      const tokens = context.tokenData;
-      if (!tokens) {
+      const rawDomainData = context.domainData;
+      if (!isValidatedTokens(rawDomainData)) {
         return {
           success: false,
           duration: 0,
           summary: "No token data provided — design plugin must validate first",
         };
       }
+      const tokens: ValidatedTokens = rawDomainData;
 
       // Scaffold package.json if first run
       if (!existsSync(join(cwd, "package.json"))) {
