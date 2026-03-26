@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { h as formatSummary, m as formatHeader, p as formatCheckResult } from "./output-C8Qm-e8m.js";
 import { n as isRecord } from "./bin.js";
-import { a as writeLock, i as mergeLock, n as loadLock } from "./lock-CzQPAcHx.js";
-import { n as findVersionMismatches, t as checkVersionConsistency } from "./versions-DzyYyGuI.js";
+import { a as mergeLock, o as writeLock, r as loadLock, t as enrichEcosystems } from "./lock-BI6KSt7i.js";
+import { n as collectDeps, r as findVersionMismatches, t as checkVersionConsistency } from "./versions-C-iBU5-I.js";
 import { t as loadConfig } from "./loader-Bk5qGav2.js";
 import { t as buildWorkspaceGraph } from "./workspace-Bcx1iS1C.js";
 import { n as promptVersionResolution } from "./prompt-Uoqbqe-z.js";
@@ -178,7 +178,17 @@ async function runCheck(parsers, options = {}) {
 	const { fix = false, quiet = false } = options;
 	const { config, root } = await loadConfig();
 	const graph = await buildWorkspaceGraph(config, root, parsers);
-	const lock = await loadLock(root);
+	let lock = await loadLock(root);
+	if (lock) {
+		const depMap = collectDeps(graph);
+		const depEcosystems = /* @__PURE__ */ new Map();
+		for (const [depName, occurrences] of depMap) depEcosystems.set(depName, [...new Set(occurrences.map((o) => o.ecosystem))]);
+		const enriched = enrichEcosystems(lock, depEcosystems);
+		if (enriched !== lock) {
+			lock = enriched;
+			await writeLock(root, lock);
+		}
+	}
 	const results = [];
 	results.push(checkVersionConsistency(graph, lock));
 	if (graph.bridges.length > 0) results.push(checkBridges(graph));
@@ -242,4 +252,4 @@ async function runCheck(parsers, options = {}) {
 //#endregion
 export { runCheck };
 
-//# sourceMappingURL=check-Bp3AYCbR.js.map
+//# sourceMappingURL=check-DRaw_zgU.js.map

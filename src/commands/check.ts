@@ -2,10 +2,10 @@ import { loadConfig } from "../config/loader.js";
 import type { CheckResult } from "../checks/types.js";
 import { checkBridges } from "../checks/bridges.js";
 import { checkEnvParity } from "../checks/env.js";
-import { checkVersionConsistency, findVersionMismatches } from "../checks/versions.js";
+import { checkVersionConsistency, collectDeps, findVersionMismatches } from "../checks/versions.js";
 import { buildWorkspaceGraph, type ParserRegistry } from "../graph/workspace.js";
 import { formatCheckResult, formatHeader, formatSummary } from "../output.js";
-import { loadLock, mergeLock, writeLock } from "../lock.js";
+import { enrichEcosystems, loadLock, mergeLock, writeLock } from "../lock.js";
 import type { LockUpdate } from "../lock.js";
 import { promptVersionResolution, type DepChoice } from "../prompt.js";
 import { applyManifestUpdate } from "../manifest-writer.js";
@@ -28,7 +28,21 @@ export async function runCheck(
   const { config, root } = await loadConfig();
 
   const graph = await buildWorkspaceGraph(config, root, parsers);
-  const lock = await loadLock(root);
+  let lock = await loadLock(root);
+
+  // Enrich V1-migrated locks with real ecosystem data from the workspace
+  if (lock) {
+    const depMap = collectDeps(graph);
+    const depEcosystems = new Map<string, readonly string[]>();
+    for (const [depName, occurrences] of depMap) {
+      depEcosystems.set(depName, [...new Set(occurrences.map((o) => o.ecosystem))]);
+    }
+    const enriched = enrichEcosystems(lock, depEcosystems);
+    if (enriched !== lock) {
+      lock = enriched;
+      await writeLock(root, lock);
+    }
+  }
 
   const results: CheckResult[] = [];
 

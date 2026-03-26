@@ -3,7 +3,7 @@ import { a as GREEN, r as DIM, s as ORANGE, t as BOLD, u as RESET } from "./outp
 import { n as isRecord, t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-Bk5qGav2.js";
 import { n as loadPlugins, t as PluginRegistry } from "./registry-C3TQvbGO.js";
-import { runCheck } from "./check-Bp3AYCbR.js";
+import { runCheck } from "./check-DRaw_zgU.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -743,8 +743,8 @@ async function runPostInitCheck(parsers) {
 	}
 	const { config, root } = await loadConfig();
 	const { buildWorkspaceGraph } = await import("./workspace-Bcx1iS1C.js").then((n) => n.n);
-	const { findVersionMismatches } = await import("./versions-DzyYyGuI.js").then((n) => n.r);
-	const { loadLock } = await import("./lock-CzQPAcHx.js").then((n) => n.r);
+	const { findVersionMismatches } = await import("./versions-C-iBU5-I.js").then((n) => n.i);
+	const { loadLock } = await import("./lock-BI6KSt7i.js").then((n) => n.i);
 	const mismatches = findVersionMismatches(await buildWorkspaceGraph(config, root, parsers), await loadLock(root));
 	if (mismatches.length === 0) {
 		log.warn(`${DIM}Some checks failed. Run${RESET} ${BOLD}mido check${RESET} ${DIM}to see details.${RESET}`);
@@ -1242,4 +1242,4 @@ async function cleanupReplacedTooling(root) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-wZt_Yb9g.js.map
+//# sourceMappingURL=init-CVBdIj5b.js.map

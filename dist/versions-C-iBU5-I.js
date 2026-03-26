@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { t as __exportAll } from "./rolldown-runtime-QdrSlVMC.js";
-import { t as getLockedRange } from "./lock-CzQPAcHx.js";
+import { n as getLockedRange } from "./lock-BI6KSt7i.js";
 //#region src/checks/versions.ts
 var versions_exports = /* @__PURE__ */ __exportAll({
 	checkVersionConsistency: () => checkVersionConsistency,
@@ -93,6 +93,6 @@ function checkVersionConsistency(graph, lock = null) {
 	};
 }
 //#endregion
-export { findVersionMismatches as n, versions_exports as r, checkVersionConsistency as t };
+export { versions_exports as i, collectDeps as n, findVersionMismatches as r, checkVersionConsistency as t };
 
-//# sourceMappingURL=versions-DzyYyGuI.js.map
+//# sourceMappingURL=versions-C-iBU5-I.js.map

@@ -158,6 +158,33 @@ export function getLockedRange(lock: MidoLock, depName: string): string | undefi
   return lock.resolved[depName]?.range;
 }
 
+/**
+ * Fill in "unknown" ecosystems from the workspace graph.
+ * Called after loading a V1-migrated lock to resolve ecosystem info
+ * from the actual dependency data in the workspace.
+ */
+export function enrichEcosystems(
+  lock: MidoLock,
+  depEcosystems: ReadonlyMap<string, readonly string[]>,
+): MidoLock {
+  let changed = false;
+  const resolved: Record<string, LockEntry> = {};
+
+  for (const [name, entry] of Object.entries(lock.resolved)) {
+    const hasUnknown = entry.ecosystems.length === 1 && entry.ecosystems[0] === "unknown";
+    const known = depEcosystems.get(name);
+
+    if (hasUnknown && known && known.length > 0) {
+      resolved[name] = { ...entry, ecosystems: [...known] };
+      changed = true;
+    } else {
+      resolved[name] = entry;
+    }
+  }
+
+  return changed ? { version: lock.version, resolved } : lock;
+}
+
 /** Check all entries for integrity violations */
 export function checkIntegrity(lock: MidoLock): readonly string[] {
   const violations: string[] = [];

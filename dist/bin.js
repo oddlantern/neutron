@@ -201,7 +201,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-Bp3AYCbR.js");
+		const { runCheck } = await import("./check-DRaw_zgU.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -209,7 +209,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-wZt_Yb9g.js");
+		const { runInit } = await import("./init-CVBdIj5b.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
@@ -263,7 +263,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-BkWYwrHe.js");
+		const { runPreCommit } = await import("./pre-commit-CI2V6pV6.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}

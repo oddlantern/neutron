@@ -8,6 +8,7 @@ import { existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 //#region src/lock.ts
 var lock_exports = /* @__PURE__ */ __exportAll({
+	enrichEcosystems: () => enrichEcosystems,
 	getLockedRange: () => getLockedRange,
 	loadLock: () => loadLock,
 	mergeLock: () => mergeLock,
@@ -105,7 +106,31 @@ function mergeLock(existing, updates) {
 function getLockedRange(lock, depName) {
 	return lock.resolved[depName]?.range;
 }
+/**
+* Fill in "unknown" ecosystems from the workspace graph.
+* Called after loading a V1-migrated lock to resolve ecosystem info
+* from the actual dependency data in the workspace.
+*/
+function enrichEcosystems(lock, depEcosystems) {
+	let changed = false;
+	const resolved = {};
+	for (const [name, entry] of Object.entries(lock.resolved)) {
+		const hasUnknown = entry.ecosystems.length === 1 && entry.ecosystems[0] === "unknown";
+		const known = depEcosystems.get(name);
+		if (hasUnknown && known && known.length > 0) {
+			resolved[name] = {
+				...entry,
+				ecosystems: [...known]
+			};
+			changed = true;
+		} else resolved[name] = entry;
+	}
+	return changed ? {
+		version: lock.version,
+		resolved
+	} : lock;
+}
 //#endregion
-export { writeLock as a, mergeLock as i, loadLock as n, lock_exports as r, getLockedRange as t };
+export { mergeLock as a, lock_exports as i, getLockedRange as n, writeLock as o, loadLock as r, enrichEcosystems as t };
 
-//# sourceMappingURL=lock-CzQPAcHx.js.map
+//# sourceMappingURL=lock-BI6KSt7i.js.map

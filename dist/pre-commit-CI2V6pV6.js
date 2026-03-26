@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { c as PASS, i as FAIL } from "./output-C8Qm-e8m.js";
-import { runCheck } from "./check-Bp3AYCbR.js";
+import { runCheck } from "./check-DRaw_zgU.js";
 import { runFmt } from "./fmt-D8Daddol.js";
 import { runLint } from "./lint-JOVR_H25.js";
 //#region src/commands/pre-commit.ts
@@ -42,4 +42,4 @@ async function runPreCommit(parsers) {
 //#endregion
 export { runPreCommit };
 
-//# sourceMappingURL=pre-commit-BkWYwrHe.js.map
+//# sourceMappingURL=pre-commit-CI2V6pV6.js.map
