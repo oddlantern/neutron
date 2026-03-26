@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -13,6 +13,15 @@ import type {
   WatchPathSuggestion,
 } from "../types.js";
 import { STANDARD_ACTIONS } from "../types.js";
+import type { ValidatedTokens } from "./design/types.js";
+import {
+  generateBarrel,
+  generateColorScheme,
+  generateConstants,
+  generatePackageBarrel,
+  generateTheme,
+  generateThemeExtensions,
+} from "./dart/token-codegen.js";
 import { isRecord, runCommand } from "./exec.js";
 
 const WATCH_PATTERNS: readonly string[] = ["lib/**/*.dart", "bin/**/*.dart"];
@@ -22,6 +31,7 @@ const ACTION_PUB_GET = "pub-get";
 const ACTION_CODEGEN = "codegen";
 const ACTION_GENERATE_API = "generate-api";
 const ACTION_GENERATE_OPENAPI_DART = "generate-openapi-dart";
+const ACTION_GENERATE_DESIGN_TOKENS = "generate-design-tokens";
 
 async function readPubspec(pkg: WorkspacePackage, root: string): Promise<Record<string, unknown>> {
   const manifestPath = join(root, pkg.path, "pubspec.yaml");
@@ -50,6 +60,107 @@ function isFlutterPackage(manifest: Record<string, unknown>): boolean {
     return false;
   }
   return "flutter" in deps;
+}
+
+/**
+ * Scaffold a Flutter package at the given path if it doesn't exist.
+ * Creates pubspec.yaml, lib/ structure, and package barrel.
+ */
+function scaffoldDartPackage(pkgDir: string, packageName: string, tokens: ValidatedTokens): void {
+  const libDir = join(pkgDir, "lib");
+  const themeDir = join(libDir, "core", "theme");
+  const generatedDir = join(themeDir, "generated");
+
+  mkdirSync(generatedDir, { recursive: true });
+
+  const needsGoogleFonts = tokens.typography?.provider === "google_fonts";
+
+  const pubspec = [
+    `name: ${packageName}`,
+    "publish_to: none",
+    "",
+    "environment:",
+    "  sdk: '>=3.0.0 <4.0.0'",
+    "  flutter: '>=3.10.0'",
+    "",
+    "dependencies:",
+    "  flutter:",
+    "    sdk: flutter",
+  ];
+
+  if (needsGoogleFonts) {
+    pubspec.push("  google_fonts: ^6.0.0");
+  }
+
+  pubspec.push("");
+  writeFileSync(join(pkgDir, "pubspec.yaml"), pubspec.join("\n"), "utf-8");
+}
+
+/**
+ * Execute design token generation for a Dart/Flutter target.
+ */
+async function executeDesignTokenGeneration(
+  pkg: WorkspacePackage,
+  root: string,
+  context: ExecutionContext,
+): Promise<ExecuteResult> {
+  const start = performance.now();
+
+  const tokens = context.tokenData;
+  if (!tokens) {
+    return {
+      success: false,
+      duration: 0,
+      summary: "No token data provided — design plugin must validate first",
+    };
+  }
+
+  const pkgDir = join(root, pkg.path);
+  const packageName = pkg.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
+
+  // Scaffold if first run
+  if (!existsSync(join(pkgDir, "pubspec.yaml"))) {
+    scaffoldDartPackage(pkgDir, packageName, tokens);
+  }
+
+  const themeDir = join(pkgDir, "lib", "core", "theme");
+  const generatedDir = join(themeDir, "generated");
+  mkdirSync(generatedDir, { recursive: true });
+
+  // Generate files
+  const colorSchemeContent = generateColorScheme(tokens);
+  const extensionsContent = generateThemeExtensions(tokens);
+  const constantsContent = generateConstants(tokens);
+  const themeContent = generateTheme(tokens, packageName);
+
+  const COLOR_SCHEME_FILE = "color_scheme.generated.dart";
+  const EXTENSIONS_FILE = "theme_extensions.generated.dart";
+  const CONSTANTS_FILE = "constants.generated.dart";
+  const generatedFiles = [COLOR_SCHEME_FILE, EXTENSIONS_FILE, CONSTANTS_FILE];
+
+  writeFileSync(join(generatedDir, COLOR_SCHEME_FILE), colorSchemeContent, "utf-8");
+  writeFileSync(join(generatedDir, EXTENSIONS_FILE), extensionsContent, "utf-8");
+  writeFileSync(join(generatedDir, CONSTANTS_FILE), constantsContent, "utf-8");
+
+  // Barrel for generated/
+  const barrelContent = generateBarrel(generatedFiles);
+  writeFileSync(join(generatedDir, "generated.dart"), barrelContent, "utf-8");
+
+  // theme.dart (ThemeData assembly)
+  writeFileSync(join(themeDir, "theme.dart"), themeContent, "utf-8");
+
+  // Package barrel
+  const packageBarrelContent = generatePackageBarrel(packageName);
+  writeFileSync(join(pkgDir, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
+
+  const duration = Math.round(performance.now() - start);
+  const fileCount = generatedFiles.length + 3; // + barrel + theme + package barrel
+
+  return {
+    success: true,
+    duration,
+    summary: `${fileCount} Dart files written`,
+  };
 }
 
 export const dartPlugin: EcosystemPlugin = {
@@ -204,6 +315,10 @@ export const dartPlugin: EcosystemPlugin = {
         );
       }
 
+      case ACTION_GENERATE_DESIGN_TOKENS: {
+        return executeDesignTokenGeneration(pkg, root, context);
+      }
+
       default:
         return {
           success: false,
@@ -219,6 +334,29 @@ export const dartPlugin: EcosystemPlugin = {
     pkg: WorkspacePackage,
     root: string,
   ): Promise<DomainCapability | null> {
+    if (domain === "design-tokens") {
+      // Accept if target is a Flutter package or doesn't exist yet (first run)
+      const pubspecPath = join(root, pkg.path, "pubspec.yaml");
+      if (!existsSync(pubspecPath)) {
+        return {
+          action: ACTION_GENERATE_DESIGN_TOKENS,
+          description: "Flutter theme (M3 ColorScheme, extensions, constants)",
+        };
+      }
+      try {
+        const manifest = await readPubspec(pkg, root);
+        if (isFlutterPackage(manifest)) {
+          return {
+            action: ACTION_GENERATE_DESIGN_TOKENS,
+            description: "Flutter theme (M3 ColorScheme, extensions, constants)",
+          };
+        }
+      } catch {
+        // manifest unreadable
+      }
+      return null;
+    }
+
     if (domain !== "openapi") {
       return null;
     }

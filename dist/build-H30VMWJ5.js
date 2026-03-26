@@ -3,7 +3,7 @@ import { i as GREEN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-
 import { t as loadConfig } from "./loader-Byxz0D__.js";
 import { t as groupByEcosystem } from "./group-DG4KFO0Y.js";
 import { t as buildWorkspaceGraph } from "./workspace-BD6E7qqa.js";
-import { i as STANDARD_ACTIONS, n as loadPlugins, t as PluginRegistry } from "./registry-ibd6msB5.js";
+import { i as STANDARD_ACTIONS, n as loadPlugins, t as PluginRegistry } from "./registry-BG_Yc1It.js";
 import { t as detectPackageManager } from "./pm-detect-DB_So8gt.js";
 //#region src/commands/build.ts
 const PASS = `${GREEN}✓${RESET}`;
@@ -59,4 +59,4 @@ async function runBuild(parsers, options = {}) {
 //#endregion
 export { runBuild };
 
-//# sourceMappingURL=build-anMs6KFx.js.map
+//# sourceMappingURL=build-H30VMWJ5.js.map

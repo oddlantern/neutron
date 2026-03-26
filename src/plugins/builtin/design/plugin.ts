@@ -1,0 +1,228 @@
+import { readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
+
+import type { WorkspacePackage } from "../../../graph/types.js";
+import type {
+  DomainPlugin,
+  ExecutablePipelineStep,
+  ExecuteResult,
+  ExecutionContext,
+} from "../../types.js";
+import { formatValidationErrors, validateTokens } from "./token-schema.js";
+import type { ValidatedTokens } from "./types.js";
+
+const DOMAIN_NAME = "design-tokens";
+
+/**
+ * Read and parse a tokens.json file.
+ */
+async function readTokens(artifactPath: string, root: string): Promise<unknown> {
+  const absPath = join(root, artifactPath);
+  const content = await readFile(absPath, "utf-8");
+  return JSON.parse(content) as unknown;
+}
+
+/**
+ * Check if a parsed JSON object looks like a design tokens file.
+ * Must have a `color` key at the top level.
+ */
+function looksLikeTokens(raw: unknown): boolean {
+  if (typeof raw !== "object" || !raw) {
+    return false;
+  }
+  return "color" in raw;
+}
+
+// ─── Plugin ──────────────────────────────────────────────────────────────────
+
+export const designPlugin: DomainPlugin = {
+  type: "domain",
+  name: "design",
+
+  async detectBridge(artifact: string, root: string): Promise<boolean> {
+    const filename = basename(artifact);
+    if (filename !== "tokens.json") {
+      return false;
+    }
+
+    try {
+      const raw = await readTokens(artifact, root);
+      return looksLikeTokens(raw);
+    } catch {
+      return false;
+    }
+  },
+
+  async exportArtifact(
+    _source: WorkspacePackage,
+    artifact: string,
+    root: string,
+  ): Promise<ExecuteResult> {
+    const start = performance.now();
+
+    try {
+      const raw = await readTokens(artifact, root);
+      const result = validateTokens(raw);
+
+      if (!result.success) {
+        const output = formatValidationErrors(result.errors, result.warnings);
+        return {
+          success: false,
+          duration: Math.round(performance.now() - start),
+          summary: `tokens.json validation failed (${result.errors.length} error(s))`,
+          output,
+        };
+      }
+
+      return {
+        success: true,
+        duration: Math.round(performance.now() - start),
+        summary: "tokens valid",
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        duration: Math.round(performance.now() - start),
+        summary: `Failed to read tokens.json: ${msg}`,
+      };
+    }
+  },
+
+  async generateDownstream(
+    artifact: string,
+    targets: readonly WorkspacePackage[],
+    root: string,
+    context: ExecutionContext,
+  ): Promise<readonly ExecuteResult[]> {
+    const raw = await readTokens(artifact, root);
+    const validation = validateTokens(raw);
+    if (!validation.success || !validation.data) {
+      return [
+        {
+          success: false,
+          duration: 0,
+          summary: "tokens.json validation failed — cannot generate downstream",
+        },
+      ];
+    }
+
+    const handlers = await context.findEcosystemHandlers(DOMAIN_NAME, artifact);
+    const targetPaths = new Set(targets.map((t) => t.path));
+    const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
+
+    if (relevantHandlers.length === 0) {
+      return [];
+    }
+
+    const ctxWithTokens: ExecutionContext = {
+      ...context,
+      artifactPath: artifact,
+      tokenData: validation.data,
+    };
+
+    const results: ExecuteResult[] = [];
+    for (const handler of relevantHandlers) {
+      const result = await handler.plugin.execute(
+        handler.capability.action,
+        handler.pkg,
+        root,
+        ctxWithTokens,
+      );
+      results.push(result);
+    }
+
+    return results;
+  },
+
+  async buildPipeline(
+    _source: WorkspacePackage,
+    artifact: string,
+    targets: readonly WorkspacePackage[],
+    root: string,
+    context: ExecutionContext,
+  ): Promise<readonly ExecutablePipelineStep[]> {
+    const steps: ExecutablePipelineStep[] = [];
+
+    // Mutable ref shared between the validate step closure and generation closures.
+    // The validate step writes to this; generation steps read from it.
+    const shared: { data: ValidatedTokens | undefined } = { data: undefined };
+
+    // Step 1: Validate tokens
+    steps.push({
+      name: "validate-tokens",
+      plugin: "design",
+      description: "validating tokens...",
+      outputPaths: [artifact],
+      execute: async (): Promise<ExecuteResult> => {
+        const start = performance.now();
+        try {
+          const raw = await readTokens(artifact, root);
+          const result = validateTokens(raw);
+
+          if (!result.success) {
+            const output = formatValidationErrors(result.errors, result.warnings);
+            return {
+              success: false,
+              duration: Math.round(performance.now() - start),
+              summary: "tokens.json validation failed",
+              output,
+            };
+          }
+
+          shared.data = result.data;
+          return {
+            success: true,
+            duration: Math.round(performance.now() - start),
+            summary: "tokens valid",
+          };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return {
+            success: false,
+            duration: Math.round(performance.now() - start),
+            summary: `Failed to read tokens.json: ${msg}`,
+          };
+        }
+      },
+    });
+
+    // Discover ecosystem handlers for downstream generation
+    const handlers = await context.findEcosystemHandlers(DOMAIN_NAME, artifact);
+    const targetPaths = new Set(targets.map((t) => t.path));
+    const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
+
+    // Step 2+: One step per ecosystem handler
+    for (const handler of relevantHandlers) {
+      steps.push({
+        name: `generate-${handler.plugin.name}`,
+        plugin: handler.plugin.name,
+        description: `${handler.capability.description}...`,
+        execute: async (): Promise<ExecuteResult> => {
+          if (!shared.data) {
+            return {
+              success: false,
+              duration: 0,
+              summary: "Cannot generate — token validation did not run",
+            };
+          }
+
+          const ctxWithTokens: ExecutionContext = {
+            ...context,
+            artifactPath: artifact,
+            tokenData: shared.data,
+          };
+
+          return handler.plugin.execute(
+            handler.capability.action,
+            handler.pkg,
+            root,
+            ctxWithTokens,
+          );
+        },
+      });
+    }
+
+    return steps;
+  },
+};

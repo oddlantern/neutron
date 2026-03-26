@@ -217,6 +217,9 @@ function printStepResult(stepResult: PipelineStepResult): void {
   );
 }
 
+/**
+ * Execute a single bridge (no artifact grouping).
+ */
 async function executeBridge(
   resolved: ResolvedBridge,
   registry: PluginRegistry,
@@ -253,7 +256,7 @@ async function executeBridge(
         if (pipelineResult.success) {
           const stepCount = pipelineResult.steps.length;
           logSuccess(
-            `${resolved.domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) \u2014 ${stepCount} step(s)`,
+            `${resolved.domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) — ${stepCount} step(s)`,
           );
         } else {
           logWaiting();
@@ -328,8 +331,114 @@ async function executeBridge(
     return;
   }
 
-  logFail(`No plugin found for ${bridge.artifact} \u2014 add run: <script> to this bridge`);
+  logFail(`No plugin found for ${bridge.artifact} — add run: <script> to this bridge`);
   logWaiting();
+}
+
+/**
+ * Group bridges by artifact path. When multiple bridges share the same artifact
+ * and domain plugin, merge their targets and execute once (single validation,
+ * parallel generation). Non-grouped bridges execute individually.
+ */
+function groupBridgesByArtifact(
+  bridges: readonly ResolvedBridge[],
+): readonly (readonly ResolvedBridge[])[] {
+  const groups = new Map<string, ResolvedBridge[]>();
+
+  for (const bridge of bridges) {
+    // Only group bridges that have a domain plugin with buildPipeline
+    if (!bridge.domain?.buildPipeline) {
+      // Each non-groupable bridge is its own group of 1
+      groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.target}`, [bridge]);
+      continue;
+    }
+
+    const key = `${bridge.bridge.artifact}::${bridge.domain.name}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(bridge);
+    } else {
+      groups.set(key, [bridge]);
+    }
+  }
+
+  return [...groups.values()];
+}
+
+/**
+ * Execute a group of bridges that share the same artifact.
+ * Merges targets from all bridges and runs a single pipeline.
+ */
+async function executeBridgeGroup(
+  group: readonly ResolvedBridge[],
+  registry: PluginRegistry,
+  graph: WorkspaceGraph,
+  root: string,
+  pm: string,
+  verbose: boolean,
+): Promise<void> {
+  const first = group[0];
+  if (!first) {
+    return;
+  }
+
+  // Single bridge — no grouping needed
+  if (group.length === 1) {
+    await executeBridge(first, registry, graph, root, pm, verbose);
+    return;
+  }
+
+  // Multiple bridges sharing the same artifact — merge targets
+  const domain = first.domain;
+
+  if (!domain?.buildPipeline) {
+    // Shouldn't happen (groupBridgesByArtifact only groups these), but handle gracefully
+    for (const bridge of group) {
+      await executeBridge(bridge, registry, graph, root, pm, verbose);
+    }
+    return;
+  }
+
+  const mergedTargets: WorkspacePackage[] = [];
+  for (const bridge of group) {
+    mergedTargets.push(...bridge.targets);
+  }
+
+  const context = registry.createContext(graph, root, pm, { verbose });
+
+  if (verbose) {
+    const targetNames = mergedTargets.map((t) => t.path).join(", ");
+    logDebug(
+      `grouped ${group.length} bridges for artifact ${first.bridge.artifact} → [${targetNames}]`,
+    );
+  }
+
+  const steps = await domain.buildPipeline(
+    first.source,
+    first.bridge.artifact,
+    mergedTargets,
+    root,
+    context,
+  );
+
+  if (steps.length > 0) {
+    const pipelineResult = await runPipelineWithProgress(steps, root);
+
+    if (pipelineResult.success) {
+      const stepCount = pipelineResult.steps.length;
+      logSuccess(
+        `${domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) — ${stepCount} step(s)`,
+      );
+    } else {
+      logWaiting();
+    }
+    return;
+  }
+
+  // Fallback if buildPipeline returned no steps
+  for (const bridge of group) {
+    await executeBridge(bridge, registry, graph, root, pm, verbose);
+  }
 }
 
 /**
@@ -455,8 +564,10 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         const batch = [...pending];
         pending = new Set();
 
-        for (const item of batch) {
-          await executeBridge(item, registry, graph, root, pm, verbose);
+        // Group bridges that share the same artifact for single-validation execution
+        const groups = groupBridgesByArtifact(batch);
+        for (const group of groups) {
+          await executeBridgeGroup(group, registry, graph, root, pm, verbose);
         }
       }
 

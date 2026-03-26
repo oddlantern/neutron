@@ -2,7 +2,7 @@
 import { c as YELLOW, i as GREEN, n as CYAN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as loadConfig } from "./loader-Byxz0D__.js";
 import { t as buildWorkspaceGraph } from "./workspace-BD6E7qqa.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-ibd6msB5.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BG_Yc1It.js";
 import { t as detectPackageManager } from "./pm-detect-DB_So8gt.js";
 import { lstat, readFile, readdir, realpath, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
@@ -1773,6 +1773,9 @@ function printStepResult(stepResult) {
 	}
 	logSuccess(`${stepResult.step.description.replace(/\.\.\.$/, "")} (${formatMs(stepResult.duration)})`);
 }
+/**
+* Execute a single bridge (no artifact grouping).
+*/
 async function executeBridge(resolved, registry, graph, root, pm, verbose) {
 	const bridge = resolved.bridge;
 	const context = registry.createContext(graph, root, pm, { verbose });
@@ -1788,7 +1791,7 @@ async function executeBridge(resolved, registry, graph, root, pm, verbose) {
 				const pipelineResult = await runPipelineWithProgress(steps, root);
 				if (pipelineResult.success) {
 					const stepCount = pipelineResult.steps.length;
-					logSuccess(`${resolved.domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) \u2014 ${stepCount} step(s)`);
+					logSuccess(`${resolved.domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) — ${stepCount} step(s)`);
 				} else logWaiting();
 				return;
 			}
@@ -1830,8 +1833,61 @@ async function executeBridge(resolved, registry, graph, root, pm, verbose) {
 		printResult(await resolved.sourcePlugin.execute(action, resolved.source, root, context), `${resolved.source.path} bridge`);
 		return;
 	}
-	logFail(`No plugin found for ${bridge.artifact} \u2014 add run: <script> to this bridge`);
+	logFail(`No plugin found for ${bridge.artifact} — add run: <script> to this bridge`);
 	logWaiting();
+}
+/**
+* Group bridges by artifact path. When multiple bridges share the same artifact
+* and domain plugin, merge their targets and execute once (single validation,
+* parallel generation). Non-grouped bridges execute individually.
+*/
+function groupBridgesByArtifact(bridges) {
+	const groups = /* @__PURE__ */ new Map();
+	for (const bridge of bridges) {
+		if (!bridge.domain?.buildPipeline) {
+			groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.target}`, [bridge]);
+			continue;
+		}
+		const key = `${bridge.bridge.artifact}::${bridge.domain.name}`;
+		const existing = groups.get(key);
+		if (existing) existing.push(bridge);
+		else groups.set(key, [bridge]);
+	}
+	return [...groups.values()];
+}
+/**
+* Execute a group of bridges that share the same artifact.
+* Merges targets from all bridges and runs a single pipeline.
+*/
+async function executeBridgeGroup(group, registry, graph, root, pm, verbose) {
+	const first = group[0];
+	if (!first) return;
+	if (group.length === 1) {
+		await executeBridge(first, registry, graph, root, pm, verbose);
+		return;
+	}
+	const domain = first.domain;
+	if (!domain?.buildPipeline) {
+		for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose);
+		return;
+	}
+	const mergedTargets = [];
+	for (const bridge of group) mergedTargets.push(...bridge.targets);
+	const context = registry.createContext(graph, root, pm, { verbose });
+	if (verbose) {
+		const targetNames = mergedTargets.map((t) => t.path).join(", ");
+		logDebug(`grouped ${group.length} bridges for artifact ${first.bridge.artifact} → [${targetNames}]`);
+	}
+	const steps = await domain.buildPipeline(first.source, first.bridge.artifact, mergedTargets, root, context);
+	if (steps.length > 0) {
+		const pipelineResult = await runPipelineWithProgress(steps, root);
+		if (pipelineResult.success) {
+			const stepCount = pipelineResult.steps.length;
+			logSuccess(`${domain.name} bridge: synced (${formatMs(pipelineResult.totalDuration)}) — ${stepCount} step(s)`);
+		} else logWaiting();
+		return;
+	}
+	for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose);
 }
 /**
 * Run a pipeline step-by-step, printing progress as each step completes.
@@ -1916,7 +1972,8 @@ async function runDev(parsers, options = {}) {
 			while (pending.size > 0) {
 				const batch = [...pending];
 				pending = /* @__PURE__ */ new Set();
-				for (const item of batch) await executeBridge(item, registry, graph, root, pm, verbose);
+				const groups = groupBridgesByArtifact(batch);
+				for (const group of groups) await executeBridgeGroup(group, registry, graph, root, pm, verbose);
 			}
 			running = false;
 		}
@@ -2016,4 +2073,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-CBR4aJrc.js.map
+//# sourceMappingURL=dev-C0QOC_FK.js.map
