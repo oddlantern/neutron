@@ -369,10 +369,12 @@
       "properties": {
         "types": {
           "type": "array",
-          "description": "Allowed commit types.",
+          "description": "Allowed commit types. Defaults to conventional commit types; add custom types as needed.",
           "items": {
-            "type": "string",
-            "enum": [
+            "type": "string"
+          },
+          "examples": [
+            [
               "feat",
               "fix",
               "docs",
@@ -385,7 +387,7 @@
               "chore",
               "revert"
             ]
-          }
+          ]
         },
         "scopes": {
           "type": "array",

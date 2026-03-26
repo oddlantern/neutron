@@ -17,6 +17,12 @@ import { isRecord, runCommand } from "./exec.js";
 
 const WATCH_PATTERNS: readonly string[] = ["lib/**/*.dart", "bin/**/*.dart"];
 
+/** Action names for Dart-specific operations */
+const ACTION_PUB_GET = "pub-get";
+const ACTION_CODEGEN = "codegen";
+const ACTION_GENERATE_API = "generate-api";
+const ACTION_GENERATE_OPENAPI_DART = "generate-openapi-dart";
+
 async function readPubspec(pkg: WorkspacePackage, root: string): Promise<Record<string, unknown>> {
   const manifestPath = join(root, pkg.path, "pubspec.yaml");
   const content = await readFile(manifestPath, "utf-8");
@@ -62,7 +68,7 @@ export const dartPlugin: EcosystemPlugin = {
   async getActions(pkg: WorkspacePackage, root: string): Promise<readonly string[]> {
     try {
       const manifest = await readPubspec(pkg, root);
-      const actions: string[] = ["pub-get"];
+      const actions: string[] = [ACTION_PUB_GET];
 
       // Standard actions — always available for Dart packages
       actions.push(STANDARD_ACTIONS.LINT);
@@ -72,16 +78,16 @@ export const dartPlugin: EcosystemPlugin = {
       // Build — only if build_runner is available
       if (hasDep(manifest, "build_runner")) {
         actions.push(STANDARD_ACTIONS.BUILD);
-        actions.push("codegen");
+        actions.push(ACTION_CODEGEN);
       }
 
       if (hasDep(manifest, "swagger_parser")) {
-        actions.push("generate-api");
+        actions.push(ACTION_GENERATE_API);
       }
 
       return actions;
     } catch {
-      return ["pub-get"];
+      return [ACTION_PUB_GET];
     }
   },
 
@@ -172,20 +178,20 @@ export const dartPlugin: EcosystemPlugin = {
           cwd,
         );
 
-      case "pub-get":
+      case ACTION_PUB_GET:
         return runCommand(dartCmd, ["pub", "get"], cwd);
 
-      case "codegen":
+      case ACTION_CODEGEN:
         return runCommand(
           "dart",
           ["run", "build_runner", "build", "--delete-conflicting-outputs"],
           cwd,
         );
 
-      case "generate-api":
+      case ACTION_GENERATE_API:
         return runCommand("dart", ["run", "swagger_parser"], cwd);
 
-      case "generate-openapi-dart": {
+      case ACTION_GENERATE_OPENAPI_DART: {
         // Run swagger_parser then build_runner
         const swaggerResult = await runCommand("dart", ["run", "swagger_parser"], cwd);
         if (!swaggerResult.success) {
@@ -221,7 +227,7 @@ export const dartPlugin: EcosystemPlugin = {
       const manifest = await readPubspec(pkg, root);
       if (hasDep(manifest, "swagger_parser")) {
         return {
-          action: "generate-openapi-dart",
+          action: ACTION_GENERATE_OPENAPI_DART,
           description: "Dart client via swagger_parser + build_runner",
         };
       }

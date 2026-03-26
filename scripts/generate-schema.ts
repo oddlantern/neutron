@@ -12,6 +12,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { OXFMT_DEFAULTS } from '../src/config/defaults.js';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // ─── Read oxlint schema for rule value type ──────────────────────────────────
@@ -318,23 +320,9 @@ const midoSchema = {
       properties: {
         types: {
           type: 'array',
-          description: 'Allowed commit types.',
-          items: {
-            type: 'string',
-            enum: [
-              'feat',
-              'fix',
-              'docs',
-              'style',
-              'refactor',
-              'perf',
-              'test',
-              'build',
-              'ci',
-              'chore',
-              'revert',
-            ],
-          },
+          description: 'Allowed commit types. Defaults to conventional commit types; add custom types as needed.',
+          items: { type: 'string' },
+          examples: [['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert']],
         },
         scopes: {
           type: 'array',

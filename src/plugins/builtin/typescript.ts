@@ -13,11 +13,14 @@ import type {
   WatchPathSuggestion,
 } from "../types.js";
 import { STANDARD_ACTIONS } from "../types.js";
-import { getScripts, hasDep, readPackageJson, runCommand } from "./exec.js";
+import { getScripts, hasDep, isRecord, readPackageJson, runCommand } from "./exec.js";
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
 
 const WELL_KNOWN_ACTIONS: readonly string[] = ["generate", "build", "dev", "codegen"];
+
+/** Action name for direct openapi-typescript invocation */
+const ACTION_GENERATE_OPENAPI_TS = "generate-openapi-ts";
 
 /**
  * Parse an openapi-typescript invocation from a package script to extract
@@ -105,6 +108,10 @@ function ensureCacheDir(root: string): string {
   return cacheDir;
 }
 
+/** Cache for written config paths — avoids concurrent writes to the same file */
+let cachedOxlintConfigPath: string | null | undefined;
+let cachedOxfmtConfigPath: string | null | undefined;
+
 /** Oxlint plugins always enabled */
 const ALWAYS_ENABLED_PLUGINS: readonly string[] = ["typescript", "unicorn", "oxc", "import"];
 
@@ -134,13 +141,12 @@ function detectOxlintPlugins(pkg: WorkspacePackage, root: string): readonly stri
     }
     const raw = readFileSync(manifestPath, "utf-8");
     const manifest: unknown = JSON.parse(raw);
-    if (typeof manifest !== "object" || !manifest) {
+    if (!isRecord(manifest)) {
       return [...plugins];
     }
-    const record = manifest as Record<string, unknown>;
 
     for (const [dep, depPlugins] of DEP_PLUGIN_MAP) {
-      if (hasDep(record, dep)) {
+      if (hasDep(manifest, dep)) {
         for (const p of depPlugins) {
           plugins.add(p);
         }
@@ -189,7 +195,7 @@ function writeOxlintConfig(
     const categories: Record<string, string> = {};
     for (const cat of ALL_CATEGORIES) {
       const level = lint.categories[cat];
-      if (level) {
+      if (level !== undefined) {
         categories[cat] = level;
       }
     }
@@ -203,28 +209,19 @@ function writeOxlintConfig(
     config["rules"] = lint.rules;
   }
 
-  // Plugins
+  // Plugins — always include so oxlint enables the right set
   if (plugins.length > 0) {
     config["plugins"] = plugins;
   }
 
-  // If we only have default plugins and nothing else, skip config file
-  if (
-    !config["categories"] &&
-    !config["rules"] &&
-    plugins.length <= ALWAYS_ENABLED_PLUGINS.length
-  ) {
-    // Still need plugins in config
-    if (plugins.length > 0) {
-      config["plugins"] = plugins;
-    } else {
-      return null;
-    }
+  if (cachedOxlintConfigPath !== undefined) {
+    return cachedOxlintConfigPath;
   }
 
   const cacheDir = ensureCacheDir(root);
   const configPath = join(cacheDir, "oxlintrc.json");
   writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
+  cachedOxlintConfigPath = configPath;
   return configPath;
 }
 
@@ -233,6 +230,10 @@ function writeOxlintConfig(
  * Returns the config path, or null if no config is needed.
  */
 function writeOxfmtConfig(root: string, format: FormatTypescriptConfig): string | null {
+  if (cachedOxfmtConfigPath !== undefined) {
+    return cachedOxfmtConfigPath;
+  }
+
   const opts: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(format)) {
     if (value !== undefined) {
@@ -241,12 +242,14 @@ function writeOxfmtConfig(root: string, format: FormatTypescriptConfig): string 
   }
 
   if (Object.keys(opts).length === 0) {
+    cachedOxfmtConfigPath = null;
     return null;
   }
 
   const cacheDir = ensureCacheDir(root);
   const configPath = join(cacheDir, "oxfmtrc.json");
   writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
+  cachedOxfmtConfigPath = configPath;
   return configPath;
 }
 
@@ -514,7 +517,7 @@ export const typescriptPlugin: EcosystemPlugin = {
     }
 
     // Direct openapi-typescript invocation
-    if (action === "generate-openapi-ts") {
+    if (action === ACTION_GENERATE_OPENAPI_TS) {
       let scripts: Record<string, string> = {};
       try {
         const manifest = await readPackageJson(pkg.path, root);
@@ -563,7 +566,7 @@ export const typescriptPlugin: EcosystemPlugin = {
       // Primary: direct tool invocation via openapi-typescript dependency
       if (hasDep(manifest, "openapi-typescript")) {
         return {
-          action: "generate-openapi-ts",
+          action: ACTION_GENERATE_OPENAPI_TS,
           description: "TypeScript types via openapi-typescript",
         };
       }

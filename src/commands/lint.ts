@@ -2,6 +2,7 @@ import { join } from "node:path";
 
 import { loadConfig } from "../config/loader.js";
 import { resolveFiles } from "../files/resolver.js";
+import { groupByEcosystem } from "./group.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
 import type { WorkspacePackage } from "../graph/types.js";
@@ -134,27 +135,4 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
   }
 
   return hasErrors ? 1 : 0;
-}
-
-/** Group packages by ecosystem, applying filters */
-function groupByEcosystem(
-  packages: ReadonlyMap<string, WorkspacePackage>,
-  options: LintOptions,
-): Map<string, WorkspacePackage[]> {
-  const grouped = new Map<string, WorkspacePackage[]>();
-
-  for (const pkg of packages.values()) {
-    if (options.package && pkg.path !== options.package) {
-      continue;
-    }
-    if (options.ecosystem && pkg.ecosystem !== options.ecosystem) {
-      continue;
-    }
-
-    const list = grouped.get(pkg.ecosystem) ?? [];
-    list.push(pkg);
-    grouped.set(pkg.ecosystem, list);
-  }
-
-  return grouped;
 }

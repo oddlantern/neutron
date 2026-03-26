@@ -149,6 +149,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
+  // CancelError from @clack/prompts cancel flow — exit cleanly
+  if (error instanceof Error && error.name === "CancelError") {
+    process.exit(0);
+  }
   const message = error instanceof Error ? error.message : String(error);
   console.error(`\x1b[31merror:\x1b[0m ${message}`);
   process.exit(1);

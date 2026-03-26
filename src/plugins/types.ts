@@ -1,8 +1,6 @@
 import type {
-  FormatConfig,
   FormatDartConfig,
   FormatTypescriptConfig,
-  LintConfig,
   LintDartConfig,
   LintTypescriptConfig,
 } from "../config/schema.js";
@@ -233,10 +231,6 @@ export interface ExecutionContext {
   readonly artifactPath?: string | undefined;
   /** Verbose logging enabled */
   readonly verbose?: boolean | undefined;
-  /** Full lint configuration from mido.yml */
-  readonly lintConfig?: LintConfig | undefined;
-  /** Full format configuration from mido.yml */
-  readonly formatConfig?: FormatConfig | undefined;
   /** Ecosystem-specific lint config (resolved by the command before calling plugin) */
   readonly lintTypescript?: LintTypescriptConfig | undefined;
   /** Ecosystem-specific lint config for Dart */

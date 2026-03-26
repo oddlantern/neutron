@@ -1,7 +1,7 @@
 import { loadConfig } from "../config/loader.js";
+import { groupByEcosystem } from "./group.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
-import type { WorkspacePackage } from "../graph/types.js";
 import { BOLD, DIM, GREEN, RED, RESET } from "../output.js";
 import { loadPlugins } from "../plugins/loader.js";
 import { PluginRegistry } from "../plugins/registry.js";
@@ -99,24 +99,4 @@ export async function runBuild(
   }
 
   return hasErrors ? 1 : 0;
-}
-
-/** Group packages by ecosystem, applying filters */
-function groupByEcosystem(
-  packages: ReadonlyMap<string, WorkspacePackage>,
-  options: BuildOptions,
-): Map<string, WorkspacePackage[]> {
-  const grouped = new Map<string, WorkspacePackage[]>();
-
-  for (const pkg of packages.values()) {
-    if (options.package && pkg.path !== options.package) {
-      continue;
-    }
-
-    const list = grouped.get(pkg.ecosystem) ?? [];
-    list.push(pkg);
-    grouped.set(pkg.ecosystem, list);
-  }
-
-  return grouped;
 }

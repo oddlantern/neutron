@@ -104,8 +104,6 @@ export class PluginRegistry {
       root,
       packageManager,
       verbose: options?.verbose,
-      lintConfig: options?.lintConfig,
-      formatConfig: options?.formatConfig,
       lintTypescript: options?.lintConfig?.typescript,
       lintDart: options?.lintConfig?.dart,
       formatTypescript: options?.formatConfig?.typescript,
