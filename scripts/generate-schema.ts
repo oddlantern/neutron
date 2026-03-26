@@ -8,6 +8,7 @@
  *  - mido's own config shape
  */
 
+import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -90,12 +91,63 @@ const categoriesSchema = {
   additionalProperties: false,
 };
 
-// ─── Rules schema ────────────────────────────────────────────────────────────
+// ─── Rules schema (extracted from oxlint --rules at build time) ──────────────
+
+interface OxlintRule {
+  readonly qualified: string;
+  readonly category: string;
+}
+
+function extractRulesFromOxlint(): readonly OxlintRule[] {
+  const oxlintBin = join(ROOT, 'node_modules', '.bin', 'oxlint');
+
+  let output: string;
+  try {
+    output = execSync(`${oxlintBin} --rules`, { encoding: 'utf-8', timeout: 10_000 });
+  } catch {
+    console.warn('Warning: could not run oxlint --rules, rules autocomplete will be unavailable');
+    return [];
+  }
+
+  const rules: OxlintRule[] = [];
+  let category = '';
+
+  for (const line of output.split('\n')) {
+    const catMatch = /^## (\w+)/.exec(line);
+    if (catMatch) {
+      category = catMatch[1]?.toLowerCase() ?? '';
+      continue;
+    }
+    // Parse table rows: | rule-name | source | ...
+    const ruleMatch = /^\| ([\w-]+)\s+\| (\w+)/.exec(line);
+    if (!ruleMatch || ruleMatch[1] === 'Rule name') {
+      continue;
+    }
+    const name = ruleMatch[1] ?? '';
+    const source = ruleMatch[2] ?? '';
+    const qualified = source + '/' + name;
+    rules.push({ qualified, category });
+  }
+
+  return rules;
+}
+
+const oxlintRules = extractRulesFromOxlint();
+console.log(`Extracted ${oxlintRules.length} oxlint rules for schema autocomplete`);
+
+const ruleProperties: Record<string, unknown> = {};
+for (const rule of oxlintRules) {
+  ruleProperties[rule.qualified] = {
+    description: `[${rule.category}] ${rule.qualified}`,
+    ...ruleValueSchema,
+  };
+}
 
 const rulesSchema = {
   type: 'object',
   description:
-    'Individual rule overrides. Keys are rule names (e.g. "eqeqeq", "import/no-cycle"), values are severity or [severity, ...options]. See https://oxc.rs/docs/guide/usage/linter/rules.html',
+    'Individual rule overrides. Keys are rule names (e.g. "eslint/eqeqeq", "import/no-cycle"), values are severity or [severity, ...options]. See https://oxc.rs/docs/guide/usage/linter/rules.html',
+  properties: ruleProperties,
   additionalProperties: ruleValueSchema,
 };
 
@@ -196,7 +248,7 @@ const midoSchema = {
         },
         typescript: {
           type: 'object',
-          description: 'TypeScript formatting options (applied via the bundled oxfmt formatter).',
+          description: 'TypeScript formatting options (applied via the bundled oxfmt formatter). Any oxfmt/prettier-compatible option is accepted.',
           properties: {
             printWidth: { type: 'number', description: 'Maximum line width.', default: 80 },
             tabWidth: {
@@ -263,8 +315,17 @@ const midoSchema = {
               description: 'Line ending style.',
               default: 'lf',
             },
+            importOrder: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Import sorting order groups (oxfmt @ianvs/prettier-plugin-sort-imports compatible).',
+            },
+            importOrderTypeScriptVersion: {
+              type: 'string',
+              description: 'TypeScript version for import order parsing.',
+            },
           },
-          additionalProperties: false,
+          additionalProperties: true,
         },
         dart: {
           type: 'object',
@@ -272,7 +333,7 @@ const midoSchema = {
           properties: {
             lineLength: { type: 'number', description: 'Maximum line length.', default: 80 },
           },
-          additionalProperties: false,
+          additionalProperties: true,
         },
       },
       additionalProperties: false,
