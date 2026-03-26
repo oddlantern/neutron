@@ -1,37 +1,11 @@
-import { join } from "node:path";
-
-import { loadConfig } from "../config/loader.js";
-import { resolveFiles } from "../files/resolver.js";
-import { groupByEcosystem } from "./group.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
-import type { WorkspacePackage } from "../graph/types.js";
-import { BOLD, DIM, GREEN, RED, RESET } from "../output.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
 import { STANDARD_ACTIONS } from "../plugins/types.js";
-import type { ExecuteResult } from "../plugins/types.js";
-import { detectPackageManager } from "../watcher/pm-detect.js";
 
-const PASS = `${GREEN}✓${RESET}`;
-const FAIL = `${RED}✗${RESET}`;
+import type { EcosystemRunnerOptions } from "./ecosystem-runner.js";
+import { runEcosystemCommand } from "./ecosystem-runner.js";
 
-/** File extensions per ecosystem for format resolution */
-const FORMAT_EXTENSIONS: Readonly<Record<string, readonly string[]>> = {
-  typescript: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
-  dart: [".dart"],
-};
-
-export interface FmtOptions {
+export interface FmtOptions extends EcosystemRunnerOptions {
   readonly check?: boolean | undefined;
-  readonly quiet?: boolean | undefined;
-  readonly package?: string | undefined;
-  readonly ecosystem?: string | undefined;
-}
-
-interface PackageFmtResult {
-  readonly pkg: WorkspacePackage;
-  readonly result: ExecuteResult;
 }
 
 /**
@@ -40,103 +14,14 @@ interface PackageFmtResult {
  * @returns exit code (0 = all formatted, 1 = unformatted files found in check mode)
  */
 export async function runFmt(parsers: ParserRegistry, options: FmtOptions = {}): Promise<number> {
-  const { check = false, quiet = false } = options;
-  const { config, root } = await loadConfig();
-  const graph = await buildWorkspaceGraph(config, root, parsers);
-  const plugins = loadPlugins();
-  const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
-  const pm = detectPackageManager(root);
-  const context = registry.createContext(
-    graph,
-    root,
-    pm,
-    config.lint || config.format
-      ? {
-          ...(config.lint ? { lintConfig: config.lint } : {}),
-          ...(config.format ? { formatConfig: config.format } : {}),
-        }
-      : undefined,
-  );
-
+  const { check = false, ...rest } = options;
   const action = check ? STANDARD_ACTIONS.FORMAT_CHECK : STANDARD_ACTIONS.FORMAT;
 
-  const grouped = groupByEcosystem(graph.packages, options);
-  let hasErrors = false;
-
-  for (const [ecosystem, packages] of grouped) {
-    if (!quiet) {
-      console.log(
-        `\n${DIM}◇${RESET} ${BOLD}${ecosystem}${RESET} ${DIM}(${packages.length} packages)${RESET}`,
-      );
-    }
-
-    // Resolve ignore patterns from config
-    const ignorePatterns = config.format?.ignore ?? [];
-
-    const results: readonly PackageFmtResult[] = await Promise.all(
-      packages.map(async (pkg) => {
-        const plugin = registry.getEcosystemForPackage(pkg);
-        if (!plugin) {
-          return {
-            pkg,
-            result: {
-              success: true,
-              duration: 0,
-              summary: `No plugin for ecosystem ${pkg.ecosystem}`,
-            },
-          };
-        }
-
-        // Resolve files centrally — plugins receive pre-filtered lists
-        const extensions = FORMAT_EXTENSIONS[ecosystem];
-        const pkgContext = extensions
-          ? {
-              ...context,
-              resolvedFiles: resolveFiles(join(root, pkg.path), extensions, ignorePatterns),
-            }
-          : context;
-
-        const result = await plugin.execute(action, pkg, root, pkgContext);
-        return { pkg, result };
-      }),
-    );
-
-    for (const { pkg, result } of results) {
-      if (!result.success) {
-        hasErrors = true;
-      }
-
-      if (quiet && result.success) {
-        continue;
-      }
-
-      const icon = result.success ? PASS : FAIL;
-      console.log(`  ${icon} ${pkg.path}`);
-
-      if (!result.success && result.output) {
-        const trimmed = result.output.trim();
-        if (trimmed) {
-          const indented = trimmed
-            .split("\n")
-            .map((line) => `      ${DIM}${line}${RESET}`)
-            .join("\n");
-          console.log(indented);
-        }
-      }
-    }
-  }
-
-  if (!quiet) {
-    const icon = hasErrors ? FAIL : PASS;
-    const msg = check
-      ? hasErrors
-        ? "Formatting issues found"
-        : "All files formatted"
-      : hasErrors
-        ? "Formatting failed"
-        : "All formatted";
-    console.log(`\n${icon} ${msg}\n`);
-  }
-
-  return hasErrors ? 1 : 0;
+  return runEcosystemCommand(parsers, rest, {
+    action,
+    ignoreSource: "format",
+    summary: check
+      ? ["All files formatted", "Formatting issues found"]
+      : ["All formatted", "Formatting failed"],
+  });
 }

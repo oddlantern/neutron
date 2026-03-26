@@ -2,6 +2,7 @@ import { packageJsonParser } from "./parsers/package-json.js";
 import { pubspecParser } from "./parsers/pubspec.js";
 import type { ManifestParser } from "./parsers/types.js";
 import { printBanner } from "./banner.js";
+import { RED, RESET } from "./output.js";
 import { VERSION } from "./version.js";
 
 // Parser registry — add new ecosystem parsers here
@@ -154,6 +155,6 @@ main().catch((error: unknown) => {
     process.exit(0);
   }
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`\x1b[31merror:\x1b[0m ${message}`);
+  console.error(`${RED}error:${RESET} ${message}`);
   process.exit(1);
 });

@@ -7,7 +7,7 @@ import { loadConfig } from "../config/loader.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
 import type { Bridge, WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
-import { BOLD, CYAN, DIM, GREEN, RED, RESET, YELLOW } from "../output.js";
+import { BOLD, CYAN, DIM, GREEN, MAGENTA, RED, RESET, YELLOW } from "../output.js";
 import { loadPlugins } from "../plugins/loader.js";
 import { PluginRegistry } from "../plugins/registry.js";
 import type {
@@ -18,12 +18,11 @@ import type {
   PipelineResult,
   PipelineStepResult,
 } from "../plugins/types.js";
-import { detectPackageManager } from "./pm-detect.js";
+import { detectPackageManager } from "../pm-detect.js";
 import { createDebouncer } from "./debouncer.js";
 import type { Debouncer } from "./debouncer.js";
 import { runPipeline } from "./pipeline.js";
 
-const MAGENTA = "\x1b[35m";
 const CONFIG_FILENAME = "mido.yml";
 
 interface ResolvedBridge {
@@ -41,14 +40,14 @@ export interface DevOptions {
 
 /** Mutable state for the running watcher session */
 interface WatcherSession {
-  watcher: FSWatcher;
-  bridgeDebouncers: Map<ResolvedBridge, Debouncer>;
-  configDebouncer: Debouncer;
-  resolved: readonly ResolvedBridge[];
-  graph: WorkspaceGraph;
-  registry: PluginRegistry;
-  root: string;
-  pm: string;
+  readonly watcher: FSWatcher;
+  readonly bridgeDebouncers: Map<ResolvedBridge, Debouncer>;
+  readonly configDebouncer: Debouncer;
+  readonly resolved: readonly ResolvedBridge[];
+  readonly graph: WorkspaceGraph;
+  readonly registry: PluginRegistry;
+  readonly root: string;
+  readonly pm: string;
 }
 
 function formatMs(ms: number): string {
@@ -552,7 +551,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
 
     // Track running state to prevent overlapping executions
     let running = false;
-    let pending: Set<ResolvedBridge> = new Set();
+    const pending: Set<ResolvedBridge> = new Set();
 
     async function processPending(): Promise<void> {
       if (running) {
@@ -562,7 +561,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
 
       while (pending.size > 0) {
         const batch = [...pending];
-        pending = new Set();
+        pending.clear();
 
         // Group bridges that share the same artifact for single-validation execution
         const groups = groupBridgesByArtifact(batch);

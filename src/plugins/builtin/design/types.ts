@@ -23,8 +23,17 @@ export type ExtensionValue = z.infer<typeof extensionValueSchema>;
 /** Fully validated token data — the output of schema validation */
 export type ValidatedTokens = z.infer<typeof designTokensSchema>;
 
-/** Detected type of an extension value */
-export type ExtensionFieldType = "color" | "color-static" | "number" | "number-themed" | "string";
+/** Themed color pair */
+export interface ThemedColor {
+  readonly light: string;
+  readonly dark: string;
+}
+
+/** Themed number pair */
+export interface ThemedNumber {
+  readonly light: number;
+  readonly dark: number;
+}
 
 /** A resolved extension with type info for each field */
 export interface ResolvedExtension {
@@ -33,34 +42,52 @@ export interface ResolvedExtension {
   readonly fields: ReadonlyMap<string, ResolvedExtensionField>;
 }
 
-/** A single field in a resolved extension */
-export interface ResolvedExtensionField {
-  readonly name: string;
-  readonly type: ExtensionFieldType;
-  readonly value: ExtensionValue;
+/**
+ * Discriminated union for extension fields.
+ * The `type` tag narrows `value` — no `as` casts needed in consumers.
+ */
+export type ResolvedExtensionField =
+  | { readonly name: string; readonly type: "color"; readonly value: ThemedColor }
+  | { readonly name: string; readonly type: "color-static"; readonly value: string }
+  | { readonly name: string; readonly type: "number"; readonly value: number }
+  | { readonly name: string; readonly type: "number-themed"; readonly value: ThemedNumber }
+  | { readonly name: string; readonly type: "string"; readonly value: string };
+
+// ─── Type guards ───────────────────────────────────────────────────────────
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isThemedColor(value: unknown): value is ThemedColor {
+  return isRecord(value) && typeof value["light"] === "string" && typeof value["dark"] === "string";
+}
+
+function isThemedNumber(value: unknown): value is ThemedNumber {
+  return isRecord(value) && typeof value["light"] === "number" && typeof value["dark"] === "number";
 }
 
 /**
- * Detect the type of an extension value from its shape.
+ * Narrow an unknown extension value into a ResolvedExtensionField.
  */
-export function detectExtensionFieldType(value: ExtensionValue): ExtensionFieldType {
+function resolveField(name: string, value: unknown): ResolvedExtensionField {
   if (typeof value === "number") {
-    return "number";
+    return { name, type: "number", value };
   }
   if (typeof value === "string") {
-    return /^#[0-9a-fA-F]{6}$/.test(value) ? "color-static" : "string";
-  }
-  // Object with light/dark
-  if (typeof value === "object" && value !== null) {
-    const obj = value as Record<string, unknown>;
-    if (typeof obj["light"] === "string" && typeof obj["dark"] === "string") {
-      return "color";
+    if (/^#[0-9a-fA-F]{6}$/.test(value)) {
+      return { name, type: "color-static", value };
     }
-    if (typeof obj["light"] === "number" && typeof obj["dark"] === "number") {
-      return "number-themed";
-    }
+    return { name, type: "string", value };
   }
-  return "string";
+  if (isThemedColor(value)) {
+    return { name, type: "color", value };
+  }
+  if (isThemedNumber(value)) {
+    return { name, type: "number-themed", value };
+  }
+  // Fallback: coerce to string
+  return { name, type: "string", value: String(value) };
 }
 
 /**
@@ -86,11 +113,7 @@ export function resolveExtensions(
         }
         continue;
       }
-      fields.set(fieldName, {
-        name: fieldName,
-        type: detectExtensionFieldType(fieldValue as ExtensionValue),
-        value: fieldValue as ExtensionValue,
-      });
+      fields.set(fieldName, resolveField(fieldName, fieldValue));
     }
 
     resolved.push({ name, getter, fields });

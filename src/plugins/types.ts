@@ -5,7 +5,6 @@ import type {
   LintTypescriptConfig,
 } from "../config/schema.js";
 import type { WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
-import type { ValidatedTokens } from "./builtin/design/types.js";
 
 /** Standard action names shared across ecosystem plugins */
 export const STANDARD_ACTIONS: {
@@ -242,8 +241,8 @@ export interface ExecutionContext {
   readonly formatDart?: FormatDartConfig | undefined;
   /** Pre-resolved file paths (relative to package root) — plugins use these instead of scanning directories */
   readonly resolvedFiles?: readonly string[] | undefined;
-  /** Validated design token data — passed from mido-design to ecosystem plugins */
-  readonly tokenData?: ValidatedTokens | undefined;
+  /** Opaque domain data — passed from domain plugins to ecosystem plugins (e.g., validated design tokens) */
+  readonly domainData?: unknown;
 }
 
 export interface EcosystemHandler {

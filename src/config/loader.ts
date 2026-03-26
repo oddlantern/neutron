@@ -23,7 +23,6 @@ const CONFIG_FILENAMES = ["mido.yml", "mido.yaml"] as const;
 function findConfigFile(startDir: string): string | null {
   let current = startDir;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     for (const filename of CONFIG_FILENAMES) {
       const candidate = join(current, filename);

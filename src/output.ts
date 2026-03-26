@@ -10,10 +10,11 @@ export const YELLOW = "\x1b[33m";
 export const CYAN = "\x1b[36m";
 /** mido brand orange — ANSI 256-color 208 */
 export const ORANGE = "\x1b[38;5;208m";
+export const MAGENTA = "\x1b[35m";
 
-const PASS = `${GREEN}✓${RESET}`;
-const FAIL = `${RED}✗${RESET}`;
-const WARN = `${YELLOW}⚠${RESET}`;
+export const PASS = `${GREEN}✓${RESET}`;
+export const FAIL = `${RED}✗${RESET}`;
+export const WARN = `${YELLOW}⚠${RESET}`;
 
 function formatIssue(issue: CheckIssue): string {
   const icon = issue.severity === "error" ? FAIL : WARN;

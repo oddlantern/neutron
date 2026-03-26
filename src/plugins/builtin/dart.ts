@@ -22,7 +22,25 @@ import {
   generateTheme,
   generateThemeExtensions,
 } from "./dart/token-codegen.js";
-import { isRecord, runCommand } from "./exec.js";
+import { hasDep, isRecord, runCommand } from "./exec.js";
+
+/** Dart-specific dependency fields */
+const DART_DEP_FIELDS: readonly string[] = [
+  "dependencies",
+  "dev_dependencies",
+  "dependency_overrides",
+];
+
+/**
+ * Narrow unknown domainData to ValidatedTokens.
+ * ValidatedTokens always has a `color` object at the top level.
+ */
+function isValidatedTokens(value: unknown): value is ValidatedTokens {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return typeof value["color"] === "object" && value["color"] !== null;
+}
 
 const WATCH_PATTERNS: readonly string[] = ["lib/**/*.dart", "bin/**/*.dart"];
 
@@ -41,17 +59,6 @@ async function readPubspec(pkg: WorkspacePackage, root: string): Promise<Record<
     throw new Error(`Expected object in ${manifestPath}`);
   }
   return parsed;
-}
-
-function hasDep(manifest: Record<string, unknown>, name: string): boolean {
-  const fields = ["dependencies", "dev_dependencies", "dependency_overrides"];
-  for (const field of fields) {
-    const deps = manifest[field];
-    if (isRecord(deps) && name in deps) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function isFlutterPackage(manifest: Record<string, unknown>): boolean {
@@ -106,14 +113,15 @@ async function executeDesignTokenGeneration(
 ): Promise<ExecuteResult> {
   const start = performance.now();
 
-  const tokens = context.tokenData;
-  if (!tokens) {
+  const rawDomainData = context.domainData;
+  if (!isValidatedTokens(rawDomainData)) {
     return {
       success: false,
       duration: 0,
       summary: "No token data provided — design plugin must validate first",
     };
   }
+  const tokens: ValidatedTokens = rawDomainData;
 
   const pkgDir = join(root, pkg.path);
   const packageName = pkg.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
@@ -187,12 +195,12 @@ export const dartPlugin: EcosystemPlugin = {
       actions.push(STANDARD_ACTIONS.FORMAT_CHECK);
 
       // Build — only if build_runner is available
-      if (hasDep(manifest, "build_runner")) {
+      if (hasDep(manifest, "build_runner", DART_DEP_FIELDS)) {
         actions.push(STANDARD_ACTIONS.BUILD);
         actions.push(ACTION_CODEGEN);
       }
 
-      if (hasDep(manifest, "swagger_parser")) {
+      if (hasDep(manifest, "swagger_parser", DART_DEP_FIELDS)) {
         actions.push(ACTION_GENERATE_API);
       }
 
@@ -363,7 +371,7 @@ export const dartPlugin: EcosystemPlugin = {
 
     try {
       const manifest = await readPubspec(pkg, root);
-      if (hasDep(manifest, "swagger_parser")) {
+      if (hasDep(manifest, "swagger_parser", DART_DEP_FIELDS)) {
         return {
           action: ACTION_GENERATE_OPENAPI_DART,
           description: "Dart client via swagger_parser + build_runner",

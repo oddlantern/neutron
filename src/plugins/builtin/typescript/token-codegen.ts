@@ -43,30 +43,28 @@ export function generateCSS(tokens: ValidatedTokens): string {
 
       switch (field.type) {
         case "color": {
-          const v = field.value as { readonly light: string; readonly dark: string };
-          lightVars.push(`  ${varName}: ${v.light};`);
-          darkVars.push(`  ${varName}: ${v.dark};`);
+          lightVars.push(`  ${varName}: ${field.value.light};`);
+          darkVars.push(`  ${varName}: ${field.value.dark};`);
           break;
         }
         case "color-static": {
-          lightVars.push(`  ${varName}: ${field.value as string};`);
-          darkVars.push(`  ${varName}: ${field.value as string};`);
+          lightVars.push(`  ${varName}: ${field.value};`);
+          darkVars.push(`  ${varName}: ${field.value};`);
           break;
         }
         case "number": {
-          lightVars.push(`  ${varName}: ${field.value as number}px;`);
-          darkVars.push(`  ${varName}: ${field.value as number}px;`);
+          lightVars.push(`  ${varName}: ${field.value}px;`);
+          darkVars.push(`  ${varName}: ${field.value}px;`);
           break;
         }
         case "number-themed": {
-          const v = field.value as { readonly light: number; readonly dark: number };
-          lightVars.push(`  ${varName}: ${v.light}px;`);
-          darkVars.push(`  ${varName}: ${v.dark}px;`);
+          lightVars.push(`  ${varName}: ${field.value.light}px;`);
+          darkVars.push(`  ${varName}: ${field.value.dark}px;`);
           break;
         }
         case "string": {
-          lightVars.push(`  ${varName}: ${field.value as string};`);
-          darkVars.push(`  ${varName}: ${field.value as string};`);
+          lightVars.push(`  ${varName}: ${field.value};`);
+          darkVars.push(`  ${varName}: ${field.value};`);
           break;
         }
       }
@@ -82,12 +80,15 @@ export function generateCSS(tokens: ValidatedTokens): string {
     }
   }
 
+  /** Radius values at or above this threshold are treated as unitless (e.g., pill shapes) */
+  const FULL_RADIUS_THRESHOLD = 999;
+
   // Radius
   if (tokens.radius) {
     lightVars.push("");
     lightVars.push("  /* Radius */");
     for (const [key, value] of Object.entries(tokens.radius)) {
-      const unit = value >= 999 ? "" : "px";
+      const unit = value >= FULL_RADIUS_THRESHOLD ? "" : "px";
       lightVars.push(`  --radius-${camelToKebab(key)}: ${value}${unit};`);
     }
   }

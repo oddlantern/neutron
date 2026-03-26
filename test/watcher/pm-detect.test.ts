@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, expect, test } from 'bun:test';
 
-import { detectPackageManager } from '../../src/watcher/pm-detect.js';
+import { detectPackageManager } from '../../src/pm-detect.js';
 
 function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), 'mido-test-pm-'));
