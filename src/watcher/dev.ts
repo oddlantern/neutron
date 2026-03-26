@@ -1,15 +1,15 @@
-import { join, relative } from 'node:path';
+import { join, relative } from "node:path";
 
-import chokidar from 'chokidar';
-import type { FSWatcher } from 'chokidar';
+import chokidar from "chokidar";
+import type { FSWatcher } from "chokidar";
 
-import { loadConfig } from '../config/loader.js';
-import { buildWorkspaceGraph } from '../graph/workspace.js';
-import type { ParserRegistry } from '../graph/workspace.js';
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
-import { BOLD, CYAN, DIM, GREEN, RED, RESET, YELLOW } from '../output.js';
-import { loadPlugins } from '../plugins/loader.js';
-import { PluginRegistry } from '../plugins/registry.js';
+import { loadConfig } from "../config/loader.js";
+import { buildWorkspaceGraph } from "../graph/workspace.js";
+import type { ParserRegistry } from "../graph/workspace.js";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
+import { BOLD, CYAN, DIM, GREEN, RED, RESET, YELLOW } from "../output.js";
+import { loadPlugins } from "../plugins/loader.js";
+import { PluginRegistry } from "../plugins/registry.js";
 import type {
   DomainPlugin,
   EcosystemPlugin,
@@ -17,14 +17,14 @@ import type {
   ExecuteResult,
   PipelineResult,
   PipelineStepResult,
-} from '../plugins/types.js';
-import { detectPackageManager } from './pm-detect.js';
-import { createDebouncer } from './debouncer.js';
-import type { Debouncer } from './debouncer.js';
-import { runPipeline } from './pipeline.js';
+} from "../plugins/types.js";
+import { detectPackageManager } from "./pm-detect.js";
+import { createDebouncer } from "./debouncer.js";
+import type { Debouncer } from "./debouncer.js";
+import { runPipeline } from "./pipeline.js";
 
-const MAGENTA = '\x1b[35m';
-const CONFIG_FILENAME = 'mido.yml';
+const MAGENTA = "\x1b[35m";
+const CONFIG_FILENAME = "mido.yml";
 
 interface ResolvedBridge {
   readonly bridge: Bridge;
@@ -84,7 +84,7 @@ function logUnchanged(message: string): void {
 }
 
 function logOutput(output: string): void {
-  const lines = output.trim().split('\n');
+  const lines = output.trim().split("\n");
   const MAX_OUTPUT_LINES = 15;
   const shown = lines.slice(0, MAX_OUTPUT_LINES);
   for (const line of shown) {
@@ -133,7 +133,7 @@ async function resolveBridges(
     if (bridge.watch?.length) {
       watchPatterns = bridge.watch;
     } else {
-      watchPatterns = [join(source.path, '**')];
+      watchPatterns = [join(source.path, "**")];
     }
 
     resolved.push({
@@ -153,8 +153,8 @@ function printBridgeSummary(resolved: readonly ResolvedBridge[], registry: Plugi
   for (const r of resolved) {
     const artifact = r.bridge.artifact;
     const sourceLabel = r.source.path;
-    const targetLabels = r.targets.map((t) => t.path).join(', ');
-    const watchLabels = r.watchPatterns.join(', ');
+    const targetLabels = r.targets.map((t) => t.path).join(", ");
+    const watchLabels = r.watchPatterns.join(", ");
 
     if (r.domain) {
       const plugins: string[] = [`mido-${r.domain.name}`];
@@ -171,7 +171,7 @@ function printBridgeSummary(resolved: readonly ResolvedBridge[], registry: Plugi
       console.log(`  ${BOLD}${r.domain.name}:${RESET} ${sourceLabel} \u2192 ${artifact}`);
       console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
       console.log(`    ${DIM}targets: ${targetLabels}${RESET}`);
-      console.log(`    ${DIM}plugins: ${plugins.join(', ')}${RESET}`);
+      console.log(`    ${DIM}plugins: ${plugins.join(", ")}${RESET}`);
     } else if (r.bridge.run) {
       console.log(`  ${BOLD}bridge:${RESET} ${sourceLabel} \u2192 ${artifact}`);
       console.log(`    ${DIM}watching: ${watchLabels}${RESET}`);
@@ -199,7 +199,7 @@ function printStartup(resolved: readonly ResolvedBridge[], registry: PluginRegis
 function printStepResult(stepResult: PipelineStepResult): void {
   if (!stepResult.success) {
     logFail(
-      `${stepResult.step.description.replace(/\.\.\.$/, '')} failed (${formatMs(stepResult.duration)})`,
+      `${stepResult.step.description.replace(/\.\.\.$/, "")} failed (${formatMs(stepResult.duration)})`,
     );
     if (stepResult.output) {
       logOutput(stepResult.output);
@@ -208,12 +208,12 @@ function printStepResult(stepResult: PipelineStepResult): void {
   }
 
   if (!stepResult.changed) {
-    logUnchanged(`${stepResult.step.description.replace(/\.\.\.$/, '')} \u2014 unchanged`);
+    logUnchanged(`${stepResult.step.description.replace(/\.\.\.$/, "")} \u2014 unchanged`);
     return;
   }
 
   logSuccess(
-    `${stepResult.step.description.replace(/\.\.\.$/, '')} (${formatMs(stepResult.duration)})`,
+    `${stepResult.step.description.replace(/\.\.\.$/, "")} (${formatMs(stepResult.duration)})`,
   );
 }
 
@@ -314,7 +314,7 @@ async function executeBridge(
   // Ecosystem-only path
   if (resolved.sourcePlugin) {
     const actions = await resolved.sourcePlugin.getActions(resolved.source, root);
-    const action = actions.includes('generate') ? 'generate' : actions[0];
+    const action = actions.includes("generate") ? "generate" : actions[0];
 
     if (!action) {
       logFail(`no actions available for ${resolved.source.name}`);
@@ -363,7 +363,7 @@ function printResult(result: ExecuteResult, label: string): void {
 function matchesBridge(relPath: string, bridge: ResolvedBridge): boolean {
   for (const pattern of bridge.watchPatterns) {
     // Strip glob suffix to get the directory prefix
-    const patternBase = pattern.replace(/\/?\*\*.*$/, '');
+    const patternBase = pattern.replace(/\/?\*\*.*$/, "");
     if (patternBase && relPath.startsWith(patternBase)) {
       return true;
     }
@@ -376,7 +376,7 @@ function resolveWatchDirs(resolved: readonly ResolvedBridge[], root: string): re
   const watchDirs = new Set<string>();
   for (const r of resolved) {
     for (const pattern of r.watchPatterns) {
-      const baseDir = pattern.replace(/\/?\*\*.*$/, '') || '.';
+      const baseDir = pattern.replace(/\/?\*\*.*$/, "") || ".";
       watchDirs.add(join(root, baseDir));
     }
   }
@@ -478,7 +478,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
 
     // Config reload debouncer — fires when mido.yml changes
     const configDebouncer = createDebouncer(async () => {
-      logStep('mido.yml changed \u2014 reloading config...');
+      logStep("mido.yml changed \u2014 reloading config...");
 
       if (session) {
         teardownSession(session);
@@ -492,7 +492,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
           printBridgeSummary(newSession.resolved, newSession.registry);
           console.log(`  ${DIM}Waiting for changes...${RESET}\n`);
         } else {
-          logFail('Config reload failed \u2014 no valid bridges. Fix mido.yml and save again.');
+          logFail("Config reload failed \u2014 no valid bridges. Fix mido.yml and save again.");
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -505,11 +505,11 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
     const watcher = chokidar.watch(allWatchPaths, {
       ignoreInitial: true,
       ignored: [
-        '**/node_modules/**',
-        '**/.dart_tool/**',
-        '**/build/**',
-        '**/dist/**',
-        '**/.symlinks/**',
+        "**/node_modules/**",
+        "**/.dart_tool/**",
+        "**/build/**",
+        "**/dist/**",
+        "**/.symlinks/**",
       ],
       awaitWriteFinish: {
         stabilityThreshold: 300,
@@ -518,8 +518,8 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
     });
 
     if (verbose) {
-      watcher.on('ready', () => {
-        logDebug('chokidar ready \u2014 watcher initialized');
+      watcher.on("ready", () => {
+        logDebug("chokidar ready \u2014 watcher initialized");
         const watched = watcher.getWatched();
         let fileCount = 0;
         for (const files of Object.values(watched)) {
@@ -539,7 +539,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       // Check if it's the config file
       if (relPath === CONFIG_FILENAME) {
         if (verbose) {
-          logDebug('config file changed \u2014 scheduling reload');
+          logDebug("config file changed \u2014 scheduling reload");
         }
         configDebouncer.trigger();
         return;
@@ -568,9 +568,9 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       }
     }
 
-    watcher.on('change', (path: string) => handleFileEvent('change', path));
-    watcher.on('add', (path: string) => handleFileEvent('add', path));
-    watcher.on('unlink', (path: string) => {
+    watcher.on("change", (path: string) => handleFileEvent("change", path));
+    watcher.on("add", (path: string) => handleFileEvent("add", path));
+    watcher.on("unlink", (path: string) => {
       if (verbose) {
         logDebug(`chokidar unlink: ${path}`);
       }
@@ -606,7 +606,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       resolve(0);
     };
 
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
+    process.on("SIGINT", cleanup);
+    process.on("SIGTERM", cleanup);
   });
 }

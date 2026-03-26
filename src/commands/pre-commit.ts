@@ -1,8 +1,8 @@
-import type { ParserRegistry } from '../graph/workspace.js';
-import { GREEN, RED, RESET } from '../output.js';
-import { runFmt } from './fmt.js';
-import { runLint } from './lint.js';
-import { runCheck } from './check.js';
+import type { ParserRegistry } from "../graph/workspace.js";
+import { GREEN, RED, RESET } from "../output.js";
+import { runFmt } from "./fmt.js";
+import { runLint } from "./lint.js";
+import { runCheck } from "./check.js";
 
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
@@ -23,15 +23,15 @@ interface PreCommitStep {
 export async function runPreCommit(parsers: ParserRegistry): Promise<number> {
   const steps: readonly PreCommitStep[] = [
     {
-      name: 'format',
+      name: "format",
       run: () => runFmt(parsers, { check: true, quiet: true }),
     },
     {
-      name: 'lint',
+      name: "lint",
       run: () => runLint(parsers, { quiet: true }),
     },
     {
-      name: 'workspace',
+      name: "workspace",
       run: () => runCheck(parsers, { quiet: true }),
     },
   ];

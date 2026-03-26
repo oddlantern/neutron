@@ -1,113 +1,416 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/oddlantern/mido/main/schema.json",
   "title": "mido.yml",
-  "description": "Configuration for mido — a cross-ecosystem monorepo workspace tool",
+  "description": "mido workspace configuration — cross-ecosystem monorepo tool",
   "type": "object",
-  "required": ["workspace", "ecosystems"],
-  "additionalProperties": false,
   "properties": {
     "workspace": {
       "type": "string",
-      "description": "Name of the workspace (used in CLI output and lock file)"
+      "description": "Workspace name, used in generated package names and CLI output."
     },
     "ecosystems": {
       "type": "object",
-      "description": "Language ecosystems and their packages. Keys are ecosystem names (e.g. typescript, dart)",
-      "minProperties": 1,
+      "description": "Language ecosystems and their packages.",
       "additionalProperties": {
         "type": "object",
-        "required": ["manifest", "packages"],
-        "additionalProperties": false,
         "properties": {
           "manifest": {
             "type": "string",
-            "description": "Manifest filename for this ecosystem (e.g. package.json, pubspec.yaml)"
+            "description": "Manifest filename (e.g. \"package.json\", \"pubspec.yaml\")."
           },
           "lockfile": {
             "type": "string",
-            "description": "Lockfile filename for this ecosystem (e.g. bun.lock, pubspec.lock). Optional — used for change detection"
+            "description": "Optional lockfile name."
           },
           "packages": {
             "type": "array",
-            "description": "Paths to packages in this ecosystem, relative to the workspace root",
-            "items": { "type": "string" },
-            "minItems": 1
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Package paths relative to workspace root."
           }
-        }
+        },
+        "required": [
+          "manifest",
+          "packages"
+        ]
       }
     },
     "bridges": {
       "type": "array",
-      "description": "Cross-ecosystem dependencies linked by a shared artifact file",
+      "description": "Cross-ecosystem dependencies linked by a shared artifact.",
       "items": {
         "type": "object",
-        "required": ["source", "target", "artifact"],
-        "additionalProperties": false,
         "properties": {
           "source": {
             "type": "string",
-            "description": "Package path that produces the artifact"
+            "description": "Package that produces the artifact."
           },
           "target": {
             "type": "string",
-            "description": "Package path that consumes the artifact"
+            "description": "Package that consumes the artifact."
           },
           "artifact": {
             "type": "string",
-            "description": "Path to the shared file relative to the workspace root (e.g. packages/api/openapi.json)"
+            "description": "Path to the shared file (e.g. openapi.json)."
+          },
+          "run": {
+            "type": "string",
+            "description": "Fallback shell command when no plugin claims the bridge."
+          },
+          "watch": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Glob patterns to monitor for changes (used by mido dev)."
+          },
+          "entryFile": {
+            "type": "string",
+            "description": "Server entry file relative to source package dir."
+          },
+          "specPath": {
+            "type": "string",
+            "description": "Custom OpenAPI spec endpoint path."
           }
-        }
+        },
+        "required": [
+          "source",
+          "target",
+          "artifact"
+        ]
       }
     },
     "env": {
       "type": "object",
-      "description": "Environment variable parity checks across packages",
-      "required": ["shared", "files"],
-      "additionalProperties": false,
+      "description": "Environment variable parity across packages.",
       "properties": {
         "shared": {
           "type": "array",
-          "description": "Environment variable names that must be present in all listed env files",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Environment variable names that must be present in all env files."
         },
         "files": {
           "type": "array",
-          "description": "Paths to .env files to check for parity, relative to the workspace root",
-          "items": { "type": "string" },
-          "minItems": 2
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "description": "Paths to env files to check for parity."
         }
-      }
+      },
+      "required": [
+        "shared",
+        "files"
+      ]
+    },
+    "format": {
+      "type": "object",
+      "description": "Per-ecosystem formatting. mido picks the right formatter: TypeScript → oxfmt, Dart → dart format.",
+      "properties": {
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns excluded from formatting across all ecosystems."
+        },
+        "typescript": {
+          "type": "object",
+          "description": "TypeScript formatting options (applied via the bundled oxfmt formatter).",
+          "properties": {
+            "printWidth": {
+              "type": "number",
+              "description": "Maximum line width.",
+              "default": 80
+            },
+            "tabWidth": {
+              "type": "number",
+              "description": "Number of spaces per indentation level.",
+              "default": 2
+            },
+            "useTabs": {
+              "type": "boolean",
+              "description": "Indent with tabs instead of spaces.",
+              "default": false
+            },
+            "semi": {
+              "type": "boolean",
+              "description": "Add semicolons at the end of statements.",
+              "default": true
+            },
+            "singleQuote": {
+              "type": "boolean",
+              "description": "Use single quotes instead of double quotes.",
+              "default": false
+            },
+            "jsxSingleQuote": {
+              "type": "boolean",
+              "description": "Use single quotes in JSX.",
+              "default": false
+            },
+            "trailingComma": {
+              "type": "string",
+              "enum": [
+                "all",
+                "none",
+                "es5"
+              ],
+              "description": "Trailing comma style.",
+              "default": "all"
+            },
+            "bracketSpacing": {
+              "type": "boolean",
+              "description": "Spaces between brackets in object literals.",
+              "default": true
+            },
+            "bracketSameLine": {
+              "type": "boolean",
+              "description": "Put > of multi-line elements on the last line.",
+              "default": false
+            },
+            "arrowParens": {
+              "type": "string",
+              "enum": [
+                "always",
+                "avoid"
+              ],
+              "description": "Parentheses around single arrow function parameter.",
+              "default": "always"
+            },
+            "proseWrap": {
+              "type": "string",
+              "enum": [
+                "preserve",
+                "always",
+                "never"
+              ],
+              "description": "How to wrap prose in markdown.",
+              "default": "preserve"
+            },
+            "singleAttributePerLine": {
+              "type": "boolean",
+              "description": "Enforce single attribute per line in HTML/JSX.",
+              "default": false
+            },
+            "endOfLine": {
+              "type": "string",
+              "enum": [
+                "lf",
+                "crlf",
+                "cr",
+                "auto"
+              ],
+              "description": "Line ending style.",
+              "default": "lf"
+            }
+          },
+          "additionalProperties": false
+        },
+        "dart": {
+          "type": "object",
+          "description": "Dart formatting options (applied via dart format).",
+          "properties": {
+            "lineLength": {
+              "type": "number",
+              "description": "Maximum line length.",
+              "default": 80
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "lint": {
+      "type": "object",
+      "description": "Per-ecosystem linting. mido picks the right linter: TypeScript → oxlint, Dart → dart analyze. Plugins auto-enabled based on dependencies.",
+      "properties": {
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns excluded from linting across all ecosystems."
+        },
+        "typescript": {
+          "type": "object",
+          "description": "TypeScript linting (oxlint). mido auto-enables plugins: typescript, unicorn, oxc, import; react/jsx-a11y if React detected.",
+          "properties": {
+            "categories": {
+              "type": "object",
+              "description": "Rule categories group 700+ rules by intent. Each category can be \"off\", \"warn\", or \"error\".",
+              "properties": {
+                "correctness": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Code that is outright wrong or useless.",
+                  "default": "error"
+                },
+                "suspicious": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Code that is most likely wrong.",
+                  "default": "warn"
+                },
+                "pedantic": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Strict rules, occasional false positives.",
+                  "default": "off"
+                },
+                "perf": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Code that could be more performant.",
+                  "default": "warn"
+                },
+                "style": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Code style consistency.",
+                  "default": "off"
+                },
+                "restriction": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Prevents specific language features.",
+                  "default": "off"
+                },
+                "nursery": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "warn",
+                    "error"
+                  ],
+                  "description": "Experimental rules under development.",
+                  "default": "off"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rules": {
+              "type": "object",
+              "description": "Individual rule overrides. Keys are rule names (e.g. \"eqeqeq\", \"import/no-cycle\"), values are severity or [severity, ...options]. See https://oxc.rs/docs/guide/usage/linter/rules.html",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "allow",
+                      "warn",
+                      "error",
+                      "deny"
+                    ]
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2
+                  },
+                  {
+                    "type": "array",
+                    "description": "Rule with options: [severity, ...options]"
+                  }
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "dart": {
+          "type": "object",
+          "description": "Dart linting (dart analyze). Respects analysis_options.yaml in each package.",
+          "properties": {
+            "strict": {
+              "type": "boolean",
+              "description": "Enable strict analysis (--fatal-infos).",
+              "default": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     },
     "commits": {
       "type": "object",
-      "description": "Conventional commit rules enforced by the commit-msg hook",
-      "additionalProperties": false,
+      "description": "Conventional commit validation, enforced by mido's commit-msg git hook. Run `mido install` to set up hooks.",
       "properties": {
         "types": {
           "type": "array",
-          "description": "Allowed commit types (e.g. feat, fix, docs, refactor)",
-          "items": { "type": "string" },
-          "minItems": 1
+          "description": "Allowed commit types.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "feat",
+              "fix",
+              "docs",
+              "style",
+              "refactor",
+              "perf",
+              "test",
+              "build",
+              "ci",
+              "chore",
+              "revert"
+            ]
+          }
         },
         "scopes": {
           "type": "array",
-          "description": "Allowed commit scopes. If omitted, any scope is accepted",
-          "items": { "type": "string" }
+          "description": "Allowed commit scopes. Empty array allows any scope.",
+          "items": {
+            "type": "string"
+          }
         },
         "header_max_length": {
-          "type": "integer",
-          "description": "Maximum length of the commit header line",
-          "minimum": 1,
+          "type": "number",
+          "description": "Maximum length of the commit header line.",
           "default": 100
         },
         "body_max_line_length": {
-          "type": "integer",
-          "description": "Maximum length of each line in the commit body",
-          "minimum": 1,
+          "type": "number",
+          "description": "Maximum line length in commit body.",
           "default": 200
         }
-      }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "required": [
+    "workspace",
+    "ecosystems"
+  ],
+  "additionalProperties": false
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { a as ORANGE, i as GREEN, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
 import { t as printBanner } from "./bin.js";
-import { t as loadConfig } from "./loader-D-FGp-6W.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-2wPMEgE6.js";
-import { runCheck } from "./check-yCF5--1I.js";
+import { t as loadConfig } from "./loader-COlyl5x_.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BdHSAy8K.js";
+import { runCheck } from "./check-B6CS7OcE.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { Document, isMap, isScalar } from "yaml";
@@ -291,8 +291,7 @@ async function runFirstTime(root, configPath, parsers) {
 	const name = nameResult || dirName;
 	const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
 	const config = buildConfigObject(name, finalEcosystems, bridgesWithWatch, envFiles);
-	if (migratedToolConfig.lint) config["lint"] = migratedToolConfig.lint;
-	if (migratedToolConfig.format) config["format"] = migratedToolConfig.format;
+	mergeMigratedConfig(config, migratedToolConfig);
 	await writeFile(configPath, renderYaml(config), "utf-8");
 	log.success(`${ORANGE}${CONFIG_FILENAME}${RESET} written`);
 	const installHooks = await confirm({
@@ -457,12 +456,8 @@ async function runReconciliation(root, configPath, parsers) {
 		configChanged = true;
 	}
 	const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
-	if (migratedToolConfig.lint) {
-		existing["lint"] = migratedToolConfig.lint;
-		configChanged = true;
-	}
-	if (migratedToolConfig.format) {
-		existing["format"] = migratedToolConfig.format;
+	if (migratedToolConfig.lint || migratedToolConfig.format) {
+		mergeMigratedConfig(existing, migratedToolConfig);
 		configChanged = true;
 	}
 	if (configChanged) {
@@ -551,7 +546,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-9UYrenpG.js");
+			const { runDev } = await import("./dev-DuTTzgeV.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -784,6 +779,30 @@ function removePackageFromConfig(config, path) {
 		}
 	}
 }
+/**
+* Deep-merge migrated tool config into the generated config.
+* Migrated values override defaults (e.g., migrated rules replace empty rules).
+*/
+function mergeMigratedConfig(config, migrated) {
+	if (migrated.lint && isRecord(migrated.lint)) {
+		const base = isRecord(config["lint"]) ? config["lint"] : {};
+		for (const [key, value] of Object.entries(migrated.lint)) if (key === "typescript" && isRecord(value) && isRecord(base["typescript"])) base["typescript"] = {
+			...base["typescript"],
+			...value
+		};
+		else base[key] = value;
+		config["lint"] = base;
+	}
+	if (migrated.format && isRecord(migrated.format)) {
+		const base = isRecord(config["format"]) ? config["format"] : {};
+		for (const [key, value] of Object.entries(migrated.format)) if (key === "typescript" && isRecord(value) && isRecord(base["typescript"])) base["typescript"] = {
+			...base["typescript"],
+			...value
+		};
+		else base[key] = value;
+		config["format"] = base;
+	}
+}
 function configToObject(config) {
 	const obj = {
 		workspace: config.workspace,
@@ -796,6 +815,14 @@ function configToObject(config) {
 	if (config.format) obj["format"] = config.format;
 	return obj;
 }
+/** Default ignore patterns for lint and format */
+const DEFAULT_IGNORE = [
+	"dist",
+	"build",
+	"**/*.g.dart",
+	"**/*.freezed.dart",
+	"**/*.generated.dart"
+];
 function buildConfigObject(name, ecosystems, bridges, envFiles) {
 	const config = {
 		workspace: name,
@@ -814,18 +841,71 @@ function buildConfigObject(name, ecosystems, bridges, envFiles) {
 		shared: [],
 		files: envFiles.map((e) => e.path)
 	};
+	const formatSection = { ignore: [...DEFAULT_IGNORE] };
+	if (ecosystems["typescript"]) formatSection["typescript"] = {
+		printWidth: 80,
+		tabWidth: 2,
+		useTabs: false,
+		semi: true,
+		singleQuote: false,
+		jsxSingleQuote: false,
+		trailingComma: "all",
+		bracketSpacing: true,
+		bracketSameLine: false,
+		arrowParens: "always",
+		proseWrap: "preserve",
+		singleAttributePerLine: false,
+		endOfLine: "lf"
+	};
+	if (ecosystems["dart"]) formatSection["dart"] = { lineLength: 80 };
+	config["format"] = formatSection;
+	const lintSection = { ignore: [...DEFAULT_IGNORE] };
+	if (ecosystems["typescript"]) lintSection["typescript"] = {
+		categories: {
+			correctness: "error",
+			suspicious: "warn",
+			perf: "warn"
+		},
+		rules: {}
+	};
+	if (ecosystems["dart"]) lintSection["dart"] = { strict: false };
+	config["lint"] = lintSection;
+	const scopes = [];
+	for (const group of Object.values(ecosystems)) for (const pkg of group.packages) {
+		const scope = pkg.split("/").pop();
+		if (scope && !scopes.includes(scope)) scopes.push(scope);
+	}
+	config["commits"] = {
+		types: [
+			"feat",
+			"fix",
+			"docs",
+			"style",
+			"refactor",
+			"perf",
+			"test",
+			"build",
+			"ci",
+			"chore",
+			"revert"
+		],
+		scopes: scopes.sort(),
+		header_max_length: 100,
+		body_max_line_length: 200
+	};
 	return config;
 }
 function renderYaml(config) {
 	const doc = new Document(config);
-	doc.commentBefore = " yaml-language-server: $schema=https://raw.githubusercontent.com/oddlantern/mido/main/schema.json";
+	doc.commentBefore = " yaml-language-server: $schema=node_modules/@oddlantern/mido/schema.json\n\n ─────────────────────────────────────────────────────────\n mido — Cross-ecosystem workspace configuration\n Docs: https://github.com/oddlantern/mido\n ─────────────────────────────────────────────────────────";
 	const comments = new Map([
-		["workspace", " Workspace name"],
-		["ecosystems", " Language ecosystems and their packages"],
-		["bridges", " Cross-ecosystem dependencies linked by a shared artifact"],
-		["env", " Environment variable parity across packages"],
-		["lint", " Linter configuration (rules and ignore patterns)"],
-		["format", " Formatter configuration (options and ignore patterns)"]
+		["workspace", " ─── Workspace ─────────────────────────────────────────\n Workspace name (used in generated package names and CLI output)"],
+		["ecosystems", " ─── Ecosystems ────────────────────────────────────────\n Declare which languages your workspace uses and where\n packages live. mido auto-detects these during init."],
+		["bridges", " ─── Bridges ───────────────────────────────────────────\n Cross-ecosystem dependencies linked by a shared artifact.\n\n source:   package that produces the artifact\n target:   package that consumes the artifact\n artifact: the file that connects them\n watch:    files to monitor for changes (used by mido dev)"],
+		["env", " ─── Environment ───────────────────────────────────────\n Environment variable parity across packages"],
+		["format", " ─── Formatting ────────────────────────────────────────\n Per-ecosystem formatting. mido picks the right tool:\n   TypeScript → oxfmt (bundled with mido)\n   Dart       → dart format\n\n All tool defaults are shown. Change any value to override."],
+		["lint", " ─── Linting ───────────────────────────────────────────\n Per-ecosystem linting. mido picks the right tool:\n   TypeScript → oxlint (bundled with mido)\n   Dart       → dart analyze\n\n mido auto-enables appropriate oxlint plugins based on\n your dependencies (typescript, unicorn, oxc, import by\n default — react, jsx-a11y, react-perf if React detected)."],
+		["commits", " ─── Commits ───────────────────────────────────────────\n Conventional commit validation, enforced by mido's\n commit-msg git hook. Run `mido install` to set up hooks."]
 	]);
 	if (isMap(doc.contents)) for (const pair of doc.contents.items) {
 		if (!isScalar(pair.key)) continue;
@@ -999,11 +1079,14 @@ const OXLINT_JSON_CONFIGS = [".oxlintrc.json"];
 const OXLINT_JS_CONFIGS = ["oxlint.config.ts", "oxlint.config.js"];
 /**
 * Extract the mido lint section from an oxlint config object.
-* Maps `rules` → `rules`, `ignorePatterns` → `ignore`.
+* Produces ecosystem-centric structure: { ignore, typescript: { categories, rules } }
 */
 function extractLintConfig(parsed) {
 	const lint = {};
-	if (isRecord(parsed["rules"]) && Object.keys(parsed["rules"]).length > 0) lint["rules"] = parsed["rules"];
+	const ts = {};
+	if (isRecord(parsed["categories"]) && Object.keys(parsed["categories"]).length > 0) ts["categories"] = parsed["categories"];
+	if (isRecord(parsed["rules"]) && Object.keys(parsed["rules"]).length > 0) ts["rules"] = parsed["rules"];
+	if (Object.keys(ts).length > 0) lint["typescript"] = ts;
 	if (Array.isArray(parsed["ignorePatterns"]) && parsed["ignorePatterns"].length > 0) lint["ignore"] = parsed["ignorePatterns"];
 	return lint;
 }
@@ -1018,12 +1101,13 @@ const IGNORE_FILES = [".oxfmtignore", ".prettierignore"];
 const FORMAT_META_KEYS = new Set(["$schema"]);
 /**
 * Extract all formatting options from an oxfmt/prettier config.
-* Copies every key except meta keys — the full config is preserved.
+* Produces ecosystem-centric structure: { typescript: { printWidth, semi, ... } }
 */
 function extractFormatConfig(parsed) {
-	const format = {};
-	for (const [key, value] of Object.entries(parsed)) if (!FORMAT_META_KEYS.has(key)) format[key] = value;
-	return format;
+	const ts = {};
+	for (const [key, value] of Object.entries(parsed)) if (!FORMAT_META_KEYS.has(key)) ts[key] = value;
+	if (Object.keys(ts).length === 0) return {};
+	return { typescript: ts };
 }
 const STALE_ESLINT_CONFIGS = [
 	".eslintrc.json",
@@ -1136,4 +1220,4 @@ async function migrateLintFormatConfig(root, _configPath) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-R27XmzE0.js.map
+//# sourceMappingURL=init-Ddll0kBv.js.map

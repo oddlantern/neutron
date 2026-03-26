@@ -105,11 +105,19 @@ export const dartPlugin: EcosystemPlugin = {
     const analyzeCmd = flutter ? "flutter" : "dart";
 
     switch (action) {
-      case STANDARD_ACTIONS.LINT:
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          return runCommand(analyzeCmd, ["analyze", ...context.resolvedFiles], cwd);
+      case STANDARD_ACTIONS.LINT: {
+        const args = ["analyze"];
+        // Dart lint.dart.strict → --fatal-infos
+        if (context.lintDart?.strict) {
+          args.push("--fatal-infos");
         }
-        return runCommand(analyzeCmd, ["analyze", "."], cwd);
+        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+          args.push(...context.resolvedFiles);
+        } else {
+          args.push(".");
+        }
+        return runCommand(analyzeCmd, args, cwd);
+      }
 
       case STANDARD_ACTIONS.LINT_FIX:
         if (context.resolvedFiles && context.resolvedFiles.length > 0) {
@@ -118,33 +126,43 @@ export const dartPlugin: EcosystemPlugin = {
         return runCommand("dart", ["fix", "--apply", "."], cwd);
 
       case STANDARD_ACTIONS.FORMAT: {
+        const args = ["format"];
+        // Dart format.dart.lineLength → --line-length
+        if (context.formatDart?.lineLength) {
+          args.push("--line-length", String(context.formatDart.lineLength));
+        }
         if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          return runCommand("dart", ["format", ...context.resolvedFiles], cwd);
+          args.push(...context.resolvedFiles);
+        } else {
+          const libDir = join(cwd, "lib");
+          const binDir = join(cwd, "bin");
+          const targets = [libDir];
+          if (existsSync(binDir)) {
+            targets.push(binDir);
+          }
+          args.push(...targets);
         }
-        const libDir = join(cwd, "lib");
-        const binDir = join(cwd, "bin");
-        const targets = [libDir];
-        if (existsSync(binDir)) {
-          targets.push(binDir);
-        }
-        return runCommand("dart", ["format", ...targets], cwd);
+        return runCommand("dart", args, cwd);
       }
 
       case STANDARD_ACTIONS.FORMAT_CHECK: {
+        const args = ["format", "--set-exit-if-changed"];
+        // Dart format.dart.lineLength → --line-length
+        if (context.formatDart?.lineLength) {
+          args.push("--line-length", String(context.formatDart.lineLength));
+        }
         if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          return runCommand(
-            "dart",
-            ["format", "--set-exit-if-changed", ...context.resolvedFiles],
-            cwd,
-          );
+          args.push(...context.resolvedFiles);
+        } else {
+          const libDir = join(cwd, "lib");
+          const binDir = join(cwd, "bin");
+          const targets = [libDir];
+          if (existsSync(binDir)) {
+            targets.push(binDir);
+          }
+          args.push(...targets);
         }
-        const libDir = join(cwd, "lib");
-        const binDir = join(cwd, "bin");
-        const targets = [libDir];
-        if (existsSync(binDir)) {
-          targets.push(binDir);
-        }
-        return runCommand("dart", ["format", "--set-exit-if-changed", ...targets], cwd);
+        return runCommand("dart", args, cwd);
       }
 
       case STANDARD_ACTIONS.BUILD:

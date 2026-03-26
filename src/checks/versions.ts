@@ -1,6 +1,6 @@
-import type { WorkspaceGraph } from '../graph/types.js';
-import type { CheckIssue, CheckResult } from './types.js';
-import type { MidoLock } from '../lock.js';
+import type { WorkspaceGraph } from "../graph/types.js";
+import type { CheckIssue, CheckResult } from "./types.js";
+import type { MidoLock } from "../lock.js";
 
 export interface DepOccurrence {
   readonly packagePath: string;
@@ -25,7 +25,7 @@ export function collectDeps(graph: WorkspaceGraph): Map<string, DepOccurrence[]>
 
   for (const pkg of graph.packages.values()) {
     for (const dep of pkg.dependencies) {
-      if (dep.range === '<local>') {
+      if (dep.range === "<local>") {
         continue;
       }
 
@@ -103,11 +103,11 @@ export function checkVersionConsistency(
       const deviating = m.occurrences.filter((o) => o.range !== m.lockedRange);
       const details = deviating
         .map((o) => `  ${o.packagePath} (${o.ecosystem}): ${o.range} [${o.type}]`)
-        .join('\n');
+        .join("\n");
 
       return {
-        severity: 'error',
-        check: 'versions',
+        severity: "error",
+        check: "versions",
         message: `"${m.depName}" deviates from locked range ${m.lockedRange}`,
         details,
       };
@@ -116,11 +116,11 @@ export function checkVersionConsistency(
     const ranges = new Set(m.occurrences.map((o) => o.range));
     const details = m.occurrences
       .map((o) => `  ${o.packagePath} (${o.ecosystem}): ${o.range} [${o.type}]`)
-      .join('\n');
+      .join("\n");
 
     return {
-      severity: 'error',
-      check: 'versions',
+      severity: "error",
+      check: "versions",
       message: `"${m.depName}" has ${ranges.size} different version ranges across ${m.occurrences.length} packages`,
       details,
     };
@@ -130,7 +130,7 @@ export function checkVersionConsistency(
   const multiPkgDeps = [...depMap.values()].filter((o) => o.length >= 2).length;
 
   return {
-    check: 'versions',
+    check: "versions",
     passed: issues.length === 0,
     issues,
     summary:

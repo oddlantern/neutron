@@ -1,8 +1,8 @@
-import { packageJsonParser } from './parsers/package-json.js';
-import { pubspecParser } from './parsers/pubspec.js';
-import type { ManifestParser } from './parsers/types.js';
-import { printBanner } from './banner.js';
-import { VERSION } from './version.js';
+import { packageJsonParser } from "./parsers/package-json.js";
+import { pubspecParser } from "./parsers/pubspec.js";
+import type { ManifestParser } from "./parsers/types.js";
+import { printBanner } from "./banner.js";
+import { VERSION } from "./version.js";
 
 // Parser registry — add new ecosystem parsers here
 const parsers = new Map<string, ManifestParser>([
@@ -61,85 +61,85 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0];
 
-  if (!command || command === 'help' || command === '--help' || command === '-h') {
+  if (!command || command === "help" || command === "--help" || command === "-h") {
     printBanner();
     console.log(HELP);
     process.exit(0);
   }
 
-  if (command === '--version' || command === '-v') {
+  if (command === "--version" || command === "-v") {
     console.log(VERSION);
     process.exit(0);
   }
 
-  if (command === 'check') {
-    const fix = args.includes('--fix');
-    const quiet = args.includes('--quiet') || args.includes('--hook');
-    const { runCheck } = await import('./commands/check.js');
+  if (command === "check") {
+    const fix = args.includes("--fix");
+    const quiet = args.includes("--quiet") || args.includes("--hook");
+    const { runCheck } = await import("./commands/check.js");
     const exitCode = await runCheck(parsers, { fix, quiet });
     process.exit(exitCode);
   }
 
-  if (command === 'init') {
-    const { runInit } = await import('./commands/init.js');
+  if (command === "init") {
+    const { runInit } = await import("./commands/init.js");
     const exitCode = await runInit(process.cwd(), parsers);
     process.exit(exitCode);
   }
 
-  if (command === 'dev') {
-    const verbose = args.includes('--verbose');
-    const { runDev } = await import('./watcher/dev.js');
+  if (command === "dev") {
+    const verbose = args.includes("--verbose");
+    const { runDev } = await import("./watcher/dev.js");
     const exitCode = await runDev(parsers, { verbose });
     process.exit(exitCode);
   }
 
-  if (command === 'install') {
-    const { runInstall } = await import('./commands/install.js');
+  if (command === "install") {
+    const { runInstall } = await import("./commands/install.js");
     const exitCode = await runInstall(process.cwd());
     process.exit(exitCode);
   }
 
-  if (command === 'lint') {
-    const fix = args.includes('--fix');
-    const quiet = args.includes('--quiet');
-    const pkg = getFlagValue(args, '--package');
-    const ecosystem = getFlagValue(args, '--ecosystem');
-    const { runLint } = await import('./commands/lint.js');
+  if (command === "lint") {
+    const fix = args.includes("--fix");
+    const quiet = args.includes("--quiet");
+    const pkg = getFlagValue(args, "--package");
+    const ecosystem = getFlagValue(args, "--ecosystem");
+    const { runLint } = await import("./commands/lint.js");
     const exitCode = await runLint(parsers, { fix, quiet, package: pkg, ecosystem });
     process.exit(exitCode);
   }
 
-  if (command === 'fmt') {
-    const check = args.includes('--check');
-    const quiet = args.includes('--quiet');
-    const pkg = getFlagValue(args, '--package');
-    const ecosystem = getFlagValue(args, '--ecosystem');
-    const { runFmt } = await import('./commands/fmt.js');
+  if (command === "fmt") {
+    const check = args.includes("--check");
+    const quiet = args.includes("--quiet");
+    const pkg = getFlagValue(args, "--package");
+    const ecosystem = getFlagValue(args, "--ecosystem");
+    const { runFmt } = await import("./commands/fmt.js");
     const exitCode = await runFmt(parsers, { check, quiet, package: pkg, ecosystem });
     process.exit(exitCode);
   }
 
-  if (command === 'build') {
-    const quiet = args.includes('--quiet');
-    const pkg = getFlagValue(args, '--package');
-    const { runBuild } = await import('./commands/build.js');
+  if (command === "build") {
+    const quiet = args.includes("--quiet");
+    const pkg = getFlagValue(args, "--package");
+    const { runBuild } = await import("./commands/build.js");
     const exitCode = await runBuild(parsers, { quiet, package: pkg });
     process.exit(exitCode);
   }
 
-  if (command === 'pre-commit') {
-    const { runPreCommit } = await import('./commands/pre-commit.js');
+  if (command === "pre-commit") {
+    const { runPreCommit } = await import("./commands/pre-commit.js");
     const exitCode = await runPreCommit(parsers);
     process.exit(exitCode);
   }
 
-  if (command === 'commit-msg') {
+  if (command === "commit-msg") {
     const filePath = args[1];
     if (!filePath) {
-      console.error('Usage: mido commit-msg <file>');
+      console.error("Usage: mido commit-msg <file>");
       process.exit(1);
     }
-    const { runCommitMsg } = await import('./commands/commit-msg.js');
+    const { runCommitMsg } = await import("./commands/commit-msg.js");
     const exitCode = await runCommitMsg(filePath);
     process.exit(exitCode);
   }

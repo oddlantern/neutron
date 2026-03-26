@@ -1,8 +1,8 @@
-import { execSync } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
-import { readFile, rm, unlink, writeFile } from 'node:fs/promises';
-import { basename, join, relative } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { execSync } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
+import { readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { basename, join, relative } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import {
   cancel,
@@ -17,22 +17,22 @@ import {
   select,
   spinner,
   text,
-} from '@clack/prompts';
-import { Document, isMap, isScalar } from 'yaml';
+} from "@clack/prompts";
+import { Document, isMap, isScalar } from "yaml";
 
-import type { MidoConfig } from '../config/schema.js';
-import { loadConfig } from '../config/loader.js';
-import { scanRepo, type DiscoveredPackage } from '../discovery/scanner.js';
-import { detectBridges, detectEnvFiles, type BridgeCandidate } from '../discovery/heuristics.js';
-import { printBanner } from '../banner.js';
-import { BOLD, DIM, GREEN, ORANGE, RESET } from '../output.js';
-import { runCheck } from './check.js';
-import type { ParserRegistry } from '../graph/workspace.js';
-import { loadPlugins } from '../plugins/loader.js';
-import { PluginRegistry } from '../plugins/registry.js';
-import type { WatchPathSuggestion } from '../plugins/types.js';
+import type { MidoConfig } from "../config/schema.js";
+import { loadConfig } from "../config/loader.js";
+import { scanRepo, type DiscoveredPackage } from "../discovery/scanner.js";
+import { detectBridges, detectEnvFiles, type BridgeCandidate } from "../discovery/heuristics.js";
+import { printBanner } from "../banner.js";
+import { BOLD, DIM, GREEN, ORANGE, RESET } from "../output.js";
+import { runCheck } from "./check.js";
+import type { ParserRegistry } from "../graph/workspace.js";
+import { loadPlugins } from "../plugins/loader.js";
+import { PluginRegistry } from "../plugins/registry.js";
+import type { WatchPathSuggestion } from "../plugins/types.js";
 
-const CONFIG_FILENAME = 'mido.yml';
+const CONFIG_FILENAME = "mido.yml";
 
 interface EcosystemGroup {
   readonly manifest: string;
@@ -47,7 +47,7 @@ interface BridgeWithWatch {
 }
 
 function handleCancel(): never {
-  cancel('Aborted.');
+  cancel("Aborted.");
   process.exit(0);
 }
 
@@ -75,15 +75,15 @@ async function runFirstTime(
   parsers: ParserRegistry,
 ): Promise<number> {
   printBanner();
-  intro('mido init');
+  intro("mido init");
 
   const s = spinner();
-  s.start('Scanning repo...');
+  s.start("Scanning repo...");
   const discovered = await scanRepo(root);
-  s.stop('Scan complete');
+  s.stop("Scan complete");
 
   if (discovered.length === 0) {
-    log.error('No ecosystem packages found. Nothing to configure.');
+    log.error("No ecosystem packages found. Nothing to configure.");
     return 1;
   }
 
@@ -97,7 +97,7 @@ async function runFirstTime(
   }
 
   if (supported.length === 0) {
-    log.error('No supported ecosystem packages found.');
+    log.error("No supported ecosystem packages found.");
     return 1;
   }
 
@@ -110,10 +110,10 @@ async function runFirstTime(
 
   // Confirm or adjust packages
   const adjustPackages = await select({
-    message: 'Confirm packages?',
+    message: "Confirm packages?",
     options: [
-      { value: 'yes', label: 'Yes, looks correct' },
-      { value: 'adjust', label: 'Let me adjust' },
+      { value: "yes", label: "Yes, looks correct" },
+      { value: "adjust", label: "Let me adjust" },
     ],
   });
   if (isCancel(adjustPackages)) {
@@ -121,9 +121,9 @@ async function runFirstTime(
   }
 
   let finalSupported = supported;
-  if (adjustPackages === 'adjust') {
+  if (adjustPackages === "adjust") {
     const selected = await multiselect({
-      message: 'Select packages to include:',
+      message: "Select packages to include:",
       options: supported.map((p) => ({
         value: p.path,
         label: p.path,
@@ -150,7 +150,7 @@ async function runFirstTime(
         (b) =>
           `  ${ORANGE}${b.source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${b.target}${RESET} ${DIM}via${RESET} ${BOLD}${b.artifact}${RESET}`,
       )
-      .join('\n');
+      .join("\n");
     log.info(`Detected ${ORANGE}${detectedBridges.length}${RESET} bridge(s):\n${bridgeLines}`);
   }
 
@@ -188,14 +188,14 @@ async function runFirstTime(
   // Detect env files
   const envFiles = detectEnvFiles(root, finalSupported);
   if (envFiles.length >= 2) {
-    const envLines = envFiles.map((e) => `  ${e.path}`).join('\n');
+    const envLines = envFiles.map((e) => `  ${e.path}`).join("\n");
     log.info(`Env files:\n${envLines}`);
   }
 
   // Workspace name
-  const dirName = root.split('/').pop() ?? 'workspace';
+  const dirName = root.split("/").pop() ?? "workspace";
   const nameResult = await text({
-    message: 'Workspace name:',
+    message: "Workspace name:",
     placeholder: dirName,
     defaultValue: dirName,
   });
@@ -209,25 +209,20 @@ async function runFirstTime(
 
   // Build and write config
   const config = buildConfigObject(name, finalEcosystems, bridgesWithWatch, envFiles);
-  if (migratedToolConfig.lint) {
-    config['lint'] = migratedToolConfig.lint;
-  }
-  if (migratedToolConfig.format) {
-    config['format'] = migratedToolConfig.format;
-  }
+  mergeMigratedConfig(config, migratedToolConfig);
   const yaml = renderYaml(config);
-  await writeFile(configPath, yaml, 'utf-8');
+  await writeFile(configPath, yaml, "utf-8");
   log.success(`${ORANGE}${CONFIG_FILENAME}${RESET} written`);
 
   // Offer hooks
-  const installHooks = await confirm({ message: 'Install git hooks?', initialValue: true });
+  const installHooks = await confirm({ message: "Install git hooks?", initialValue: true });
   if (isCancel(installHooks)) {
     handleCancel();
   }
 
   let hooksInstalled = false;
   if (installHooks) {
-    const { runInstall } = await import('./install.js');
+    const { runInstall } = await import("./install.js");
     const installResult = await runInstall(root);
     if (installResult !== 0) {
       return installResult;
@@ -258,10 +253,10 @@ async function runReconciliation(
   parsers: ParserRegistry,
 ): Promise<number> {
   printBanner();
-  intro('mido init \u2014 reconciling with existing config');
+  intro("mido init \u2014 reconciling with existing config");
 
   const s = spinner();
-  s.start('Scanning repo and comparing with mido.yml...');
+  s.start("Scanning repo and comparing with mido.yml...");
 
   const discovered = await scanRepo(root);
   const supported = discovered.filter((p) => p.supported);
@@ -271,12 +266,12 @@ async function runReconciliation(
     const loaded = await loadConfig(root);
     existing = loaded.config;
   } catch {
-    s.stop('Failed to load existing config');
+    s.stop("Failed to load existing config");
     log.error(`Could not parse existing ${CONFIG_FILENAME}. Delete it and run init again.`);
     return 1;
   }
 
-  s.stop('Scan complete');
+  s.stop("Scan complete");
 
   // Load plugins for watch path suggestions
   const { ecosystem, domain } = loadPlugins();
@@ -317,7 +312,7 @@ async function runReconciliation(
   // Display status
   const statusLines: string[] = [];
   for (const path of kept) {
-    const eco = existingEcosystemForPath.get(path) ?? '';
+    const eco = existingEcosystemForPath.get(path) ?? "";
     statusLines.push(`  ${GREEN}\u2713${RESET} ${path} ${DIM}(${eco})${RESET}`);
   }
   for (const pkg of newPackages) {
@@ -326,10 +321,10 @@ async function runReconciliation(
     );
   }
   for (const path of missing) {
-    const eco = existingEcosystemForPath.get(path) ?? '';
+    const eco = existingEcosystemForPath.get(path) ?? "";
     statusLines.push(`  ${DIM}\u26A0 ${path} (${eco}) \u2190 NOT FOUND ON DISK${RESET}`);
   }
-  log.info(`Packages:\n${statusLines.join('\n')}`);
+  log.info(`Packages:\n${statusLines.join("\n")}`);
 
   let configChanged = false;
 
@@ -377,16 +372,16 @@ async function runReconciliation(
     const action = await select({
       message: `Bridge: ${bridge.source} produces ${basename(bridge.artifact)}, consumed by ${bridge.target}`,
       options: [
-        { value: 'keep', label: 'Keep' },
-        { value: 'modify', label: 'Modify' },
-        { value: 'remove', label: 'Remove' },
+        { value: "keep", label: "Keep" },
+        { value: "modify", label: "Modify" },
+        { value: "remove", label: "Remove" },
       ],
     });
     if (isCancel(action)) {
       handleCancel();
     }
 
-    if (action === 'keep') {
+    if (action === "keep") {
       // If bridge has no watch paths, offer to add them (with plugin suggestion)
       if (!bridge.watch?.length) {
         const sourcePackage = reconPackageMap.get(bridge.source);
@@ -412,7 +407,7 @@ async function runReconciliation(
         } else {
           // No suggestion — ask if they want to add paths manually
           const addWatch = await confirm({
-            message: 'Add watch paths for this bridge?',
+            message: "Add watch paths for this bridge?",
             initialValue: false,
           });
           if (isCancel(addWatch)) {
@@ -433,7 +428,7 @@ async function runReconciliation(
       } else {
         updatedBridges.push(bridge);
       }
-    } else if (action === 'modify') {
+    } else if (action === "modify") {
       const modified = await promptModifyBridge(
         root,
         existing,
@@ -469,29 +464,26 @@ async function runReconciliation(
 
   // Update bridges in config
   if (configChanged || updatedBridges.length !== existingBridges.length) {
-    (existing as Record<string, unknown>)['bridges'] =
+    (existing as Record<string, unknown>)["bridges"] =
       updatedBridges.length > 0 ? updatedBridges : undefined;
     configChanged = true;
   }
 
   // Migrate existing lint/format config files
   const migratedToolConfig = await migrateLintFormatConfig(root, configPath);
-  if (migratedToolConfig.lint) {
-    (existing as Record<string, unknown>)['lint'] = migratedToolConfig.lint;
-    configChanged = true;
-  }
-  if (migratedToolConfig.format) {
-    (existing as Record<string, unknown>)['format'] = migratedToolConfig.format;
+  if (migratedToolConfig.lint || migratedToolConfig.format) {
+    const mutable = existing as Record<string, unknown>;
+    mergeMigratedConfig(mutable, migratedToolConfig);
     configChanged = true;
   }
 
   // Write if changed
   if (configChanged) {
     const yaml = renderYaml(configToObject(existing));
-    await writeFile(configPath, yaml, 'utf-8');
-    log.success('Config updated');
+    await writeFile(configPath, yaml, "utf-8");
+    log.success("Config updated");
   } else {
-    log.success('No changes needed');
+    log.success("No changes needed");
   }
 
   // Run health check and offer to fix mismatches
@@ -525,9 +517,9 @@ async function runPostInitCheck(parsers: ParserRegistry): Promise<boolean> {
 
   // There are failures — check specifically for version mismatches
   const { config, root } = await loadConfig();
-  const { buildWorkspaceGraph } = await import('../graph/workspace.js');
-  const { findVersionMismatches } = await import('../checks/versions.js');
-  const { loadLock } = await import('../lock.js');
+  const { buildWorkspaceGraph } = await import("../graph/workspace.js");
+  const { findVersionMismatches } = await import("../checks/versions.js");
+  const { loadLock } = await import("../lock.js");
 
   const graph = await buildWorkspaceGraph(config, root, parsers);
   const lock = await loadLock(root);
@@ -563,7 +555,7 @@ const HELP_LINES = [
   `${BOLD}mido check${RESET}            ${DIM}Run all workspace consistency checks${RESET}`,
   `${BOLD}mido check --fix${RESET}      ${DIM}Interactively resolve version mismatches${RESET}`,
   `${BOLD}mido install${RESET}          ${DIM}Install git hooks${RESET}`,
-].join('\n');
+].join("\n");
 
 /**
  * Show a celebratory summary and next-steps menu after init completes.
@@ -586,15 +578,15 @@ async function promptNextSteps(parsers: ParserRegistry, summary: InitSummary): P
     summaryLines.push(`${GREEN}all checks passed${RESET}`);
   }
 
-  note(summaryLines.join('\n'), `${ORANGE}${BOLD}Workspace ready${RESET}`);
+  note(summaryLines.join("\n"), `${ORANGE}${BOLD}Workspace ready${RESET}`);
 
   const next = await select({
     message: "What's next?",
     options: [
-      { value: 'dev', label: 'Start watching', hint: 'mido dev' },
-      { value: 'check', label: 'Check workspace health', hint: 'mido check' },
-      { value: 'help', label: 'View help', hint: 'mido help' },
-      { value: 'exit', label: 'Exit' },
+      { value: "dev", label: "Start watching", hint: "mido dev" },
+      { value: "check", label: "Check workspace health", hint: "mido check" },
+      { value: "help", label: "View help", hint: "mido help" },
+      { value: "exit", label: "Exit" },
     ],
   });
 
@@ -604,21 +596,21 @@ async function promptNextSteps(parsers: ParserRegistry, summary: InitSummary): P
   }
 
   switch (next) {
-    case 'dev': {
+    case "dev": {
       outro(`${ORANGE}Starting watcher...${RESET}`);
-      const { runDev } = await import('../watcher/dev.js');
+      const { runDev } = await import("../watcher/dev.js");
       return runDev(parsers, {});
     }
-    case 'check': {
+    case "check": {
       outro(`${ORANGE}Running checks...${RESET}`);
       return runCheck(parsers, {});
     }
-    case 'help': {
+    case "help": {
       note(HELP_LINES, `${ORANGE}${BOLD}Commands${RESET}`);
       outro(`${DIM}Happy coding!${RESET}`);
       return 0;
     }
-    case 'exit':
+    case "exit":
     default: {
       outro(`${DIM}Happy coding!${RESET}`);
       return 0;
@@ -645,13 +637,13 @@ async function promptWatchPaths(
   const defaultWatch = `${source}/**`;
 
   // Build options: plugin suggestion first (if available), then browse/manual/skip
-  type WatchChoice = 'suggestion' | 'browse' | 'manual' | 'skip';
+  type WatchChoice = "suggestion" | "browse" | "manual" | "skip";
   const options: Array<{ value: WatchChoice; label: string; hint?: string }> = [];
 
   if (suggestion) {
-    const suggestedLabel = suggestion.paths.join(', ');
+    const suggestedLabel = suggestion.paths.join(", ");
     options.push({
-      value: 'suggestion',
+      value: "suggestion",
       label: suggestedLabel,
       hint: `detected: ${suggestion.reason}`,
     });
@@ -659,31 +651,31 @@ async function promptWatchPaths(
 
   // "Skip" shows current watch paths if they exist, otherwise the default
   const skipHint = currentWatch?.length
-    ? `keep: ${currentWatch.join(', ')}`
+    ? `keep: ${currentWatch.join(", ")}`
     : `default: ${defaultWatch}`;
 
   options.push(
-    { value: 'browse', label: 'Browse for a different path' },
-    { value: 'manual', label: 'Enter manually' },
-    { value: 'skip', label: 'Skip', hint: skipHint },
+    { value: "browse", label: "Browse for a different path" },
+    { value: "manual", label: "Enter manually" },
+    { value: "skip", label: "Skip", hint: skipHint },
   );
 
   const choice = await select({
-    message: 'Watch paths for this bridge:',
+    message: "Watch paths for this bridge:",
     options,
-    initialValue: suggestion ? ('suggestion' as WatchChoice) : ('browse' as WatchChoice),
+    initialValue: suggestion ? ("suggestion" as WatchChoice) : ("browse" as WatchChoice),
   });
   if (isCancel(choice)) {
     handleCancel();
   }
 
   switch (choice) {
-    case 'suggestion': {
+    case "suggestion": {
       return suggestion?.paths;
     }
-    case 'browse': {
+    case "browse": {
       const browsed = await clackPath({
-        message: 'Select directory to watch:',
+        message: "Select directory to watch:",
         root,
         directory: true,
       });
@@ -693,9 +685,9 @@ async function promptWatchPaths(
       const relPath = relative(root, join(root, browsed));
       return [`${relPath}/**`];
     }
-    case 'manual': {
+    case "manual": {
       const entered = await text({
-        message: 'Watch paths (comma-separated globs):',
+        message: "Watch paths (comma-separated globs):",
         placeholder: defaultWatch,
       });
       if (isCancel(entered)) {
@@ -709,7 +701,7 @@ async function promptWatchPaths(
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
     }
-    case 'skip':
+    case "skip":
     default: {
       // Preserve existing watch paths if available
       return currentWatch?.length ? currentWatch : undefined;
@@ -727,7 +719,7 @@ async function promptModifyBridge(
     readonly watch?: readonly string[] | undefined;
   },
   pluginRegistry?: PluginRegistry,
-  packageMap?: ReadonlyMap<string, import('../graph/types.js').WorkspacePackage>,
+  packageMap?: ReadonlyMap<string, import("../graph/types.js").WorkspacePackage>,
 ): Promise<BridgeWithWatch | null> {
   const allPaths = getAllPackagePaths(config);
 
@@ -787,7 +779,7 @@ async function promptAdditionalBridges(
 ): Promise<BridgeWithWatch[]> {
   const result: BridgeWithWatch[] = [];
 
-  const addMore = await confirm({ message: 'Any additional bridges?', initialValue: false });
+  const addMore = await confirm({ message: "Any additional bridges?", initialValue: false });
   if (isCancel(addMore)) {
     handleCancel();
   }
@@ -798,7 +790,7 @@ async function promptAdditionalBridges(
   let adding = true;
   while (adding) {
     const source = await select({
-      message: 'Source (who generates the file):',
+      message: "Source (who generates the file):",
       options: packagePaths.map((p) => ({ value: p, label: p })),
     });
     if (isCancel(source)) {
@@ -807,7 +799,7 @@ async function promptAdditionalBridges(
 
     const targetPaths = packagePaths.filter((p) => p !== source);
     const target = await select({
-      message: 'Target (who depends on it):',
+      message: "Target (who depends on it):",
       options: targetPaths.map((p) => ({ value: p, label: p })),
     });
     if (isCancel(target)) {
@@ -815,7 +807,7 @@ async function promptAdditionalBridges(
     }
 
     const artifact = await clackPath({
-      message: 'Artifact (shared file, e.g. openapi.json):',
+      message: "Artifact (shared file, e.g. openapi.json):",
       root,
     });
     if (isCancel(artifact)) {
@@ -829,8 +821,8 @@ async function promptAdditionalBridges(
     if (existsSync(fullArtifactPath)) {
       try {
         if (statSync(fullArtifactPath).isDirectory()) {
-          log.warn('Artifact must be a file, not a directory. Skipping bridge.');
-          const retry = await confirm({ message: 'Add another bridge?', initialValue: false });
+          log.warn("Artifact must be a file, not a directory. Skipping bridge.");
+          const retry = await confirm({ message: "Add another bridge?", initialValue: false });
           if (isCancel(retry)) {
             handleCancel();
           }
@@ -842,14 +834,14 @@ async function promptAdditionalBridges(
       }
     } else {
       const proceed = await confirm({
-        message: 'File not found — it may not be generated yet. Continue?',
+        message: "File not found — it may not be generated yet. Continue?",
         initialValue: false,
       });
       if (isCancel(proceed)) {
         handleCancel();
       }
       if (!proceed) {
-        const retry = await confirm({ message: 'Add another bridge?', initialValue: false });
+        const retry = await confirm({ message: "Add another bridge?", initialValue: false });
         if (isCancel(retry)) {
           handleCancel();
         }
@@ -864,7 +856,7 @@ async function promptAdditionalBridges(
       `Bridge: ${ORANGE}${source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${target}${RESET} ${DIM}via${RESET} ${BOLD}${relArtifact}${RESET}`,
     );
 
-    const another = await confirm({ message: 'Add another bridge?', initialValue: false });
+    const another = await confirm({ message: "Add another bridge?", initialValue: false });
     if (isCancel(another)) {
       handleCancel();
     }
@@ -883,12 +875,12 @@ async function promptAdditionalBridges(
  */
 function buildPackageMap(
   packages: readonly DiscoveredPackage[],
-): ReadonlyMap<string, import('../graph/types.js').WorkspacePackage> {
-  const map = new Map<string, import('../graph/types.js').WorkspacePackage>();
+): ReadonlyMap<string, import("../graph/types.js").WorkspacePackage> {
+  const map = new Map<string, import("../graph/types.js").WorkspacePackage>();
 
   for (const pkg of packages) {
     map.set(pkg.path, {
-      name: pkg.path.split('/').pop() ?? pkg.path,
+      name: pkg.path.split("/").pop() ?? pkg.path,
       path: pkg.path,
       ecosystem: pkg.ecosystem,
       version: undefined,
@@ -917,8 +909,8 @@ function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): void {
     eco.packages.sort();
   } else {
     const manifestNames: Record<string, string> = {
-      typescript: 'package.json',
-      dart: 'pubspec.yaml',
+      typescript: "package.json",
+      dart: "pubspec.yaml",
     };
     (config.ecosystems as Record<string, { manifest: string; packages: string[] }>)[pkg.ecosystem] =
       {
@@ -942,28 +934,66 @@ function removePackageFromConfig(config: MidoConfig, path: string): void {
   }
 }
 
+/**
+ * Deep-merge migrated tool config into the generated config.
+ * Migrated values override defaults (e.g., migrated rules replace empty rules).
+ */
+function mergeMigratedConfig(config: Record<string, unknown>, migrated: MigratedToolConfig): void {
+  if (migrated.lint && isRecord(migrated.lint)) {
+    const base = isRecord(config["lint"]) ? config["lint"] : {};
+    for (const [key, value] of Object.entries(migrated.lint)) {
+      if (key === "typescript" && isRecord(value) && isRecord(base["typescript"])) {
+        base["typescript"] = { ...base["typescript"], ...value };
+      } else {
+        base[key] = value;
+      }
+    }
+    config["lint"] = base;
+  }
+  if (migrated.format && isRecord(migrated.format)) {
+    const base = isRecord(config["format"]) ? config["format"] : {};
+    for (const [key, value] of Object.entries(migrated.format)) {
+      if (key === "typescript" && isRecord(value) && isRecord(base["typescript"])) {
+        base["typescript"] = { ...base["typescript"], ...value };
+      } else {
+        base[key] = value;
+      }
+    }
+    config["format"] = base;
+  }
+}
+
 function configToObject(config: MidoConfig): Record<string, unknown> {
   const obj: Record<string, unknown> = {
     workspace: config.workspace,
     ecosystems: config.ecosystems,
   };
   if (config.bridges && config.bridges.length > 0) {
-    obj['bridges'] = config.bridges;
+    obj["bridges"] = config.bridges;
   }
   if (config.env) {
-    obj['env'] = config.env;
+    obj["env"] = config.env;
   }
   if (config.commits) {
-    obj['commits'] = config.commits;
+    obj["commits"] = config.commits;
   }
   if (config.lint) {
-    obj['lint'] = config.lint;
+    obj["lint"] = config.lint;
   }
   if (config.format) {
-    obj['format'] = config.format;
+    obj["format"] = config.format;
   }
   return obj;
 }
+
+/** Default ignore patterns for lint and format */
+const DEFAULT_IGNORE: readonly string[] = [
+  "dist",
+  "build",
+  "**/*.g.dart",
+  "**/*.freezed.dart",
+  "**/*.generated.dart",
+];
 
 function buildConfigObject(
   name: string,
@@ -977,25 +1007,99 @@ function buildConfigObject(
   };
 
   if (bridges.length > 0) {
-    config['bridges'] = bridges.map((b) => {
+    config["bridges"] = bridges.map((b) => {
       const entry: Record<string, unknown> = {
         source: b.source,
         target: b.target,
         artifact: b.artifact,
       };
       if (b.watch?.length) {
-        entry['watch'] = b.watch;
+        entry["watch"] = b.watch;
       }
       return entry;
     });
   }
 
   if (envFiles.length >= 2) {
-    config['env'] = {
+    config["env"] = {
       shared: [],
       files: envFiles.map((e) => e.path),
     };
   }
+
+  // Format defaults — ecosystem-centric
+  const formatSection: Record<string, unknown> = {
+    ignore: [...DEFAULT_IGNORE],
+  };
+  if (ecosystems["typescript"]) {
+    formatSection["typescript"] = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      semi: true,
+      singleQuote: false,
+      jsxSingleQuote: false,
+      trailingComma: "all",
+      bracketSpacing: true,
+      bracketSameLine: false,
+      arrowParens: "always",
+      proseWrap: "preserve",
+      singleAttributePerLine: false,
+      endOfLine: "lf",
+    };
+  }
+  if (ecosystems["dart"]) {
+    formatSection["dart"] = { lineLength: 80 };
+  }
+  config["format"] = formatSection;
+
+  // Lint defaults — ecosystem-centric
+  const lintSection: Record<string, unknown> = {
+    ignore: [...DEFAULT_IGNORE],
+  };
+  if (ecosystems["typescript"]) {
+    lintSection["typescript"] = {
+      categories: {
+        correctness: "error",
+        suspicious: "warn",
+        perf: "warn",
+      },
+      rules: {},
+    };
+  }
+  if (ecosystems["dart"]) {
+    lintSection["dart"] = { strict: false };
+  }
+  config["lint"] = lintSection;
+
+  // Commits defaults — auto-populate scopes from package names
+  const scopes: string[] = [];
+  for (const group of Object.values(ecosystems)) {
+    for (const pkg of group.packages) {
+      const scope = pkg.split("/").pop();
+      if (scope && !scopes.includes(scope)) {
+        scopes.push(scope);
+      }
+    }
+  }
+  config["commits"] = {
+    types: [
+      "feat",
+      "fix",
+      "docs",
+      "style",
+      "refactor",
+      "perf",
+      "test",
+      "build",
+      "ci",
+      "chore",
+      "revert",
+    ],
+    scopes: scopes.sort(),
+    header_max_length: 100,
+    body_max_line_length: 200,
+  };
 
   return config;
 }
@@ -1003,15 +1107,37 @@ function buildConfigObject(
 function renderYaml(config: Record<string, unknown>): string {
   const doc = new Document(config);
   doc.commentBefore =
-    ' yaml-language-server: $schema=https://raw.githubusercontent.com/oddlantern/mido/main/schema.json';
+    " yaml-language-server: $schema=node_modules/@oddlantern/mido/schema.json\n\n ─────────────────────────────────────────────────────────\n mido — Cross-ecosystem workspace configuration\n Docs: https://github.com/oddlantern/mido\n ─────────────────────────────────────────────────────────";
 
   const comments: ReadonlyMap<string, string> = new Map([
-    ['workspace', ' Workspace name'],
-    ['ecosystems', ' Language ecosystems and their packages'],
-    ['bridges', ' Cross-ecosystem dependencies linked by a shared artifact'],
-    ['env', ' Environment variable parity across packages'],
-    ['lint', ' Linter configuration (rules and ignore patterns)'],
-    ['format', ' Formatter configuration (options and ignore patterns)'],
+    [
+      "workspace",
+      " ─── Workspace ─────────────────────────────────────────\n Workspace name (used in generated package names and CLI output)",
+    ],
+    [
+      "ecosystems",
+      " ─── Ecosystems ────────────────────────────────────────\n Declare which languages your workspace uses and where\n packages live. mido auto-detects these during init.",
+    ],
+    [
+      "bridges",
+      " ─── Bridges ───────────────────────────────────────────\n Cross-ecosystem dependencies linked by a shared artifact.\n\n source:   package that produces the artifact\n target:   package that consumes the artifact\n artifact: the file that connects them\n watch:    files to monitor for changes (used by mido dev)",
+    ],
+    [
+      "env",
+      " ─── Environment ───────────────────────────────────────\n Environment variable parity across packages",
+    ],
+    [
+      "format",
+      " ─── Formatting ────────────────────────────────────────\n Per-ecosystem formatting. mido picks the right tool:\n   TypeScript → oxfmt (bundled with mido)\n   Dart       → dart format\n\n All tool defaults are shown. Change any value to override.",
+    ],
+    [
+      "lint",
+      " ─── Linting ───────────────────────────────────────────\n Per-ecosystem linting. mido picks the right tool:\n   TypeScript → oxlint (bundled with mido)\n   Dart       → dart analyze\n\n mido auto-enables appropriate oxlint plugins based on\n your dependencies (typescript, unicorn, oxc, import by\n default — react, jsx-a11y, react-perf if React detected).",
+    ],
+    [
+      "commits",
+      " ─── Commits ───────────────────────────────────────────\n Conventional commit validation, enforced by mido's\n commit-msg git hook. Run `mido install` to set up hooks.",
+    ],
   ]);
 
   if (isMap(doc.contents)) {
@@ -1041,15 +1167,15 @@ function formatEcosystemList(ecosystems: Record<string, EcosystemGroup>): string
       lines.push(`    ${DIM}${pkg}${RESET}`);
     }
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function groupByEcosystem(packages: readonly DiscoveredPackage[]): Record<string, EcosystemGroup> {
   const groups: Record<string, EcosystemGroup> = {};
 
   const manifestNames: Record<string, string> = {
-    typescript: 'package.json',
-    dart: 'pubspec.yaml',
+    typescript: "package.json",
+    dart: "pubspec.yaml",
   };
 
   for (const pkg of packages) {
@@ -1074,15 +1200,15 @@ function groupByEcosystem(packages: readonly DiscoveredPackage[]): Record<string
 
 // ─── Cleanup ────────────────────────────────────────────────────────────────
 
-const HUSKY_DEPS = ['husky', '@commitlint/cli', '@commitlint/config-conventional'];
-const COMMITLINT_CONFIGS = ['commitlint.config.js', '.commitlintrc.js', '.commitlintrc.json'];
+const HUSKY_DEPS = ["husky", "@commitlint/cli", "@commitlint/config-conventional"];
+const COMMITLINT_CONFIGS = ["commitlint.config.js", ".commitlintrc.js", ".commitlintrc.json"];
 
 const LOCKFILE_TO_REMOVE_CMD: ReadonlyMap<string, string> = new Map([
-  ['bun.lock', 'bun remove'],
-  ['bun.lockb', 'bun remove'],
-  ['pnpm-lock.yaml', 'pnpm remove'],
-  ['yarn.lock', 'yarn remove'],
-  ['package-lock.json', 'npm uninstall'],
+  ["bun.lock", "bun remove"],
+  ["bun.lockb", "bun remove"],
+  ["pnpm-lock.yaml", "pnpm remove"],
+  ["yarn.lock", "yarn remove"],
+  ["package-lock.json", "npm uninstall"],
 ]);
 
 function detectRemoveCommand(root: string): string {
@@ -1091,14 +1217,14 @@ function detectRemoveCommand(root: string): string {
       return cmd;
     }
   }
-  return 'npm uninstall';
+  return "npm uninstall";
 }
 
 async function cleanupReplacedTooling(root: string): Promise<void> {
-  const huskyDir = join(root, '.husky');
+  const huskyDir = join(root, ".husky");
   if (existsSync(huskyDir)) {
     const answer = await confirm({
-      message: 'mido replaces Husky. Remove .husky/ directory?',
+      message: "mido replaces Husky. Remove .husky/ directory?",
       initialValue: true,
     });
     if (isCancel(answer)) {
@@ -1106,7 +1232,7 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
     }
     if (answer) {
       await rm(huskyDir, { recursive: true });
-      log.step('Removed .husky/');
+      log.step("Removed .husky/");
     }
   }
 
@@ -1119,7 +1245,7 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
 
   if (foundConfigs.length > 0) {
     const answer = await confirm({
-      message: 'mido replaces commitlint. Remove commitlint config?',
+      message: "mido replaces commitlint. Remove commitlint config?",
       initialValue: true,
     });
     if (isCancel(answer)) {
@@ -1133,20 +1259,20 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
     }
   }
 
-  const pkgJsonPath = join(root, 'package.json');
+  const pkgJsonPath = join(root, "package.json");
   if (!existsSync(pkgJsonPath)) {
     return;
   }
 
-  const pkgRaw = await readFile(pkgJsonPath, 'utf-8');
+  const pkgRaw = await readFile(pkgJsonPath, "utf-8");
   const pkg = JSON.parse(pkgRaw) as Record<string, unknown>;
-  const devDeps = pkg['devDependencies'] as Record<string, unknown> | undefined;
+  const devDeps = pkg["devDependencies"] as Record<string, unknown> | undefined;
 
   const depsToRemove = devDeps ? HUSKY_DEPS.filter((d) => d in devDeps) : [];
 
   if (depsToRemove.length > 0) {
     const answer = await confirm({
-      message: 'Remove Husky and commitlint from devDependencies?',
+      message: "Remove Husky and commitlint from devDependencies?",
       initialValue: true,
     });
     if (isCancel(answer)) {
@@ -1154,9 +1280,9 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
     }
     if (answer) {
       const cmd = detectRemoveCommand(root);
-      const full = `${cmd} ${depsToRemove.join(' ')}`;
+      const full = `${cmd} ${depsToRemove.join(" ")}`;
       log.step(`$ ${full}`);
-      execSync(full, { cwd: root, stdio: 'inherit' });
+      execSync(full, { cwd: root, stdio: "inherit" });
     }
   }
 
@@ -1165,13 +1291,13 @@ async function cleanupReplacedTooling(root: string): Promise<void> {
     return;
   }
 
-  const freshRaw = await readFile(pkgJsonPath, 'utf-8');
+  const freshRaw = await readFile(pkgJsonPath, "utf-8");
   const freshPkg = JSON.parse(freshRaw) as Record<string, unknown>;
-  const scripts = freshPkg['scripts'] as Record<string, unknown> | undefined;
+  const scripts = freshPkg["scripts"] as Record<string, unknown> | undefined;
 
-  if (scripts && scripts['prepare'] === 'husky') {
-    scripts['prepare'] = 'mido install';
-    await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + '\n', 'utf-8');
+  if (scripts && scripts["prepare"] === "husky") {
+    scripts["prepare"] = "mido install";
+    await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + "\n", "utf-8");
     log.step('Updated scripts.prepare \u2192 "mido install"');
   }
 }
@@ -1184,14 +1310,14 @@ interface MigratedToolConfig {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** Strip single-line (//) and block (/* *​/) comments from JSONC, preserving strings. */
 function stripJsonComments(raw: string): string {
   return raw.replace(
     /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
-    (_match, quoted: string | undefined) => quoted ?? '',
+    (_match, quoted: string | undefined) => quoted ?? "",
   );
 }
 
@@ -1201,14 +1327,12 @@ function parseJsonOrJsonc(raw: string): unknown {
 }
 
 /** Read and parse a JSON/JSONC file if it exists. Returns null on missing or parse error. */
-async function readJsonConfig(
-  filePath: string,
-): Promise<Record<string, unknown> | null> {
+async function readJsonConfig(filePath: string): Promise<Record<string, unknown> | null> {
   if (!existsSync(filePath)) {
     return null;
   }
   try {
-    const raw = await readFile(filePath, 'utf-8');
+    const raw = await readFile(filePath, "utf-8");
     const parsed = parseJsonOrJsonc(raw);
     return isRecord(parsed) ? parsed : null;
   } catch {
@@ -1221,15 +1345,13 @@ async function readJsonConfig(
  * Returns the default export if it's an object, null otherwise.
  * TS files require a loader (tsx) to be available in the runtime.
  */
-async function loadJsConfig(
-  filePath: string,
-): Promise<Record<string, unknown> | null> {
+async function loadJsConfig(filePath: string): Promise<Record<string, unknown> | null> {
   try {
     const mod: unknown = await import(pathToFileURL(filePath).href);
     if (!isRecord(mod)) {
       return null;
     }
-    const config = mod['default'] ?? mod;
+    const config = mod["default"] ?? mod;
     return isRecord(config) ? config : null;
   } catch {
     return null;
@@ -1242,11 +1364,11 @@ async function readIgnorePatterns(filePath: string): Promise<readonly string[]> 
     return [];
   }
   try {
-    const raw = await readFile(filePath, 'utf-8');
+    const raw = await readFile(filePath, "utf-8");
     return raw
-      .split('\n')
+      .split("\n")
       .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith('#'));
+      .filter((line) => line && !line.startsWith("#"));
   } catch {
     return [];
   }
@@ -1271,20 +1393,28 @@ async function promptRemoveFile(filePath: string, label: string): Promise<boolea
 
 // ─── Oxlint config files (checked in priority order) ─────────────────────
 
-const OXLINT_JSON_CONFIGS = ['.oxlintrc.json'] as const;
-const OXLINT_JS_CONFIGS = ['oxlint.config.ts', 'oxlint.config.js'] as const;
+const OXLINT_JSON_CONFIGS = [".oxlintrc.json"] as const;
+const OXLINT_JS_CONFIGS = ["oxlint.config.ts", "oxlint.config.js"] as const;
 
 /**
  * Extract the mido lint section from an oxlint config object.
- * Maps `rules` → `rules`, `ignorePatterns` → `ignore`.
+ * Produces ecosystem-centric structure: { ignore, typescript: { categories, rules } }
  */
 function extractLintConfig(parsed: Record<string, unknown>): Record<string, unknown> {
   const lint: Record<string, unknown> = {};
-  if (isRecord(parsed['rules']) && Object.keys(parsed['rules']).length > 0) {
-    lint['rules'] = parsed['rules'];
+  const ts: Record<string, unknown> = {};
+
+  if (isRecord(parsed["categories"]) && Object.keys(parsed["categories"]).length > 0) {
+    ts["categories"] = parsed["categories"];
   }
-  if (Array.isArray(parsed['ignorePatterns']) && parsed['ignorePatterns'].length > 0) {
-    lint['ignore'] = parsed['ignorePatterns'];
+  if (isRecord(parsed["rules"]) && Object.keys(parsed["rules"]).length > 0) {
+    ts["rules"] = parsed["rules"];
+  }
+  if (Object.keys(ts).length > 0) {
+    lint["typescript"] = ts;
+  }
+  if (Array.isArray(parsed["ignorePatterns"]) && parsed["ignorePatterns"].length > 0) {
+    lint["ignore"] = parsed["ignorePatterns"];
   }
   return lint;
 }
@@ -1292,47 +1422,46 @@ function extractLintConfig(parsed: Record<string, unknown>): Record<string, unkn
 // ─── Oxfmt / Prettier config files (checked in priority order) ───────────
 
 const OXFMT_JSON_CONFIGS = [
-  '.oxfmtrc.json',
-  '.oxfmtrc.jsonc',
-  '.prettierrc.json',
-  '.prettierrc',
+  ".oxfmtrc.json",
+  ".oxfmtrc.jsonc",
+  ".prettierrc.json",
+  ".prettierrc",
 ] as const;
 
-const IGNORE_FILES = ['.oxfmtignore', '.prettierignore'] as const;
+const IGNORE_FILES = [".oxfmtignore", ".prettierignore"] as const;
 
 /** Keys to strip when migrating a format config (internal/meta, not formatting options). */
-const FORMAT_META_KEYS = new Set(['$schema']);
+const FORMAT_META_KEYS = new Set(["$schema"]);
 
 /**
  * Extract all formatting options from an oxfmt/prettier config.
- * Copies every key except meta keys — the full config is preserved.
+ * Produces ecosystem-centric structure: { typescript: { printWidth, semi, ... } }
  */
 function extractFormatConfig(parsed: Record<string, unknown>): Record<string, unknown> {
-  const format: Record<string, unknown> = {};
+  const ts: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (!FORMAT_META_KEYS.has(key)) {
-      format[key] = value;
+      ts[key] = value;
     }
   }
-  return format;
+  if (Object.keys(ts).length === 0) {
+    return {};
+  }
+  return { typescript: ts };
 }
 
 // ─── Stale files to offer removal ────────────────────────────────────────
 
 const STALE_ESLINT_CONFIGS = [
-  '.eslintrc.json',
-  '.eslintrc.js',
-  '.eslintrc.cjs',
-  '.eslintrc.yml',
-  '.eslintrc.yaml',
-  '.eslintrc',
+  ".eslintrc.json",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".eslintrc.yml",
+  ".eslintrc.yaml",
+  ".eslintrc",
 ] as const;
 
-const STALE_PRETTIER_CONFIGS = [
-  '.prettierrc',
-  '.prettierrc.json',
-  '.prettierignore',
-] as const;
+const STALE_PRETTIER_CONFIGS = [".prettierrc", ".prettierrc.json", ".prettierignore"] as const;
 
 /**
  * Migrate existing lint/format config files into mido.yml sections.
@@ -1394,9 +1523,7 @@ async function migrateLintFormatConfig(
           removedFiles.add(name);
         }
       } else {
-        log.warn(
-          `Could not load ${name} — migrate manually into the lint section of mido.yml`,
-        );
+        log.warn(`Could not load ${name} — migrate manually into the lint section of mido.yml`);
         // Still offer removal since the user will migrate manually
         const removed = await promptRemoveFile(filePath, name);
         if (removed) {
@@ -1440,8 +1567,8 @@ async function migrateLintFormatConfig(
     if (!migrated.format) {
       migrated.format = {};
     }
-    const existing = (migrated.format['ignore'] as string[] | undefined) ?? [];
-    migrated.format['ignore'] = [...existing, ...patterns];
+    const existing = (migrated.format["ignore"] as string[] | undefined) ?? [];
+    migrated.format["ignore"] = [...existing, ...patterns];
     log.info(`Migrated ${name} patterns into mido.yml format.ignore`);
 
     const removed = await promptRemoveFile(filePath, name);

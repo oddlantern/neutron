@@ -1,13 +1,13 @@
-import type { FrameworkAdapter } from './types.js';
+import type { FrameworkAdapter } from "./types.js";
 
 export const koaAdapter: FrameworkAdapter = {
-  name: 'koa',
+  name: "koa",
 
   detect(deps: Record<string, string>): boolean {
-    return 'koa' in deps;
+    return "koa" in deps;
   },
 
-  openapiPlugins: ['koa2-swagger-ui', 'swagger-jsdoc'],
-  defaultSpecPath: '/swagger.json',
-  fallbackSpecPaths: ['/api-docs', '/openapi.json'],
+  openapiPlugins: ["koa2-swagger-ui", "swagger-jsdoc"],
+  defaultSpecPath: "/swagger.json",
+  fallbackSpecPaths: ["/api-docs", "/openapi.json"],
 };

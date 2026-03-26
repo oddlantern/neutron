@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
-import type { WorkspaceGraph } from '../graph/types.js';
-import type { CheckIssue, CheckResult } from './types.js';
+import type { WorkspaceGraph } from "../graph/types.js";
+import type { CheckIssue, CheckResult } from "./types.js";
 
 /**
  * Validate that all declared bridges reference existing packages
@@ -15,8 +15,8 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
     // Check that source package exists in the graph
     if (!graph.packages.has(bridge.source)) {
       issues.push({
-        severity: 'error',
-        check: 'bridges',
+        severity: "error",
+        check: "bridges",
         message: `Bridge source package not found in workspace: ${bridge.source}`,
         details: `Declared bridge: ${bridge.source} → ${bridge.target} via ${bridge.artifact}`,
       });
@@ -25,8 +25,8 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
     // Check that target package exists in the graph
     if (!graph.packages.has(bridge.target)) {
       issues.push({
-        severity: 'error',
-        check: 'bridges',
+        severity: "error",
+        check: "bridges",
         message: `Bridge target package not found in workspace: ${bridge.target}`,
         details: `Declared bridge: ${bridge.source} → ${bridge.target} via ${bridge.artifact}`,
       });
@@ -36,8 +36,8 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
     const artifactPath = resolve(graph.root, bridge.artifact);
     if (!existsSync(artifactPath)) {
       issues.push({
-        severity: 'error',
-        check: 'bridges',
+        severity: "error",
+        check: "bridges",
         message: `Bridge artifact not found: ${bridge.artifact}`,
         details: `Expected at ${artifactPath}\nBridge: ${bridge.source} → ${bridge.target}`,
       });
@@ -49,18 +49,18 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
 
     if (sourcePkg && targetPkg && sourcePkg.ecosystem === targetPkg.ecosystem) {
       issues.push({
-        severity: 'warning',
-        check: 'bridges',
+        severity: "warning",
+        check: "bridges",
         message: `Bridge connects packages in the same ecosystem (${sourcePkg.ecosystem}): ${bridge.source} → ${bridge.target}`,
         details:
-          'Bridges are intended for cross-ecosystem edges. Intra-ecosystem dependencies should be declared in manifest files.',
+          "Bridges are intended for cross-ecosystem edges. Intra-ecosystem dependencies should be declared in manifest files.",
       });
     }
   }
 
   return {
-    check: 'bridges',
-    passed: issues.filter((i) => i.severity === 'error').length === 0,
+    check: "bridges",
+    passed: issues.filter((i) => i.severity === "error").length === 0,
     issues,
     summary:
       issues.length === 0

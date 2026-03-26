@@ -1,12 +1,12 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 const LOCKFILE_TO_PM: ReadonlyMap<string, string> = new Map([
-  ['bun.lock', 'bun'],
-  ['bun.lockb', 'bun'],
-  ['pnpm-lock.yaml', 'pnpm'],
-  ['yarn.lock', 'yarn'],
-  ['package-lock.json', 'npm'],
+  ["bun.lock", "bun"],
+  ["bun.lockb", "bun"],
+  ["pnpm-lock.yaml", "pnpm"],
+  ["yarn.lock", "yarn"],
+  ["package-lock.json", "npm"],
 ]);
 
 /** Detect package manager from lockfiles in the workspace root */
@@ -16,5 +16,5 @@ export function detectPackageManager(root: string): string {
       return pm;
     }
   }
-  return 'npm';
+  return "npm";
 }

@@ -1,4 +1,4 @@
-import { confirm, isCancel, select, text, cancel } from '@clack/prompts';
+import { confirm, isCancel, select, text, cancel } from "@clack/prompts";
 
 export interface DepChoice {
   readonly range: string;
@@ -15,7 +15,7 @@ export interface VersionResolution {
 }
 
 function handleCancel(): never {
-  cancel('Aborted.');
+  cancel("Aborted.");
   process.exit(0);
 }
 
@@ -38,8 +38,8 @@ export async function promptVersionResolution(
     hint: `${c.packagePath} (${c.ecosystem}) [${c.type}]`,
   }));
 
-  options.push({ value: 'skip', label: 'Skip', hint: '' });
-  options.push({ value: 'custom', label: 'Custom range', hint: '' });
+  options.push({ value: "skip", label: "Skip", hint: "" });
+  options.push({ value: "custom", label: "Custom range", hint: "" });
 
   const answer = await select({ message, options });
 
@@ -47,14 +47,14 @@ export async function promptVersionResolution(
     handleCancel();
   }
 
-  if (answer === 'skip') {
+  if (answer === "skip") {
     return null;
   }
 
   let chosenRange: string;
 
-  if (answer === 'custom') {
-    const custom = await text({ message: 'Custom range:' });
+  if (answer === "custom") {
+    const custom = await text({ message: "Custom range:" });
     if (isCancel(custom) || !custom) {
       return null;
     }

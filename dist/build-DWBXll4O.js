@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { i as GREEN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
-import { t as loadConfig } from "./loader-D-FGp-6W.js";
+import { t as loadConfig } from "./loader-COlyl5x_.js";
 import { t as buildWorkspaceGraph } from "./workspace-B2H5BXLY.js";
-import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-2wPMEgE6.js";
+import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-BdHSAy8K.js";
 import { t as detectPackageManager } from "./pm-detect-wR8KpsCR.js";
 //#region src/commands/build.ts
 const PASS = `${GREEN}✓${RESET}`;
@@ -69,4 +69,4 @@ function groupByEcosystem(packages, options) {
 //#endregion
 export { runBuild };
 
-//# sourceMappingURL=build-CTkyaSbj.js.map
+//# sourceMappingURL=build-DWBXll4O.js.map

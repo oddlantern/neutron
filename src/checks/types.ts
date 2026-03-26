@@ -1,4 +1,4 @@
-export type Severity = 'error' | 'warning';
+export type Severity = "error" | "warning";
 
 export interface CheckIssue {
   readonly severity: Severity;

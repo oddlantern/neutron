@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { i as GREEN, o as RED, s as RESET } from "./output-D1Xg1ws_.js";
-import { runCheck } from "./check-yCF5--1I.js";
-import { runFmt } from "./fmt-CX7aluAQ.js";
-import { runLint } from "./lint-BihbvCq4.js";
+import { runCheck } from "./check-B6CS7OcE.js";
+import { runFmt } from "./fmt-BUBJHcWJ.js";
+import { runLint } from "./lint-cxPlZyvU.js";
 //#region src/commands/pre-commit.ts
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
@@ -44,4 +44,4 @@ async function runPreCommit(parsers) {
 //#endregion
 export { runPreCommit };
 
-//# sourceMappingURL=pre-commit-LYrQ4zDy.js.map
+//# sourceMappingURL=pre-commit-mpkUvFSD.js.map

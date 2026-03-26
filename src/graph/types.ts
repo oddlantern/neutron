@@ -5,7 +5,7 @@
 export interface Dependency {
   readonly name: string;
   readonly range: string;
-  readonly type: 'production' | 'dev' | 'peer' | 'optional' | 'override';
+  readonly type: "production" | "dev" | "peer" | "optional" | "override";
 }
 
 /**

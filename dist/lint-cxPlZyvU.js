@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { i as GREEN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
-import { t as loadConfig } from "./loader-D-FGp-6W.js";
+import { t as loadConfig } from "./loader-COlyl5x_.js";
 import { t as buildWorkspaceGraph } from "./workspace-B2H5BXLY.js";
-import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-2wPMEgE6.js";
+import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-BdHSAy8K.js";
 import { t as detectPackageManager } from "./pm-detect-wR8KpsCR.js";
 import { t as resolveFiles } from "./resolver-C0fej5bN.js";
 import { join } from "node:path";
@@ -33,7 +33,10 @@ async function runLint(parsers, options = {}) {
 	const plugins = loadPlugins();
 	const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
 	const pm = detectPackageManager(root);
-	const context = registry.createContext(graph, root, pm, config.lint ? { lintConfig: config.lint } : void 0);
+	const context = registry.createContext(graph, root, pm, config.lint || config.format ? {
+		...config.lint ? { lintConfig: config.lint } : {},
+		...config.format ? { formatConfig: config.format } : {}
+	} : void 0);
 	const action = fix ? STANDARD_ACTIONS.LINT_FIX : STANDARD_ACTIONS.LINT;
 	const grouped = groupByEcosystem(graph.packages, options);
 	let hasErrors = false;
@@ -95,4 +98,4 @@ function groupByEcosystem(packages, options) {
 //#endregion
 export { runLint };
 
-//# sourceMappingURL=lint-BihbvCq4.js.map
+//# sourceMappingURL=lint-cxPlZyvU.js.map

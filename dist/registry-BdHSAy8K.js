@@ -3,7 +3,7 @@ import { t as MIDO_ROOT } from "./version-WDd4fw5u.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { parse } from "yaml";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 //#region src/plugins/types.ts
@@ -183,27 +183,91 @@ function ensureCacheDir(root) {
 	mkdirSync(cacheDir, { recursive: true });
 	return cacheDir;
 }
+/** Oxlint plugins always enabled */
+const ALWAYS_ENABLED_PLUGINS = [
+	"typescript",
+	"unicorn",
+	"oxc",
+	"import"
+];
+/** Dependency-to-plugin mapping for auto-detection */
+const DEP_PLUGIN_MAP = new Map([
+	["react", [
+		"react",
+		"jsx-a11y",
+		"react-perf"
+	]],
+	["preact", [
+		"react",
+		"jsx-a11y",
+		"react-perf"
+	]],
+	["@preact/preset-vite", [
+		"react",
+		"jsx-a11y",
+		"react-perf"
+	]],
+	["jest", ["jest"]],
+	["vitest", ["vitest"]],
+	["next", ["nextjs"]]
+]);
 /**
-* Generate a temporary oxlintrc.json from the mido lint config.
-* Only writes rules — ignore patterns are handled by the central file resolver.
+* Auto-detect oxlint plugins based on workspace dependencies.
+* Always enables: typescript, unicorn, oxc, import.
+* Conditionally enables: react, jsx-a11y, react-perf (if React/Preact), jest, vitest, nextjs.
+*/
+function detectOxlintPlugins(pkg, root) {
+	const plugins = new Set(ALWAYS_ENABLED_PLUGINS);
+	try {
+		const manifestPath = join(root, pkg.path, "package.json");
+		if (!existsSync(manifestPath)) return [...plugins];
+		const raw = readFileSync(manifestPath, "utf-8");
+		const manifest = JSON.parse(raw);
+		if (typeof manifest !== "object" || !manifest) return [...plugins];
+		const record = manifest;
+		for (const [dep, depPlugins] of DEP_PLUGIN_MAP) if (hasDep$1(record, dep)) for (const p of depPlugins) plugins.add(p);
+	} catch {}
+	return [...plugins];
+}
+const ALL_CATEGORIES = [
+	"correctness",
+	"suspicious",
+	"pedantic",
+	"perf",
+	"style",
+	"restriction",
+	"nursery"
+];
+/**
+* Generate a temporary oxlintrc.json from the mido lint.typescript config.
+* Includes categories, rules, and auto-detected plugins.
 * Returns the path to the file, or null if no config is needed.
 */
-function writeOxlintConfig(root, lint) {
-	if (!(lint.rules && Object.keys(lint.rules).length > 0)) return null;
-	const config = { rules: lint.rules };
+function writeOxlintConfig(root, lint, plugins) {
+	const config = {};
+	if (lint.categories) {
+		const categories = {};
+		for (const cat of ALL_CATEGORIES) {
+			const level = lint.categories[cat];
+			if (level) categories[cat] = level;
+		}
+		if (Object.keys(categories).length > 0) config["categories"] = categories;
+	}
+	if (lint.rules && Object.keys(lint.rules).length > 0) config["rules"] = lint.rules;
+	if (plugins.length > 0) config["plugins"] = plugins;
+	if (!config["categories"] && !config["rules"] && plugins.length <= ALWAYS_ENABLED_PLUGINS.length) if (plugins.length > 0) config["plugins"] = plugins;
+	else return null;
 	const configPath = join(ensureCacheDir(root), "oxlintrc.json");
 	writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
 	return configPath;
 }
 /**
-* Generate a temporary oxfmtrc.json from the mido format config.
-* All keys except `ignore` are forwarded to the JSON config verbatim.
-* Ignore patterns are handled by the central file resolver.
+* Generate a temporary oxfmtrc.json from the mido format.typescript config.
 * Returns the config path, or null if no config is needed.
 */
 function writeOxfmtConfig(root, format) {
 	const opts = {};
-	for (const [key, value] of Object.entries(format)) if (key !== "ignore") opts[key] = value;
+	for (const [key, value] of Object.entries(format)) if (value !== void 0) opts[key] = value;
 	if (Object.keys(opts).length === 0) return null;
 	const configPath = join(ensureCacheDir(root), "oxfmtrc.json");
 	writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
@@ -282,10 +346,10 @@ const typescriptPlugin = {
 			const oxlint = resolveBin("oxlint", root);
 			if (oxlint) {
 				const args = [];
-				if (context.lintConfig) {
-					const configPath = writeOxlintConfig(root, context.lintConfig);
-					if (configPath) args.push("--config", configPath);
-				}
+				const plugins = detectOxlintPlugins(pkg, root);
+				const lintTs = context.lintTypescript;
+				const configPath = writeOxlintConfig(root, lintTs ?? {}, plugins);
+				if (configPath) args.push("--config", configPath);
 				if (fix) args.push("--fix");
 				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
 				else {
@@ -310,8 +374,9 @@ const typescriptPlugin = {
 			const oxfmt = resolveBin("oxfmt", root);
 			if (oxfmt) {
 				const args = [];
-				if (context.formatConfig) {
-					const configPath = writeOxfmtConfig(root, context.formatConfig);
+				const fmtTs = context.formatTypescript;
+				if (fmtTs) {
+					const configPath = writeOxfmtConfig(root, fmtTs);
 					if (configPath) args.push("--config", configPath);
 				}
 				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
@@ -338,8 +403,9 @@ const typescriptPlugin = {
 			const oxfmt = resolveBin("oxfmt", root);
 			if (oxfmt) {
 				const args = ["--check"];
-				if (context.formatConfig) {
-					const configPath = writeOxfmtConfig(root, context.formatConfig);
+				const fmtTs = context.formatTypescript;
+				if (fmtTs) {
+					const configPath = writeOxfmtConfig(root, fmtTs);
 					if (configPath) args.push("--config", configPath);
 				}
 				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
@@ -486,9 +552,13 @@ const dartPlugin = {
 		const dartCmd = flutter ? "flutter" : "dart";
 		const analyzeCmd = flutter ? "flutter" : "dart";
 		switch (action) {
-			case STANDARD_ACTIONS.LINT:
-				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand(analyzeCmd, ["analyze", ...context.resolvedFiles], cwd);
-				return runCommand(analyzeCmd, ["analyze", "."], cwd);
+			case STANDARD_ACTIONS.LINT: {
+				const args = ["analyze"];
+				if (context.lintDart?.strict) args.push("--fatal-infos");
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
+				else args.push(".");
+				return runCommand(analyzeCmd, args, cwd);
+			}
 			case STANDARD_ACTIONS.LINT_FIX:
 				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand("dart", [
 					"fix",
@@ -501,28 +571,30 @@ const dartPlugin = {
 					"."
 				], cwd);
 			case STANDARD_ACTIONS.FORMAT: {
-				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand("dart", ["format", ...context.resolvedFiles], cwd);
-				const libDir = join(cwd, "lib");
-				const binDir = join(cwd, "bin");
-				const targets = [libDir];
-				if (existsSync(binDir)) targets.push(binDir);
-				return runCommand("dart", ["format", ...targets], cwd);
+				const args = ["format"];
+				if (context.formatDart?.lineLength) args.push("--line-length", String(context.formatDart.lineLength));
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
+				else {
+					const libDir = join(cwd, "lib");
+					const binDir = join(cwd, "bin");
+					const targets = [libDir];
+					if (existsSync(binDir)) targets.push(binDir);
+					args.push(...targets);
+				}
+				return runCommand("dart", args, cwd);
 			}
 			case STANDARD_ACTIONS.FORMAT_CHECK: {
-				if (context.resolvedFiles && context.resolvedFiles.length > 0) return runCommand("dart", [
-					"format",
-					"--set-exit-if-changed",
-					...context.resolvedFiles
-				], cwd);
-				const libDir = join(cwd, "lib");
-				const binDir = join(cwd, "bin");
-				const targets = [libDir];
-				if (existsSync(binDir)) targets.push(binDir);
-				return runCommand("dart", [
-					"format",
-					"--set-exit-if-changed",
-					...targets
-				], cwd);
+				const args = ["format", "--set-exit-if-changed"];
+				if (context.formatDart?.lineLength) args.push("--line-length", String(context.formatDart.lineLength));
+				if (context.resolvedFiles && context.resolvedFiles.length > 0) args.push(...context.resolvedFiles);
+				else {
+					const libDir = join(cwd, "lib");
+					const binDir = join(cwd, "bin");
+					const targets = [libDir];
+					if (existsSync(binDir)) targets.push(binDir);
+					args.push(...targets);
+				}
+				return runCommand("dart", args, cwd);
 			}
 			case STANDARD_ACTIONS.BUILD: return runCommand("dart", [
 				"run",
@@ -1229,6 +1301,10 @@ var PluginRegistry = class {
 			verbose: options?.verbose,
 			lintConfig: options?.lintConfig,
 			formatConfig: options?.formatConfig,
+			lintTypescript: options?.lintConfig?.typescript,
+			lintDart: options?.lintConfig?.dart,
+			formatTypescript: options?.formatConfig?.typescript,
+			formatDart: options?.formatConfig?.dart,
 			findEcosystemHandlers: async (domain, artifact) => {
 				const allTargets = [...graph.packages.values()];
 				return this.findEcosystemHandlers(domain, artifact, allTargets, root);
@@ -1239,4 +1315,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-2wPMEgE6.js.map
+//# sourceMappingURL=registry-BdHSAy8K.js.map

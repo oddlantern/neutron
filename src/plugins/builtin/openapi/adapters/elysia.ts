@@ -1,13 +1,13 @@
-import type { FrameworkAdapter } from './types.js';
+import type { FrameworkAdapter } from "./types.js";
 
 export const elysiaAdapter: FrameworkAdapter = {
-  name: 'elysia',
+  name: "elysia",
 
   detect(deps: Record<string, string>): boolean {
-    return 'elysia' in deps;
+    return "elysia" in deps;
   },
 
-  openapiPlugins: ['@elysiajs/openapi', '@elysiajs/swagger'],
-  defaultSpecPath: '/openapi/json',
-  fallbackSpecPaths: ['/swagger/json'],
+  openapiPlugins: ["@elysiajs/openapi", "@elysiajs/swagger"],
+  defaultSpecPath: "/openapi/json",
+  fallbackSpecPaths: ["/swagger/json"],
 };

@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { dirname, join, relative, resolve } from "node:path";
 
-import type { DiscoveredPackage } from './scanner.js';
+import type { DiscoveredPackage } from "./scanner.js";
 
 export interface BridgeCandidate {
   readonly source: string;
@@ -15,22 +15,22 @@ export interface EnvCandidate {
   readonly path: string;
 }
 
-const ARTIFACT_FILENAMES = ['openapi.json', 'openapi.yaml', 'swagger.json', 'tokens.json'];
+const ARTIFACT_FILENAMES = ["openapi.json", "openapi.yaml", "swagger.json", "tokens.json"];
 
 /**
  * Classify a package path as "app" or "lib" based on directory conventions.
  * Returns null if the path doesn't match known patterns.
  */
-export function classifyPackage(pkgPath: string): 'app' | 'lib' | null {
-  if (pkgPath.startsWith('apps/') || pkgPath.startsWith('app/')) {
-    return 'app';
+export function classifyPackage(pkgPath: string): "app" | "lib" | null {
+  if (pkgPath.startsWith("apps/") || pkgPath.startsWith("app/")) {
+    return "app";
   }
   if (
-    pkgPath.startsWith('packages/') ||
-    pkgPath.startsWith('libs/') ||
-    pkgPath.startsWith('lib/')
+    pkgPath.startsWith("packages/") ||
+    pkgPath.startsWith("libs/") ||
+    pkgPath.startsWith("lib/")
   ) {
-    return 'lib';
+    return "lib";
   }
   return null;
 }
@@ -79,13 +79,13 @@ export async function detectBridges(
 
   // Strategy 2: Detect Dart path dependencies pointing to TS packages
   for (const pkg of packages) {
-    if (pkg.ecosystem !== 'dart') {
+    if (pkg.ecosystem !== "dart") {
       continue;
     }
 
-    const pubspecPath = join(root, pkg.path, 'pubspec.yaml');
+    const pubspecPath = join(root, pkg.path, "pubspec.yaml");
     try {
-      const raw = await readFile(pubspecPath, 'utf-8');
+      const raw = await readFile(pubspecPath, "utf-8");
 
       // Simple regex for path dependencies
       const pathDepPattern = /path:\s+(.+)/g;
@@ -100,7 +100,7 @@ export async function detectBridges(
         const relPath = relative(root, resolvedPath);
 
         const targetPkg = packagesByPath.get(relPath);
-        if (targetPkg && targetPkg.ecosystem !== 'dart') {
+        if (targetPkg && targetPkg.ecosystem !== "dart") {
           // Dart package has a path dep to a non-Dart package — bridge candidate
           candidates.push({
             source: targetPkg.path,
@@ -137,7 +137,7 @@ export async function detectBridges(
  */
 function isPlausibleConsumer(producerPath: string, consumerPath: string): boolean {
   // Consumer is a subdirectory of producer
-  if (consumerPath.startsWith(producerPath + '/')) {
+  if (consumerPath.startsWith(producerPath + "/")) {
     return true;
   }
 
@@ -159,7 +159,7 @@ export function detectEnvFiles(
   packages: readonly DiscoveredPackage[],
 ): readonly EnvCandidate[] {
   const candidates: EnvCandidate[] = [];
-  const envNames = ['.env.example', '.env.template'];
+  const envNames = [".env.example", ".env.template"];
 
   for (const pkg of packages) {
     const pkgDir = resolve(root, pkg.path);

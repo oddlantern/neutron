@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { c as YELLOW, i as GREEN, n as CYAN, o as RED, r as DIM, s as RESET, t as BOLD } from "./output-D1Xg1ws_.js";
-import { t as loadConfig } from "./loader-D-FGp-6W.js";
+import { t as loadConfig } from "./loader-COlyl5x_.js";
 import { t as buildWorkspaceGraph } from "./workspace-B2H5BXLY.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-2wPMEgE6.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BdHSAy8K.js";
 import { t as detectPackageManager } from "./pm-detect-wR8KpsCR.js";
 import { lstat, readFile, readdir, realpath, stat } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
@@ -2016,4 +2016,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-9UYrenpG.js.map
+//# sourceMappingURL=dev-DuTTzgeV.js.map

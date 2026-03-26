@@ -5,6 +5,8 @@ Cross-ecosystem monorepo workspace tool. Package: `@oddlantern/mido`. Binary: `m
 ## Architecture
 
 ```
+scripts/
+  generate-schema.ts     # JSON schema generator → schema.json (build-time)
 src/
   bin.ts                 # CLI entry point, command router
   output.ts              # ANSI terminal formatting
@@ -12,8 +14,10 @@ src/
   prompt.ts              # Interactive prompts (@clack/prompts wrappers)
   manifest-writer.ts     # Write version ranges back to manifests
   config/
-    schema.ts            # Zod schema for mido.yml (ecosystems, bridges, env, commits, lint, format)
+    schema.ts            # Zod schema for mido.yml (ecosystem-centric format/lint/commits)
     loader.ts            # Walk-up config finder + validator + auto-migration
+  files/
+    resolver.ts          # Central file resolution with ignore pattern support
   graph/
     types.ts             # WorkspacePackage, Bridge, WorkspaceGraph
     workspace.ts         # Build cross-ecosystem DAG from config + parsers
@@ -84,7 +88,12 @@ src/
 - **Bridge-level overrides for edge cases.** Bridges support optional `entryFile` (server entry point) and `specPath` (custom spec endpoint) for when auto-detection fails.
 - **Standard actions across ecosystems.** `STANDARD_ACTIONS` in `src/plugins/types.ts` defines lint, lint:fix, format, format:check, build, typecheck, codegen. Ecosystem plugins implement whichever actions apply. The `lint`, `fmt`, `build` commands dispatch these actions per-package.
 - **Tool resolution for lint/format.** mido bundles oxlint and oxfmt as direct dependencies. TS plugin checks workspace `node_modules/.bin/` first (user override), then mido's own bundled `node_modules/.bin/`, then `eslint`/`prettier` as fallbacks. Dart plugin uses `dart analyze`/`dart format` from PATH. Missing tools produce a warning, not an error.
-- **Lint/format config lives in mido.yml.** The optional `lint` and `format` sections in `mido.yml` configure oxlint and oxfmt. The TS plugin generates temporary `.oxlintrc.json` and `.oxfmtrc.json` at runtime in `node_modules/.cache/mido/` and passes `--config` flags to the tools. No config files committed to the repo. `mido init` migrates existing `.oxlintrc.json`, `.oxfmtrc.json`, and `.oxfmtignore` into mido.yml.
+- **Config is ecosystem-centric, not tool-centric.** `format.typescript` holds oxfmt options, `format.dart` holds dart format options. `lint.typescript` holds oxlint categories/rules, `lint.dart` holds dart analyze options. Users never write tool names — mido picks the right tool per ecosystem. `format.ignore` and `lint.ignore` apply across all ecosystems.
+- **Oxlint plugins are auto-enabled.** The TS plugin detects dependencies and enables oxlint plugins automatically: always `typescript`, `unicorn`, `oxc`, `import`; conditionally `react`, `jsx-a11y`, `react-perf` (if React/Preact), `jest`, `vitest`, `nextjs`.
+- **Lint categories map to oxlint categories.** `lint.typescript.categories` (correctness, suspicious, pedantic, perf, style, restriction, nursery) map directly to oxlint's `--categories` config. Default: correctness=error, suspicious=warn, perf=warn.
+- **Lint/format config lives in mido.yml.** The `lint` and `format` sections configure tools per ecosystem. The TS plugin generates temporary `.oxlintrc.json` and `.oxfmtrc.json` at runtime in `node_modules/.cache/mido/` and passes `--config` flags to the tools. No config files committed to the repo. `mido init` migrates existing configs into the ecosystem-centric structure.
+- **JSON schema for VS Code autocomplete.** `scripts/generate-schema.ts` produces `schema.json` at build time. The `yaml-language-server` comment in generated mido.yml points to `node_modules/@oddlantern/mido/schema.json`. Schema ships with the npm package.
+- **Commits is a top-level config section.** Not nested under lint. `mido init` auto-populates `commits.scopes` from detected package names.
 - **Pre-commit is a single command.** `mido pre-commit` runs format check → lint → workspace check in sequence, stopping on first failure. The pre-commit hook installed by `mido install` is just `mido pre-commit`.
 - **Parallel execution within ecosystems.** Lint and format run packages within the same ecosystem in parallel via `Promise.all`. Build runs sequentially (build order may matter).
 
@@ -178,4 +187,4 @@ Build output is `dist/bin.js` (ESM, Node 20 target, sourcemaps). The `bin` field
 - Do not write Bun-specific code in `src/`. The published binary runs on Node.js.
 - Do not auto-format on commit hooks. The pre-commit hook runs `mido pre-commit` (format check + lint + workspace check). It checks formatting but does not auto-fix.
 - Do not add CLI framework deps (commander, yargs, etc). The command router is ~30 lines and that's intentional.
-- Do not create separate `.oxlintrc.json`, `.oxfmtrc.json`, or `.oxfmtignore` files. All lint and format config lives in the `lint` and `format` sections of `mido.yml`. The TS plugin generates temporary config files at runtime in `node_modules/.cache/mido/`.
+- Do not create separate `.oxlintrc.json`, `.oxfmtrc.json`, or `.oxfmtignore` files. All lint and format config lives in the ecosystem-centric `lint` and `format` sections of `mido.yml` (e.g., `format.typescript`, `lint.typescript.categories`). The TS plugin generates temporary config files at runtime in `node_modules/.cache/mido/`.

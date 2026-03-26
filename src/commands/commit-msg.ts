@@ -1,15 +1,15 @@
-import { readFile } from 'node:fs/promises';
+import { readFile } from "node:fs/promises";
 
-import { loadConfig } from '../config/loader.js';
-import { DEFAULT_COMMIT_TYPES } from '../config/schema.js';
-import type { CommitsConfig } from '../config/schema.js';
-import { validateCommitMessage } from '../commit/validator.js';
+import { loadConfig } from "../config/loader.js";
+import { DEFAULT_COMMIT_TYPES } from "../config/schema.js";
+import type { CommitsConfig } from "../config/schema.js";
+import { validateCommitMessage } from "../commit/validator.js";
 
-const RESET = '\x1b[0m';
-const BOLD = '\x1b[1m';
-const DIM = '\x1b[2m';
-const RED = '\x1b[31m';
-const YELLOW = '\x1b[33m';
+const RESET = "\x1b[0m";
+const BOLD = "\x1b[1m";
+const DIM = "\x1b[2m";
+const RED = "\x1b[31m";
+const YELLOW = "\x1b[33m";
 
 const FAIL = `${RED}✗${RESET}`;
 const WARN = `${YELLOW}⚠${RESET}`;
@@ -27,7 +27,7 @@ const FALLBACK_CONFIG: CommitsConfig = {
  * @returns exit code (0 = valid, 1 = invalid)
  */
 export async function runCommitMsg(filePath: string): Promise<number> {
-  const raw = await readFile(filePath, 'utf-8');
+  const raw = await readFile(filePath, "utf-8");
   const message = raw.trim();
 
   if (!message) {
@@ -59,20 +59,20 @@ export async function runCommitMsg(filePath: string): Promise<number> {
   }
 
   // Invalid — show header and all issues
-  const header = message.split('\n')[0] ?? '';
+  const header = message.split("\n")[0] ?? "";
   console.error(`\n${FAIL} ${BOLD}commit message invalid${RESET}\n`);
   console.error(`  header: ${DIM}"${header}"${RESET}`);
 
   for (const issue of result.issues) {
-    const icon = issue.severity === 'error' ? FAIL : WARN;
+    const icon = issue.severity === "error" ? FAIL : WARN;
     console.error(`  ${icon} ${issue.field}: ${issue.message}`);
   }
 
   // Show helpful examples
-  console.error('');
+  console.error("");
   console.error(`  ${DIM}Use: feat: add new feature${RESET}`);
   console.error(`  ${DIM}     fix(server): resolve auth timeout${RESET}`);
-  console.error('');
+  console.error("");
 
   return 1;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@oddlantern/mido",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "description": "Cross-ecosystem monorepo workspace tool",
   "type": "module",
   "bin": {
@@ -11,7 +11,8 @@
     "schema.json"
   ],
   "scripts": {
-    "build": "tsdown",
+    "generate:schema": "tsx scripts/generate-schema.ts",
+    "build": "tsx scripts/generate-schema.ts && tsdown",
     "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src/",

@@ -1,12 +1,12 @@
-import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import type {
   ExecutablePipelineStep,
   PipelineResult,
   PipelineStepResult,
-} from '../plugins/types.js';
+} from "../plugins/types.js";
 
 /**
  * Hash a file's contents. Returns empty string if the file doesn't exist.
@@ -14,9 +14,9 @@ import type {
 async function hashFile(filePath: string): Promise<string> {
   try {
     const content = await readFile(filePath);
-    return createHash('sha256').update(content).digest('hex');
+    return createHash("sha256").update(content).digest("hex");
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -46,7 +46,7 @@ function hasChanges(
   after: ReadonlyMap<string, string>,
 ): boolean {
   for (const [path, beforeHash] of before) {
-    const afterHash = after.get(path) ?? '';
+    const afterHash = after.get(path) ?? "";
     // File didn't exist before and still doesn't — expected output never materialized
     if (!beforeHash && !afterHash) {
       return true;

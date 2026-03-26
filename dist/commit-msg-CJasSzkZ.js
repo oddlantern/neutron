@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { n as DEFAULT_COMMIT_TYPES, t as loadConfig } from "./loader-D-FGp-6W.js";
+import { n as DEFAULT_COMMIT_TYPES, t as loadConfig } from "./loader-COlyl5x_.js";
 import { readFile } from "node:fs/promises";
 //#region src/commit/validator.ts
 const HEADER_PATTERN = /^(?<type>\w+)(?:\((?<scope>[^)]+)\))?(?<breaking>!)?:\s(?<subject>.+)$/;
@@ -142,4 +142,4 @@ async function runCommitMsg(filePath) {
 //#endregion
 export { runCommitMsg };
 
-//# sourceMappingURL=commit-msg-Cjw_UCak.js.map
+//# sourceMappingURL=commit-msg-CJasSzkZ.js.map

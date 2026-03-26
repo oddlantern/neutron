@@ -1,12 +1,12 @@
-import type { FormatConfig, LintConfig } from '../config/schema.js';
-import type { WorkspaceGraph, WorkspacePackage } from '../graph/types.js';
+import type { FormatConfig, LintConfig } from "../config/schema.js";
+import type { WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
 import type {
   DomainPlugin,
   EcosystemHandler,
   EcosystemPlugin,
   ExecutionContext,
   WatchPathSuggestion,
-} from './types.js';
+} from "./types.js";
 
 /**
  * Holds loaded plugins and provides context factory for plugin execution.
@@ -106,6 +106,10 @@ export class PluginRegistry {
       verbose: options?.verbose,
       lintConfig: options?.lintConfig,
       formatConfig: options?.formatConfig,
+      lintTypescript: options?.lintConfig?.typescript,
+      lintDart: options?.lintConfig?.dart,
+      formatTypescript: options?.formatConfig?.typescript,
+      formatDart: options?.formatConfig?.dart,
       findEcosystemHandlers: async (domain: string, artifact: string) => {
         const allTargets = [...graph.packages.values()];
         return this.findEcosystemHandlers(domain, artifact, allTargets, root);

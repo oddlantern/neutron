@@ -1,4 +1,11 @@
-import type { FormatConfig, LintConfig } from "../config/schema.js";
+import type {
+  FormatConfig,
+  FormatDartConfig,
+  FormatTypescriptConfig,
+  LintConfig,
+  LintDartConfig,
+  LintTypescriptConfig,
+} from "../config/schema.js";
 import type { WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
 
 /** Standard action names shared across ecosystem plugins */
@@ -226,10 +233,18 @@ export interface ExecutionContext {
   readonly artifactPath?: string | undefined;
   /** Verbose logging enabled */
   readonly verbose?: boolean | undefined;
-  /** Lint configuration from mido.yml */
+  /** Full lint configuration from mido.yml */
   readonly lintConfig?: LintConfig | undefined;
-  /** Format configuration from mido.yml */
+  /** Full format configuration from mido.yml */
   readonly formatConfig?: FormatConfig | undefined;
+  /** Ecosystem-specific lint config (resolved by the command before calling plugin) */
+  readonly lintTypescript?: LintTypescriptConfig | undefined;
+  /** Ecosystem-specific lint config for Dart */
+  readonly lintDart?: LintDartConfig | undefined;
+  /** Ecosystem-specific format config (resolved by the command before calling plugin) */
+  readonly formatTypescript?: FormatTypescriptConfig | undefined;
+  /** Ecosystem-specific format config for Dart */
+  readonly formatDart?: FormatDartConfig | undefined;
   /** Pre-resolved file paths (relative to package root) — plugins use these instead of scanning directories */
   readonly resolvedFiles?: readonly string[] | undefined;
 }

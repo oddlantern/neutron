@@ -1,24 +1,24 @@
-import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { Dependency } from '../graph/types.js';
-import type { ManifestParser, ParsedManifest } from './types.js';
+import type { Dependency } from "../graph/types.js";
+import type { ManifestParser, ParsedManifest } from "./types.js";
 
-type DepType = Dependency['type'];
+type DepType = Dependency["type"];
 
 const DEP_FIELDS: readonly (readonly [string, DepType])[] = [
-  ['dependencies', 'production'],
-  ['devDependencies', 'dev'],
-  ['peerDependencies', 'peer'],
-  ['optionalDependencies', 'optional'],
+  ["dependencies", "production"],
+  ["devDependencies", "dev"],
+  ["peerDependencies", "peer"],
+  ["optionalDependencies", "optional"],
 ] as const;
 
 const manifestSchema = z.record(z.string(), z.unknown());
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function extractDeps(
@@ -32,7 +32,7 @@ function extractDeps(
   }
 
   return Object.entries(raw)
-    .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
     .map(([name, range]) => ({ name, range, type }));
 }
 
@@ -46,14 +46,14 @@ function extractLocalPaths(manifest: Record<string, unknown>, manifestDir: strin
     }
 
     for (const value of Object.values(raw)) {
-      if (typeof value !== 'string') {
+      if (typeof value !== "string") {
         continue;
       }
 
       // Detect path dependencies: "file:../path", "link:../path", "workspace:*"
-      if (value.startsWith('file:')) {
+      if (value.startsWith("file:")) {
         paths.push(resolve(manifestDir, value.slice(5)));
-      } else if (value.startsWith('link:')) {
+      } else if (value.startsWith("link:")) {
         paths.push(resolve(manifestDir, value.slice(5)));
       }
     }
@@ -63,14 +63,14 @@ function extractLocalPaths(manifest: Record<string, unknown>, manifestDir: strin
 }
 
 export const packageJsonParser: ManifestParser = {
-  manifestName: 'package.json',
+  manifestName: "package.json",
 
   async parse(manifestPath: string): Promise<ParsedManifest> {
-    const content = await readFile(manifestPath, 'utf-8');
+    const content = await readFile(manifestPath, "utf-8");
     const manifest = manifestSchema.parse(JSON.parse(content));
 
-    const name = typeof manifest['name'] === 'string' ? manifest['name'] : '<unnamed>';
-    const version = typeof manifest['version'] === 'string' ? manifest['version'] : undefined;
+    const name = typeof manifest["name"] === "string" ? manifest["name"] : "<unnamed>";
+    const version = typeof manifest["version"] === "string" ? manifest["version"] : undefined;
 
     const dependencies = DEP_FIELDS.flatMap(([field, type]) => extractDeps(manifest, field, type));
 

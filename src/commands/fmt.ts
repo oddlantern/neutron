@@ -49,7 +49,12 @@ export async function runFmt(parsers: ParserRegistry, options: FmtOptions = {}):
     graph,
     root,
     pm,
-    config.format ? { formatConfig: config.format } : undefined,
+    config.lint || config.format
+      ? {
+          ...(config.lint ? { lintConfig: config.lint } : {}),
+          ...(config.format ? { formatConfig: config.format } : {}),
+        }
+      : undefined,
   );
 
   const action = check ? STANDARD_ACTIONS.FORMAT_CHECK : STANDARD_ACTIONS.FORMAT;

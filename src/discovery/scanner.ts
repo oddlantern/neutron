@@ -1,37 +1,37 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 
 /** Directories to always skip during scanning */
 const SKIP_DIRS = new Set([
-  '.dart_tool',
-  '.git',
-  '.husky',
-  '.idea',
-  '.mido',
-  '.symlinks',
-  '.vscode',
-  'android',
-  'build',
-  'dist',
-  'example',
-  'ios',
-  'linux',
-  'macos',
-  'node_modules',
-  'web',
-  'windows',
+  ".dart_tool",
+  ".git",
+  ".husky",
+  ".idea",
+  ".mido",
+  ".symlinks",
+  ".vscode",
+  "android",
+  "build",
+  "dist",
+  "example",
+  "ios",
+  "linux",
+  "macos",
+  "node_modules",
+  "web",
+  "windows",
 ]);
 
 /** Manifest filenames and their ecosystem names */
 const MANIFEST_MAP: ReadonlyMap<string, string> = new Map([
-  ['package.json', 'typescript'],
-  ['pubspec.yaml', 'dart'],
-  ['Cargo.toml', 'rust'],
-  ['pyproject.toml', 'python'],
+  ["package.json", "typescript"],
+  ["pubspec.yaml", "dart"],
+  ["Cargo.toml", "rust"],
+  ["pyproject.toml", "python"],
 ]);
 
 /** Ecosystems that mido currently supports */
-const SUPPORTED_ECOSYSTEMS = new Set(['typescript', 'dart']);
+const SUPPORTED_ECOSYSTEMS = new Set(["typescript", "dart"]);
 
 export interface DiscoveredPackage {
   readonly path: string;
@@ -45,7 +45,7 @@ export interface DiscoveredPackage {
  * to skip (not full glob support — just top-level directory names).
  */
 function loadGitignoreDirs(root: string): Set<string> {
-  const gitignorePath = join(root, '.gitignore');
+  const gitignorePath = join(root, ".gitignore");
   const dirs = new Set<string>();
 
   if (!existsSync(gitignorePath)) {
@@ -53,15 +53,15 @@ function loadGitignoreDirs(root: string): Set<string> {
   }
 
   try {
-    const content = readFileSync(gitignorePath, 'utf-8');
-    for (const line of content.split('\n')) {
+    const content = readFileSync(gitignorePath, "utf-8");
+    for (const line of content.split("\n")) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) {
+      if (!trimmed || trimmed.startsWith("#")) {
         continue;
       }
       // Simple directory entries like "dist/" or "dist"
-      const cleaned = trimmed.replace(/\/$/, '');
-      if (cleaned && !cleaned.includes('*') && !cleaned.includes('/')) {
+      const cleaned = trimmed.replace(/\/$/, "");
+      if (cleaned && !cleaned.includes("*") && !cleaned.includes("/")) {
         dirs.add(cleaned);
       }
     }

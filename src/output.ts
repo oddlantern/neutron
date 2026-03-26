@@ -1,30 +1,30 @@
-import type { CheckIssue, CheckResult } from './checks/types.js';
+import type { CheckIssue, CheckResult } from "./checks/types.js";
 
 // ANSI color codes — no dependency needed
-export const RESET = '\x1b[0m';
-export const BOLD = '\x1b[1m';
-export const DIM = '\x1b[2m';
-export const RED = '\x1b[31m';
-export const GREEN = '\x1b[32m';
-export const YELLOW = '\x1b[33m';
-export const CYAN = '\x1b[36m';
+export const RESET = "\x1b[0m";
+export const BOLD = "\x1b[1m";
+export const DIM = "\x1b[2m";
+export const RED = "\x1b[31m";
+export const GREEN = "\x1b[32m";
+export const YELLOW = "\x1b[33m";
+export const CYAN = "\x1b[36m";
 /** mido brand orange — ANSI 256-color 208 */
-export const ORANGE = '\x1b[38;5;208m';
+export const ORANGE = "\x1b[38;5;208m";
 
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
 const WARN = `${YELLOW}⚠${RESET}`;
 
 function formatIssue(issue: CheckIssue): string {
-  const icon = issue.severity === 'error' ? FAIL : WARN;
-  const color = issue.severity === 'error' ? RED : YELLOW;
+  const icon = issue.severity === "error" ? FAIL : WARN;
+  const color = issue.severity === "error" ? RED : YELLOW;
   let output = `  ${icon} ${color}${issue.message}${RESET}`;
 
   if (issue.details) {
     const indented = issue.details
-      .split('\n')
+      .split("\n")
       .map((line) => `    ${DIM}${line}${RESET}`)
-      .join('\n');
+      .join("\n");
     output += `\n${indented}`;
   }
 
@@ -39,7 +39,7 @@ export function formatCheckResult(result: CheckResult): string {
     return header;
   }
 
-  const issueLines = result.issues.map(formatIssue).join('\n');
+  const issueLines = result.issues.map(formatIssue).join("\n");
   return `${header}\n${issueLines}`;
 }
 
@@ -47,7 +47,7 @@ export function formatSummary(results: readonly CheckResult[]): string {
   const passed = results.filter((r) => r.passed).length;
   const failed = results.length - passed;
 
-  const line = '─'.repeat(48);
+  const line = "─".repeat(48);
 
   if (failed === 0) {
     return `\n${DIM}${line}${RESET}\n${GREEN}${BOLD}All ${passed} check(s) passed${RESET}\n`;

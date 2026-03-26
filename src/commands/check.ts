@@ -1,13 +1,13 @@
-import { loadConfig } from '../config/loader.js';
-import type { CheckResult } from '../checks/types.js';
-import { checkBridges } from '../checks/bridges.js';
-import { checkEnvParity } from '../checks/env.js';
-import { checkVersionConsistency, findVersionMismatches } from '../checks/versions.js';
-import { buildWorkspaceGraph, type ParserRegistry } from '../graph/workspace.js';
-import { formatCheckResult, formatHeader, formatSummary } from '../output.js';
-import { loadLock, mergeLock, writeLock } from '../lock.js';
-import { promptVersionResolution, type DepChoice } from '../prompt.js';
-import { applyManifestUpdate } from '../manifest-writer.js';
+import { loadConfig } from "../config/loader.js";
+import type { CheckResult } from "../checks/types.js";
+import { checkBridges } from "../checks/bridges.js";
+import { checkEnvParity } from "../checks/env.js";
+import { checkVersionConsistency, findVersionMismatches } from "../checks/versions.js";
+import { buildWorkspaceGraph, type ParserRegistry } from "../graph/workspace.js";
+import { formatCheckResult, formatHeader, formatSummary } from "../output.js";
+import { loadLock, mergeLock, writeLock } from "../lock.js";
+import { promptVersionResolution, type DepChoice } from "../prompt.js";
+import { applyManifestUpdate } from "../manifest-writer.js";
 
 export interface CheckOptions {
   readonly fix?: boolean;
@@ -73,7 +73,7 @@ export async function runCheck(
     const mismatches = findVersionMismatches(graph, lock);
 
     if (mismatches.length === 0) {
-      console.log('No version mismatches to fix.\n');
+      console.log("No version mismatches to fix.\n");
       return allPassed ? 0 : 1;
     }
 

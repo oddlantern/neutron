@@ -1,7 +1,7 @@
-import { typescriptPlugin } from './builtin/typescript.js';
-import { dartPlugin } from './builtin/dart.js';
-import { openapiPlugin } from './builtin/openapi/plugin.js';
-import type { DomainPlugin, EcosystemPlugin } from './types.js';
+import { typescriptPlugin } from "./builtin/typescript.js";
+import { dartPlugin } from "./builtin/dart.js";
+import { openapiPlugin } from "./builtin/openapi/plugin.js";
+import type { DomainPlugin, EcosystemPlugin } from "./types.js";
 
 export interface LoadedPlugins {
   readonly ecosystem: readonly EcosystemPlugin[];

@@ -49,7 +49,12 @@ export async function runLint(parsers: ParserRegistry, options: LintOptions = {}
     graph,
     root,
     pm,
-    config.lint ? { lintConfig: config.lint } : undefined,
+    config.lint || config.format
+      ? {
+          ...(config.lint ? { lintConfig: config.lint } : {}),
+          ...(config.format ? { formatConfig: config.format } : {}),
+        }
+      : undefined,
   );
 
   const action = fix ? STANDARD_ACTIONS.LINT_FIX : STANDARD_ACTIONS.LINT;

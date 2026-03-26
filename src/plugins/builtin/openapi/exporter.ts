@@ -1,13 +1,13 @@
-import { spawn } from 'node:child_process';
-import type { ChildProcess } from 'node:child_process';
-import { createServer } from 'node:net';
-import { existsSync } from 'node:fs';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
+import { createServer } from "node:net";
+import { existsSync } from "node:fs";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
-import type { FrameworkAdapter } from './adapters/types.js';
-import type { ExecuteResult } from '../../types.js';
-import { isRecord, getScripts, readPackageJson } from '../exec.js';
+import type { FrameworkAdapter } from "./adapters/types.js";
+import type { ExecuteResult } from "../../types.js";
+import { isRecord, getScripts, readPackageJson } from "../exec.js";
 
 /** Default timeout waiting for server to accept connections (ms) */
 const DEFAULT_STARTUP_TIMEOUT = 15_000;
@@ -30,8 +30,8 @@ const MAX_RESPONSE_BYTES = 50 * 1024 * 1024;
  */
 export function assertWithinRoot(resolved: string, root: string): void {
   // Normalize both to ensure trailing slashes don't cause mismatches
-  const normalizedRoot = root.endsWith('/') ? root : `${root}/`;
-  const normalizedResolved = resolved.endsWith('/') ? resolved : `${resolved}/`;
+  const normalizedRoot = root.endsWith("/") ? root : `${root}/`;
+  const normalizedResolved = resolved.endsWith("/") ? resolved : `${resolved}/`;
   if (!normalizedResolved.startsWith(normalizedRoot) && resolved !== root) {
     throw new Error(`Path "${resolved}" escapes workspace root "${root}"`);
   }
@@ -62,26 +62,26 @@ async function findFreePort(): Promise<number> {
     const server = createServer();
     server.listen(0, () => {
       const address = server.address();
-      if (!address || typeof address === 'string') {
+      if (!address || typeof address === "string") {
         server.close();
-        reject(new Error('Could not allocate a free port'));
+        reject(new Error("Could not allocate a free port"));
         return;
       }
       const port = address.port;
       server.close(() => resolve(port));
     });
-    server.on('error', reject);
+    server.on("error", reject);
   });
 }
 
 /** Well-known entry files checked in order */
 const ENTRY_CANDIDATES: readonly string[] = [
-  'src/index.ts',
-  'src/main.ts',
-  'src/app.ts',
-  'index.ts',
-  'main.ts',
-  'app.ts',
+  "src/index.ts",
+  "src/main.ts",
+  "src/app.ts",
+  "index.ts",
+  "main.ts",
+  "app.ts",
 ];
 
 /**
@@ -101,21 +101,21 @@ function parseEntryFromScript(script: string): string | null {
  */
 async function detectEntryFile(packageDir: string): Promise<string | null> {
   try {
-    const content = await readFile(join(packageDir, 'package.json'), 'utf-8');
+    const content = await readFile(join(packageDir, "package.json"), "utf-8");
     const parsed: unknown = JSON.parse(content);
     if (!isRecord(parsed)) {
-      throw new Error('Expected object');
+      throw new Error("Expected object");
     }
 
     // Check main field
-    const main = parsed['main'];
-    if (typeof main === 'string' && existsSync(join(packageDir, main))) {
+    const main = parsed["main"];
+    if (typeof main === "string" && existsSync(join(packageDir, main))) {
       return main;
     }
 
     // Check dev and start scripts for file arguments
     const scripts = getScripts(parsed);
-    for (const scriptName of ['dev', 'start']) {
+    for (const scriptName of ["dev", "start"]) {
       const script = scripts[scriptName];
       if (!script) {
         continue;
@@ -155,15 +155,15 @@ function killProcess(child: ChildProcess): Promise<void> {
       }
     };
 
-    child.on('exit', cleanup);
-    child.on('error', cleanup);
+    child.on("exit", cleanup);
+    child.on("error", cleanup);
 
-    child.kill('SIGTERM');
+    child.kill("SIGTERM");
 
     setTimeout(() => {
       if (!resolved && child.pid) {
         try {
-          child.kill('SIGKILL');
+          child.kill("SIGKILL");
         } catch {
           // already dead
         }
@@ -186,7 +186,7 @@ async function waitForServer(port: number, timeout: number): Promise<boolean> {
     try {
       const response = await fetch(`http://127.0.0.1:${String(port)}/`, {
         signal: controller.signal,
-        redirect: 'error',
+        redirect: "error",
       });
       // Any response means the server is up — we don't care about the status
       response.body?.cancel();
@@ -234,7 +234,7 @@ async function fetchSpec(
       const url = `http://127.0.0.1:${String(port)}${specPath}`;
       const response = await fetch(url, {
         signal: controller.signal,
-        redirect: 'error',
+        redirect: "error",
       });
 
       if (!response.ok) {
@@ -244,9 +244,9 @@ async function fetchSpec(
       }
 
       // Guard against oversized responses
-      const contentLength = response.headers.get('content-length');
+      const contentLength = response.headers.get("content-length");
       if (contentLength && Number(contentLength) > MAX_RESPONSE_BYTES) {
-        attempts.push({ path: specPath, status: response.status, error: 'response too large' });
+        attempts.push({ path: specPath, status: response.status, error: "response too large" });
         response.body?.cancel();
         continue;
       }
@@ -256,7 +256,7 @@ async function fetchSpec(
         attempts.push({
           path: specPath,
           status: response.status,
-          error: 'response body too large',
+          error: "response body too large",
         });
         continue;
       }
@@ -265,7 +265,7 @@ async function fetchSpec(
       try {
         body = JSON.parse(text);
       } catch {
-        attempts.push({ path: specPath, status: response.status, error: 'invalid JSON' });
+        attempts.push({ path: specPath, status: response.status, error: "invalid JSON" });
         continue;
       }
 
@@ -273,17 +273,17 @@ async function fetchSpec(
         attempts.push({
           path: specPath,
           status: response.status,
-          error: 'response is not a JSON object',
+          error: "response is not a JSON object",
         });
         continue;
       }
 
       // Validate it looks like an OpenAPI spec
-      if (!('openapi' in body) && !('swagger' in body)) {
+      if (!("openapi" in body) && !("swagger" in body)) {
         attempts.push({
           path: specPath,
           status: response.status,
-          error: 'missing openapi/swagger key',
+          error: "missing openapi/swagger key",
         });
         continue;
       }
@@ -308,16 +308,16 @@ async function fetchSpec(
 /** Format fetch attempts into a readable diagnostic string */
 function formatAttempts(attempts: readonly FetchAttempt[]): string {
   if (attempts.length === 0) {
-    return '';
+    return "";
   }
   return attempts
     .map((a) => {
       if (a.status) {
-        return `  ${a.path} → ${String(a.status)}${a.error ? ` (${a.error})` : ''}`;
+        return `  ${a.path} → ${String(a.status)}${a.error ? ` (${a.error})` : ""}`;
       }
-      return `  ${a.path} → ${a.error ?? 'unknown error'}`;
+      return `  ${a.path} → ${a.error ?? "unknown error"}`;
     })
-    .join('\n');
+    .join("\n");
 }
 
 export async function exportSpec(options: ExportOptions): Promise<ExecuteResult> {
@@ -334,7 +334,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
 
   // 1. Resolve entry file
   const entryFile = options.entryFile ?? (await detectEntryFile(packageDir));
-  debug?.(`entry file: ${entryFile ?? 'not found'}`);
+  debug?.(`entry file: ${entryFile ?? "not found"}`);
   if (!entryFile) {
     return {
       success: false,
@@ -352,31 +352,31 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     return {
       success: false,
       duration: Math.round(performance.now() - start),
-      summary: 'Port allocation failed. Check if another mido dev instance is running.',
+      summary: "Port allocation failed. Check if another mido dev instance is running.",
     };
   }
 
   // 3. Boot the server
-  const runnerArgs = pm === 'bun' ? ['run', entryFile] : ['tsx', entryFile];
-  const runner = pm === 'bun' ? 'bun' : 'npx';
+  const runnerArgs = pm === "bun" ? ["run", entryFile] : ["tsx", entryFile];
+  const runner = pm === "bun" ? "bun" : "npx";
 
-  debug?.(`spawning: ${runner} ${runnerArgs.join(' ')} (cwd: ${packageDir})`);
+  debug?.(`spawning: ${runner} ${runnerArgs.join(" ")} (cwd: ${packageDir})`);
 
   const child = spawn(runner, runnerArgs, {
     cwd: packageDir,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, PORT: String(port) },
   });
 
   // Safety net: kill child if parent exits unexpectedly
   const exitHandler = (): void => {
     try {
-      child.kill('SIGKILL');
+      child.kill("SIGKILL");
     } catch {
       // already dead
     }
   };
-  process.on('exit', exitHandler);
+  process.on("exit", exitHandler);
 
   const outputChunks: string[] = [];
   let totalBytes = 0;
@@ -387,13 +387,13 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     }
   };
 
-  child.stdout?.on('data', collectOutput);
-  child.stderr?.on('data', collectOutput);
+  child.stdout?.on("data", collectOutput);
+  child.stderr?.on("data", collectOutput);
 
   // Handle early exit (e.g., syntax error, missing dependency)
   let earlyExit = false;
   let exitCode: number | null = null;
-  child.on('exit', (code) => {
+  child.on("exit", (code) => {
     earlyExit = true;
     exitCode = code;
     debug?.(`server process exited with code ${String(code)}`);
@@ -406,7 +406,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     debug?.(`server ready: ${String(ready)}, earlyExit: ${String(earlyExit)}`);
 
     if (!ready) {
-      const serverOutput = outputChunks.join('');
+      const serverOutput = outputChunks.join("");
       const timeoutSec = Math.round(startupTimeout / 1000);
       const reason = earlyExit
         ? `Server exited with code ${String(exitCode)} before becoming ready`
@@ -424,30 +424,30 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     // 5. Fetch the spec
     const specPathOverride = options.specPath;
     // Ensure spec paths start with / to prevent URL construction issues
-    const normalize = (p: string): string => (p.startsWith('/') ? p : `/${p}`);
+    const normalize = (p: string): string => (p.startsWith("/") ? p : `/${p}`);
     const pathsToTry = specPathOverride
       ? [normalize(specPathOverride)]
       : [adapter.defaultSpecPath, ...adapter.fallbackSpecPaths];
 
-    debug?.(`fetching spec from: ${pathsToTry.join(', ')}`);
+    debug?.(`fetching spec from: ${pathsToTry.join(", ")}`);
     const result = await fetchSpec(port, pathsToTry);
-    debug?.(`fetch result: ${result.spec ? `found at ${result.path}` : 'not found'}`);
+    debug?.(`fetch result: ${result.spec ? `found at ${result.path}` : "not found"}`);
 
     if (!result.spec) {
-      const serverOutput = outputChunks.join('');
+      const serverOutput = outputChunks.join("");
       const attemptDetails = formatAttempts(result.attempts);
       const details = [
-        attemptDetails ? `Endpoints tried:\n${attemptDetails}` : '',
+        attemptDetails ? `Endpoints tried:\n${attemptDetails}` : "",
         serverOutput
-          ? `Server output:\n${serverOutput.trim().split('\n').slice(0, 10).join('\n')}`
-          : '',
+          ? `Server output:\n${serverOutput.trim().split("\n").slice(0, 10).join("\n")}`
+          : "",
       ]
         .filter(Boolean)
-        .join('\n');
+        .join("\n");
       return {
         success: false,
         duration: Math.round(performance.now() - start),
-        summary: 'Could not find OpenAPI spec. Add an openapi:export script as fallback.',
+        summary: "Could not find OpenAPI spec. Add an openapi:export script as fallback.",
         output: details || undefined,
       };
     }
@@ -459,7 +459,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
       if (!existsSync(outputDir)) {
         await mkdir(outputDir, { recursive: true });
       }
-      await writeFile(outputPath, JSON.stringify(result.spec, null, 2) + '\n', 'utf-8');
+      await writeFile(outputPath, JSON.stringify(result.spec, null, 2) + "\n", "utf-8");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return {
@@ -479,7 +479,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     // Always kill the server and remove the exit handler
     debug?.(`killing server process`);
     await killProcess(child);
-    process.removeListener('exit', exitHandler);
+    process.removeListener("exit", exitHandler);
   }
 }
 
@@ -491,17 +491,17 @@ export async function detectFrameworkAdapter(
   pkgPath: string,
   root: string,
 ): Promise<FrameworkAdapter | null> {
-  const { detectAdapter } = await import('./adapters/index.js');
+  const { detectAdapter } = await import("./adapters/index.js");
 
   try {
     const manifest = await readPackageJson(pkgPath, root);
     const allDeps: Record<string, string> = {};
 
-    for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
+    for (const field of ["dependencies", "devDependencies", "peerDependencies"]) {
       const deps = manifest[field];
       if (isRecord(deps)) {
         for (const [name, version] of Object.entries(deps)) {
-          if (typeof version === 'string') {
+          if (typeof version === "string") {
             allDeps[name] = version;
           }
         }

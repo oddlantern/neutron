@@ -1,24 +1,24 @@
-import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
-import { parse as parseYaml } from 'yaml';
-import { z } from 'zod';
+import { parse as parseYaml } from "yaml";
+import { z } from "zod";
 
-import type { Dependency } from '../graph/types.js';
-import type { ManifestParser, ParsedManifest } from './types.js';
+import type { Dependency } from "../graph/types.js";
+import type { ManifestParser, ParsedManifest } from "./types.js";
 
-type DepType = Dependency['type'];
+type DepType = Dependency["type"];
 
 const DEP_FIELDS: readonly (readonly [string, DepType])[] = [
-  ['dependencies', 'production'],
-  ['dev_dependencies', 'dev'],
-  ['dependency_overrides', 'override'],
+  ["dependencies", "production"],
+  ["dev_dependencies", "dev"],
+  ["dependency_overrides", "override"],
 ] as const;
 
 const manifestSchema = z.record(z.string(), z.unknown());
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -40,19 +40,19 @@ function extractDeps(
   const deps: Dependency[] = [];
 
   for (const [name, value] of Object.entries(raw)) {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       deps.push({ name, range: value, type });
     } else if (!value) {
-      deps.push({ name, range: 'any', type });
+      deps.push({ name, range: "any", type });
     } else if (isRecord(value)) {
       // Map-style dependency (path, git, hosted, sdk)
-      if (typeof value['version'] === 'string') {
-        deps.push({ name, range: value['version'], type });
-      } else if ('path' in value || 'git' in value || 'sdk' in value) {
+      if (typeof value["version"] === "string") {
+        deps.push({ name, range: value["version"], type });
+      } else if ("path" in value || "git" in value || "sdk" in value) {
         // Path/git/sdk deps don't have a version range to compare
-        deps.push({ name, range: '<local>', type });
+        deps.push({ name, range: "<local>", type });
       } else {
-        deps.push({ name, range: 'any', type });
+        deps.push({ name, range: "any", type });
       }
     }
   }
@@ -74,8 +74,8 @@ function extractLocalPaths(manifest: Record<string, unknown>, manifestDir: strin
         continue;
       }
 
-      if (typeof value['path'] === 'string') {
-        paths.push(resolve(manifestDir, value['path']));
+      if (typeof value["path"] === "string") {
+        paths.push(resolve(manifestDir, value["path"]));
       }
     }
   }
@@ -84,14 +84,14 @@ function extractLocalPaths(manifest: Record<string, unknown>, manifestDir: strin
 }
 
 export const pubspecParser: ManifestParser = {
-  manifestName: 'pubspec.yaml',
+  manifestName: "pubspec.yaml",
 
   async parse(manifestPath: string): Promise<ParsedManifest> {
-    const content = await readFile(manifestPath, 'utf-8');
+    const content = await readFile(manifestPath, "utf-8");
     const manifest = manifestSchema.parse(parseYaml(content));
 
-    const name = typeof manifest['name'] === 'string' ? manifest['name'] : '<unnamed>';
-    const version = typeof manifest['version'] === 'string' ? manifest['version'] : undefined;
+    const name = typeof manifest["name"] === "string" ? manifest["name"] : "<unnamed>";
+    const version = typeof manifest["version"] === "string" ? manifest["version"] : undefined;
 
     const dependencies = DEP_FIELDS.flatMap(([field, type]) => extractDeps(manifest, field, type));
 

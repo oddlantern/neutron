@@ -1,12 +1,12 @@
-import { existsSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { existsSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
-import { isMap, isSeq, parse as parseYaml, parseDocument } from 'yaml';
+import { isMap, isSeq, parse as parseYaml, parseDocument } from "yaml";
 
-import { configSchema, type MidoConfig } from './schema.js';
+import { configSchema, type MidoConfig } from "./schema.js";
 
-const CONFIG_FILENAMES = ['mido.yml', 'mido.yaml'] as const;
+const CONFIG_FILENAMES = ["mido.yml", "mido.yaml"] as const;
 
 /**
  * Walk upward from `startDir` until we find a mido.yml/mido.yaml.
@@ -35,9 +35,9 @@ function findConfigFile(startDir: string): string | null {
 
 /** Field renames for bridge schema migration (v0.0.2 → v0.0.3) */
 const BRIDGE_FIELD_RENAMES: ReadonlyMap<string, string> = new Map([
-  ['from', 'source'],
-  ['to', 'target'],
-  ['via', 'artifact'],
+  ["from", "source"],
+  ["to", "target"],
+  ["via", "artifact"],
 ]);
 
 /**
@@ -54,7 +54,7 @@ async function migrateConfig(
   let migrated = false;
 
   // Migrate bridges: from/to/via → source/target/artifact
-  const bridges = doc.get('bridges', true);
+  const bridges = doc.get("bridges", true);
   if (isSeq(bridges)) {
     for (const item of bridges.items) {
       if (!isMap(item)) {
@@ -74,8 +74,8 @@ async function migrateConfig(
 
   if (migrated) {
     const newContent = doc.toString();
-    await writeFile(configPath, newContent, 'utf-8');
-    console.log('migrated mido.yml to v0.0.3 format.');
+    await writeFile(configPath, newContent, "utf-8");
+    console.log("migrated mido.yml to v0.0.3 format.");
     return { migrated: true, content: newContent };
   }
 
@@ -107,7 +107,7 @@ export async function loadConfig(startDir?: string): Promise<LoadedConfig> {
     );
   }
 
-  let raw = await readFile(configPath, 'utf-8');
+  let raw = await readFile(configPath, "utf-8");
 
   // Migrate old config formats before validation
   const migration = await migrateConfig(configPath, raw);
@@ -124,8 +124,8 @@ export async function loadConfig(startDir?: string): Promise<LoadedConfig> {
 
   if (!result.success) {
     const issues = result.error.issues
-      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
-      .join('\n');
+      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+      .join("\n");
 
     throw new Error(`Invalid mido config at ${configPath}:\n${issues}`);
   }

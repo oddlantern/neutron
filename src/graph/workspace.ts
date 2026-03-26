@@ -1,9 +1,9 @@
-import { existsSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
-import type { MidoConfig } from '../config/schema.js';
-import type { ManifestParser } from '../parsers/types.js';
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from './types.js';
+import type { MidoConfig } from "../config/schema.js";
+import type { ManifestParser } from "../parsers/types.js";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "./types.js";
 
 /** Registry of parsers keyed by manifest filename */
 export type ParserRegistry = ReadonlyMap<string, ManifestParser>;
@@ -79,7 +79,7 @@ export async function buildWorkspaceGraph(
   if (errors.length > 0) {
     throw new Error(
       `Workspace graph build failed with ${errors.length} error(s):\n` +
-        errors.map((e) => `  - ${e}`).join('\n'),
+        errors.map((e) => `  - ${e}`).join("\n"),
     );
   }
 

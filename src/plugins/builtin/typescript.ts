@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import type { FormatConfig, LintConfig } from "../../config/schema.js";
+import type { FormatTypescriptConfig, LintTypescriptConfig } from "../../config/schema.js";
 
 import type { WorkspacePackage } from "../../graph/types.js";
 import { MIDO_ROOT } from "../../version.js";
@@ -105,18 +105,122 @@ function ensureCacheDir(root: string): string {
   return cacheDir;
 }
 
+/** Oxlint plugins always enabled */
+const ALWAYS_ENABLED_PLUGINS: readonly string[] = ["typescript", "unicorn", "oxc", "import"];
+
+/** Dependency-to-plugin mapping for auto-detection */
+const DEP_PLUGIN_MAP: ReadonlyMap<string, readonly string[]> = new Map([
+  ["react", ["react", "jsx-a11y", "react-perf"]],
+  ["preact", ["react", "jsx-a11y", "react-perf"]],
+  ["@preact/preset-vite", ["react", "jsx-a11y", "react-perf"]],
+  ["jest", ["jest"]],
+  ["vitest", ["vitest"]],
+  ["next", ["nextjs"]],
+]);
+
 /**
- * Generate a temporary oxlintrc.json from the mido lint config.
- * Only writes rules — ignore patterns are handled by the central file resolver.
- * Returns the path to the file, or null if no config is needed.
+ * Auto-detect oxlint plugins based on workspace dependencies.
+ * Always enables: typescript, unicorn, oxc, import.
+ * Conditionally enables: react, jsx-a11y, react-perf (if React/Preact), jest, vitest, nextjs.
  */
-function writeOxlintConfig(root: string, lint: LintConfig): string | null {
-  const hasRules = lint.rules && Object.keys(lint.rules).length > 0;
-  if (!hasRules) {
-    return null;
+function detectOxlintPlugins(pkg: WorkspacePackage, root: string): readonly string[] {
+  const plugins = new Set<string>(ALWAYS_ENABLED_PLUGINS);
+
+  try {
+    // Read the package.json synchronously for simplicity — this runs at lint time, not hot path
+    const manifestPath = join(root, pkg.path, "package.json");
+    if (!existsSync(manifestPath)) {
+      return [...plugins];
+    }
+    const raw = readFileSync(manifestPath, "utf-8");
+    const manifest: unknown = JSON.parse(raw);
+    if (typeof manifest !== "object" || !manifest) {
+      return [...plugins];
+    }
+    const record = manifest as Record<string, unknown>;
+
+    for (const [dep, depPlugins] of DEP_PLUGIN_MAP) {
+      if (hasDep(record, dep)) {
+        for (const p of depPlugins) {
+          plugins.add(p);
+        }
+      }
+    }
+  } catch {
+    // Can't read manifest — use defaults
   }
 
-  const config: Record<string, unknown> = { rules: lint.rules };
+  return [...plugins];
+}
+
+/** Category names in oxlint */
+type OxlintCategory =
+  | "correctness"
+  | "suspicious"
+  | "pedantic"
+  | "perf"
+  | "style"
+  | "restriction"
+  | "nursery";
+const ALL_CATEGORIES: readonly OxlintCategory[] = [
+  "correctness",
+  "suspicious",
+  "pedantic",
+  "perf",
+  "style",
+  "restriction",
+  "nursery",
+];
+
+/**
+ * Generate a temporary oxlintrc.json from the mido lint.typescript config.
+ * Includes categories, rules, and auto-detected plugins.
+ * Returns the path to the file, or null if no config is needed.
+ */
+function writeOxlintConfig(
+  root: string,
+  lint: LintTypescriptConfig,
+  plugins: readonly string[],
+): string | null {
+  const config: Record<string, unknown> = {};
+
+  // Categories
+  if (lint.categories) {
+    const categories: Record<string, string> = {};
+    for (const cat of ALL_CATEGORIES) {
+      const level = lint.categories[cat];
+      if (level) {
+        categories[cat] = level;
+      }
+    }
+    if (Object.keys(categories).length > 0) {
+      config["categories"] = categories;
+    }
+  }
+
+  // Rules
+  if (lint.rules && Object.keys(lint.rules).length > 0) {
+    config["rules"] = lint.rules;
+  }
+
+  // Plugins
+  if (plugins.length > 0) {
+    config["plugins"] = plugins;
+  }
+
+  // If we only have default plugins and nothing else, skip config file
+  if (
+    !config["categories"] &&
+    !config["rules"] &&
+    plugins.length <= ALWAYS_ENABLED_PLUGINS.length
+  ) {
+    // Still need plugins in config
+    if (plugins.length > 0) {
+      config["plugins"] = plugins;
+    } else {
+      return null;
+    }
+  }
 
   const cacheDir = ensureCacheDir(root);
   const configPath = join(cacheDir, "oxlintrc.json");
@@ -125,15 +229,13 @@ function writeOxlintConfig(root: string, lint: LintConfig): string | null {
 }
 
 /**
- * Generate a temporary oxfmtrc.json from the mido format config.
- * All keys except `ignore` are forwarded to the JSON config verbatim.
- * Ignore patterns are handled by the central file resolver.
+ * Generate a temporary oxfmtrc.json from the mido format.typescript config.
  * Returns the config path, or null if no config is needed.
  */
-function writeOxfmtConfig(root: string, format: FormatConfig): string | null {
+function writeOxfmtConfig(root: string, format: FormatTypescriptConfig): string | null {
   const opts: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(format)) {
-    if (key !== "ignore") {
+    if (value !== undefined) {
       opts[key] = value;
     }
   }
@@ -270,12 +372,15 @@ export const typescriptPlugin: EcosystemPlugin = {
       const oxlint = resolveBin("oxlint", root);
       if (oxlint) {
         const args: string[] = [];
-        if (context.lintConfig) {
-          const configPath = writeOxlintConfig(root, context.lintConfig);
-          if (configPath) {
-            args.push("--config", configPath);
-          }
+
+        // Auto-detect plugins and generate config
+        const plugins = detectOxlintPlugins(pkg, root);
+        const lintTs = context.lintTypescript;
+        const configPath = writeOxlintConfig(root, lintTs ?? {}, plugins);
+        if (configPath) {
+          args.push("--config", configPath);
         }
+
         if (fix) {
           args.push("--fix");
         }
@@ -308,8 +413,9 @@ export const typescriptPlugin: EcosystemPlugin = {
       const oxfmt = resolveBin("oxfmt", root);
       if (oxfmt) {
         const args: string[] = [];
-        if (context.formatConfig) {
-          const configPath = writeOxfmtConfig(root, context.formatConfig);
+        const fmtTs = context.formatTypescript;
+        if (fmtTs) {
+          const configPath = writeOxfmtConfig(root, fmtTs);
           if (configPath) {
             args.push("--config", configPath);
           }
@@ -349,8 +455,9 @@ export const typescriptPlugin: EcosystemPlugin = {
       const oxfmt = resolveBin("oxfmt", root);
       if (oxfmt) {
         const args: string[] = ["--check"];
-        if (context.formatConfig) {
-          const configPath = writeOxfmtConfig(root, context.formatConfig);
+        const fmtTs = context.formatTypescript;
+        if (fmtTs) {
+          const configPath = writeOxfmtConfig(root, fmtTs);
           if (configPath) {
             args.push("--config", configPath);
           }

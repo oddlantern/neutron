@@ -1,4 +1,4 @@
-import type { Dependency } from '../graph/types.js';
+import type { Dependency } from "../graph/types.js";
 
 /**
  * Result of parsing a single manifest file.

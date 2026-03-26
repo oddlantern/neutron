@@ -1,12 +1,12 @@
-import { loadConfig } from '../config/loader.js';
-import { buildWorkspaceGraph } from '../graph/workspace.js';
-import type { ParserRegistry } from '../graph/workspace.js';
-import type { WorkspacePackage } from '../graph/types.js';
-import { BOLD, DIM, GREEN, RED, RESET } from '../output.js';
-import { loadPlugins } from '../plugins/loader.js';
-import { PluginRegistry } from '../plugins/registry.js';
-import { STANDARD_ACTIONS } from '../plugins/types.js';
-import { detectPackageManager } from '../watcher/pm-detect.js';
+import { loadConfig } from "../config/loader.js";
+import { buildWorkspaceGraph } from "../graph/workspace.js";
+import type { ParserRegistry } from "../graph/workspace.js";
+import type { WorkspacePackage } from "../graph/types.js";
+import { BOLD, DIM, GREEN, RED, RESET } from "../output.js";
+import { loadPlugins } from "../plugins/loader.js";
+import { PluginRegistry } from "../plugins/registry.js";
+import { STANDARD_ACTIONS } from "../plugins/types.js";
+import { detectPackageManager } from "../watcher/pm-detect.js";
 
 const PASS = `${GREEN}✓${RESET}`;
 const FAIL = `${RED}✗${RESET}`;
@@ -77,16 +77,16 @@ export async function runBuild(
 
       const icon = result.success ? PASS : FAIL;
       const timing =
-        result.duration > 0 ? ` ${DIM}(${(result.duration / 1000).toFixed(1)}s)${RESET}` : '';
+        result.duration > 0 ? ` ${DIM}(${(result.duration / 1000).toFixed(1)}s)${RESET}` : "";
       console.log(`  ${icon} ${pkg.path}${timing}`);
 
       if (!result.success && result.output) {
         const trimmed = result.output.trim();
         if (trimmed) {
           const indented = trimmed
-            .split('\n')
+            .split("\n")
             .map((line) => `      ${DIM}${line}${RESET}`)
-            .join('\n');
+            .join("\n");
           console.log(indented);
         }
       }
@@ -95,7 +95,7 @@ export async function runBuild(
 
   if (!quiet) {
     const icon = hasErrors ? FAIL : PASS;
-    console.log(`\n${icon} ${builtCount} package(s) built${hasErrors ? ' (with errors)' : ''}\n`);
+    console.log(`\n${icon} ${builtCount} package(s) built${hasErrors ? " (with errors)" : ""}\n`);
   }
 
   return hasErrors ? 1 : 0;
