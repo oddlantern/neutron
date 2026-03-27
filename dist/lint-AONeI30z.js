@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { r as STANDARD_ACTIONS } from "./registry-B-Y0RSY6.js";
-import { t as runEcosystemCommand } from "./ecosystem-runner-8GeVEiov.js";
+import { r as STANDARD_ACTIONS } from "./registry-HJZ5X6pW.js";
+import { t as runEcosystemCommand } from "./ecosystem-runner-CwvBCPRG.js";
 //#region src/commands/lint.ts
 /**
 * Run linters across all packages in the workspace.
@@ -18,4 +18,4 @@ async function runLint(parsers, options = {}) {
 //#endregion
 export { runLint };
 
-//# sourceMappingURL=lint-BHon3ATy.js.map
+//# sourceMappingURL=lint-AONeI30z.js.map

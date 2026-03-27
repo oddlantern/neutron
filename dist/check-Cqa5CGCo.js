@@ -1,10 +1,11 @@
 #!/usr/bin/env node
+import { t as __exportAll } from "./rolldown-runtime-QdrSlVMC.js";
 import { _ as formatSummary, g as formatHeader, h as formatCheckResult, v as isRecord } from "./version-BRfsXVk-.js";
 import { a as mergeLock, o as writeLock, r as loadLock, t as enrichEcosystems } from "./lock-D-3owqTU.js";
 import { n as collectDeps, r as findVersionMismatches, t as checkVersionConsistency } from "./versions-BZyXnbdh.js";
 import { t as loadConfig } from "./loader-Co8X4jm-.js";
 import { t as buildWorkspaceGraph } from "./workspace-Ba_CMHN8.js";
-import { n as promptVersionResolution } from "./prompt-Uoqbqe-z.js";
+import { n as promptVersionResolution } from "./prompt-CKxXX7hz.js";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { z } from "zod";
@@ -171,6 +172,7 @@ async function writePubspec(root, update) {
 }
 //#endregion
 //#region src/commands/check.ts
+var check_exports = /* @__PURE__ */ __exportAll({ runCheck: () => runCheck });
 /**
 * Run all workspace checks and report results.
 *
@@ -252,6 +254,6 @@ async function runCheck(parsers, options = {}) {
 	return allPassed ? 0 : 1;
 }
 //#endregion
-export { runCheck };
+export { runCheck as n, check_exports as t };
 
-//# sourceMappingURL=check-BcpWyd8_.js.map
+//# sourceMappingURL=check-Cqa5CGCo.js.map

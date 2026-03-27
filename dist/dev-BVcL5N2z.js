@@ -2,38 +2,13 @@
 import { a as DIM, c as MAGENTA, d as RED, f as RESET, i as CYAN, m as YELLOW, r as BOLD, s as GREEN } from "./version-BRfsXVk-.js";
 import { t as loadConfig } from "./loader-Co8X4jm-.js";
 import { t as buildWorkspaceGraph } from "./workspace-Ba_CMHN8.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-B-Y0RSY6.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-HJZ5X6pW.js";
 import { t as detectPackageManager } from "./pm-detect-mpNBTwyh.js";
-import { t as writeHooks } from "./hooks-BkSDCj7v.js";
+import { t as writeHooks } from "./hooks-TfTAkcQy.js";
 import { readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { createHash } from "node:crypto";
 import chokidar from "chokidar";
-//#region src/watcher/debouncer.ts
-const DEFAULT_DELAY_MS = 2e3;
-/**
-* Create a debouncer that fires the callback after a quiet period.
-* Each trigger() call resets the timer. Only fires once per quiet period.
-*/
-function createDebouncer(callback, delayMs = DEFAULT_DELAY_MS) {
-	let timer;
-	return {
-		trigger() {
-			if (timer) clearTimeout(timer);
-			timer = setTimeout(() => {
-				timer = void 0;
-				callback();
-			}, delayMs);
-		},
-		cancel() {
-			if (timer) {
-				clearTimeout(timer);
-				timer = void 0;
-			}
-		}
-	};
-}
-//#endregion
 //#region src/watcher/pipeline.ts
 /**
 * Hash a file's contents. Returns empty string if the file doesn't exist.
@@ -107,12 +82,8 @@ async function runPipeline(steps, root) {
 	};
 }
 //#endregion
-//#region src/watcher/dev.ts
-const CONFIG_FILENAME = "mido.yml";
+//#region src/watcher/bridge-runner.ts
 const MS_PER_SECOND = 1e3;
-const CONFIG_RELOAD_DEBOUNCE_MS = 500;
-const CHOKIDAR_STABILITY_THRESHOLD_MS = 300;
-const CHOKIDAR_POLL_INTERVAL_MS = 100;
 function formatMs(ms) {
 	return ms >= MS_PER_SECOND ? `${(ms / MS_PER_SECOND).toFixed(1)}s` : `${ms}ms`;
 }
@@ -233,6 +204,22 @@ function printStepResult(stepResult) {
 	}
 	logSuccess(`${stepResult.step.description.replace(/\.\.\.$/, "")} (${formatMs(stepResult.duration)})`);
 }
+function printResult(result, label) {
+	if (result.success) logSuccess(`${label}: synced (${formatMs(result.duration)})`);
+	else {
+		logFail(`${label}: failed (${formatMs(result.duration)})`);
+		if (result.output) logOutput(result.output);
+		logWaiting();
+	}
+}
+/**
+* Run a pipeline step-by-step, printing progress as each step completes.
+*/
+async function runPipelineWithProgress(steps, root) {
+	const result = await runPipeline(steps, root);
+	for (const stepResult of result.steps) printStepResult(stepResult);
+	return result;
+}
 /**
 * Execute a single bridge (no artifact grouping).
 */
@@ -349,22 +336,6 @@ async function executeBridgeGroup(group, registry, graph, root, pm, verbose) {
 	}
 	for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose);
 }
-/**
-* Run a pipeline step-by-step, printing progress as each step completes.
-*/
-async function runPipelineWithProgress(steps, root) {
-	const result = await runPipeline(steps, root);
-	for (const stepResult of result.steps) printStepResult(stepResult);
-	return result;
-}
-function printResult(result, label) {
-	if (result.success) logSuccess(`${label}: synced (${formatMs(result.duration)})`);
-	else {
-		logFail(`${label}: failed (${formatMs(result.duration)})`);
-		if (result.output) logOutput(result.output);
-		logWaiting();
-	}
-}
 function matchesBridge(relPath, bridge) {
 	for (const pattern of bridge.watchPatterns) {
 		const patternBase = pattern.replace(/\/?\*\*.*$/, "");
@@ -372,6 +343,37 @@ function matchesBridge(relPath, bridge) {
 	}
 	return false;
 }
+//#endregion
+//#region src/watcher/debouncer.ts
+const DEFAULT_DELAY_MS = 2e3;
+/**
+* Create a debouncer that fires the callback after a quiet period.
+* Each trigger() call resets the timer. Only fires once per quiet period.
+*/
+function createDebouncer(callback, delayMs = DEFAULT_DELAY_MS) {
+	let timer;
+	return {
+		trigger() {
+			if (timer) clearTimeout(timer);
+			timer = setTimeout(() => {
+				timer = void 0;
+				callback();
+			}, delayMs);
+		},
+		cancel() {
+			if (timer) {
+				clearTimeout(timer);
+				timer = void 0;
+			}
+		}
+	};
+}
+//#endregion
+//#region src/watcher/dev.ts
+const CONFIG_FILENAME = "mido.yml";
+const CONFIG_RELOAD_DEBOUNCE_MS = 500;
+const CHOKIDAR_STABILITY_THRESHOLD_MS = 300;
+const CHOKIDAR_POLL_INTERVAL_MS = 100;
 /** Resolve watch patterns to base directories for chokidar */
 function resolveWatchDirs(resolved, root) {
 	const watchDirs = /* @__PURE__ */ new Set();
@@ -535,4 +537,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-BvM4wS6Q.js.map
+//# sourceMappingURL=dev-BVcL5N2z.js.map

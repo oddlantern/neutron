@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { t as writeHooks } from "./hooks-BkSDCj7v.js";
+import { t as writeHooks } from "./hooks-TfTAkcQy.js";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 //#region src/commands/install.ts
@@ -31,4 +31,4 @@ async function runInstall(root, config) {
 //#endregion
 export { runInstall };
 
-//# sourceMappingURL=install-BkyvVsbp.js.map
+//# sourceMappingURL=install-CrE4RfyE.js.map

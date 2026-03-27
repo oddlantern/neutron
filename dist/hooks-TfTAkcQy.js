@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { n as HOOK_NAMES } from "./schema-JaXX4kjD.js";
-import { t as confirmAction } from "./prompt-Uoqbqe-z.js";
+import { t as confirmAction } from "./prompt-CKxXX7hz.js";
 import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
@@ -92,4 +92,4 @@ async function writeHooks(root, config, interactive = true) {
 //#endregion
 export { writeHooks as t };
 
-//# sourceMappingURL=hooks-BkSDCj7v.js.map
+//# sourceMappingURL=hooks-TfTAkcQy.js.map

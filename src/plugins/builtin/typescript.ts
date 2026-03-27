@@ -1,7 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative } from "node:path";
-
-import type { FormatTypescriptConfig, LintTypescriptConfig } from "../../config/schema.js";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 import type { WorkspacePackage } from "../../graph/types.js";
 import { MIDO_ROOT } from "../../version.js";
@@ -13,23 +11,9 @@ import type {
   WatchPathSuggestion,
 } from "../types.js";
 import { STANDARD_ACTIONS } from "../types.js";
-import type { ValidatedTokens } from "./design/types.js";
-import { getScripts, hasDep, isRecord, readPackageJson, runCommand } from "./exec.js";
-import { generateCSS, generateTS } from "./typescript/token-codegen.js";
-
-/**
- * Narrow unknown domainData to ValidatedTokens.
- * ValidatedTokens always has a `color` object at the top level.
- */
-function isValidatedTokens(value: unknown): value is ValidatedTokens {
-  if (!isRecord(value)) {
-    return false;
-  }
-  if (!isRecord(value["standard"])) {
-    return false;
-  }
-  return typeof value["standard"]["color"] === "object" && value["standard"]["color"] !== null;
-}
+import { getScripts, hasDep, readPackageJson, runCommand } from "./exec.js";
+import { executeDesignTokenGeneration, executeOpenAPICodegen } from "./typescript-codegen.js";
+import { detectOxlintPlugins, writeOxfmtConfig, writeOxlintConfig } from "./typescript/lint-config.js";
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
 
@@ -40,61 +24,6 @@ const ACTION_GENERATE_OPENAPI_TS = "generate-openapi-ts";
 
 /** Action name for design token CSS/TS generation */
 const ACTION_GENERATE_DESIGN_TOKENS_CSS = "generate-design-tokens-css";
-
-/**
- * Parse an openapi-typescript invocation from a package script to extract
- * the input artifact path and output path.
- *
- * Example script: "openapi-typescript ../openapi.prepared.json -o generated/api.d.ts"
- * Returns: { input: "../openapi.prepared.json", output: "generated/api.d.ts" }
- */
-function parseOpenapiTsScript(
-  scriptValue: string,
-): { readonly input: string; readonly output: string } | null {
-  // Match: openapi-typescript <input> [flags...] -o <output>
-  // Allows arbitrary flags between input and -o (e.g., --enum, --path-params-as-types)
-  const pattern = /openapi-typescript\s+(\S+).*?\s(?:-o|--output)\s+(\S+)/;
-  const match = pattern.exec(scriptValue);
-  if (!match) {
-    return null;
-  }
-  const input = match[1];
-  const output = match[2];
-  if (!input || !output) {
-    return null;
-  }
-  return { input, output };
-}
-
-/**
- * Detect the openapi-typescript output path from existing scripts.
- * Searches generate, openapi:generate, and other scripts for openapi-typescript usage.
- * Returns the output path if found in a script.
- */
-function detectOutputFromScripts(scripts: Record<string, string>): string | null {
-  // Check scripts in priority order
-  const scriptNames = ["generate", "openapi:generate", "generate:ts", "codegen"];
-  for (const name of scriptNames) {
-    const script = scripts[name];
-    if (!script) {
-      continue;
-    }
-    const parsed = parseOpenapiTsScript(script);
-    if (parsed) {
-      return parsed.output;
-    }
-  }
-
-  // Check all scripts
-  for (const script of Object.values(scripts)) {
-    const parsed = parseOpenapiTsScript(script);
-    if (parsed) {
-      return parsed.output;
-    }
-  }
-
-  return null;
-}
 
 /**
  * Resolve a binary for a TS tool (linter, formatter).
@@ -118,160 +47,6 @@ export function resolveBin(name: string, workspaceRoot: string): string | null {
   return null;
 }
 
-const CACHE_DIR_NAME = "node_modules/.cache/mido";
-
-/** Ensure the cache directory exists and return its absolute path */
-function ensureCacheDir(root: string): string {
-  const cacheDir = join(root, CACHE_DIR_NAME);
-  mkdirSync(cacheDir, { recursive: true });
-  return cacheDir;
-}
-
-/** Cache for written config paths — avoids concurrent writes to the same file */
-let cachedOxlintConfigPath: string | null | undefined;
-let cachedOxfmtConfigPath: string | null | undefined;
-
-/** Oxlint plugins always enabled */
-const ALWAYS_ENABLED_PLUGINS: readonly string[] = ["typescript", "unicorn", "oxc", "import"];
-
-/** Dependency-to-plugin mapping for auto-detection */
-const DEP_PLUGIN_MAP: ReadonlyMap<string, readonly string[]> = new Map([
-  ["react", ["react", "jsx-a11y", "react-perf"]],
-  ["preact", ["react", "jsx-a11y", "react-perf"]],
-  ["@preact/preset-vite", ["react", "jsx-a11y", "react-perf"]],
-  ["jest", ["jest"]],
-  ["vitest", ["vitest"]],
-  ["next", ["nextjs"]],
-]);
-
-/**
- * Auto-detect oxlint plugins based on workspace dependencies.
- * Always enables: typescript, unicorn, oxc, import.
- * Conditionally enables: react, jsx-a11y, react-perf (if React/Preact), jest, vitest, nextjs.
- */
-function detectOxlintPlugins(pkg: WorkspacePackage, root: string): readonly string[] {
-  const plugins = new Set<string>(ALWAYS_ENABLED_PLUGINS);
-
-  try {
-    // Read the package.json synchronously for simplicity — this runs at lint time, not hot path
-    const manifestPath = join(root, pkg.path, "package.json");
-    if (!existsSync(manifestPath)) {
-      return [...plugins];
-    }
-    const raw = readFileSync(manifestPath, "utf-8");
-    const manifest: unknown = JSON.parse(raw);
-    if (!isRecord(manifest)) {
-      return [...plugins];
-    }
-
-    for (const [dep, depPlugins] of DEP_PLUGIN_MAP) {
-      if (hasDep(manifest, dep)) {
-        for (const p of depPlugins) {
-          plugins.add(p);
-        }
-      }
-    }
-  } catch {
-    // Can't read manifest — use defaults
-  }
-
-  return [...plugins];
-}
-
-/** Category names in oxlint */
-type OxlintCategory =
-  | "correctness"
-  | "suspicious"
-  | "pedantic"
-  | "perf"
-  | "style"
-  | "restriction"
-  | "nursery";
-const ALL_CATEGORIES: readonly OxlintCategory[] = [
-  "correctness",
-  "suspicious",
-  "pedantic",
-  "perf",
-  "style",
-  "restriction",
-  "nursery",
-];
-
-/**
- * Generate a temporary oxlintrc.json from the mido lint.typescript config.
- * Includes categories, rules, and auto-detected plugins.
- * Returns the path to the file, or null if no config is needed.
- */
-function writeOxlintConfig(
-  root: string,
-  lint: LintTypescriptConfig,
-  plugins: readonly string[],
-): string | null {
-  const config: Record<string, unknown> = {};
-
-  // Categories
-  if (lint.categories) {
-    const categories: Record<string, string> = {};
-    for (const cat of ALL_CATEGORIES) {
-      const level = lint.categories[cat];
-      if (level !== undefined) {
-        categories[cat] = level;
-      }
-    }
-    if (Object.keys(categories).length > 0) {
-      config["categories"] = categories;
-    }
-  }
-
-  // Rules
-  if (lint.rules && Object.keys(lint.rules).length > 0) {
-    config["rules"] = lint.rules;
-  }
-
-  // Plugins — always include so oxlint enables the right set
-  if (plugins.length > 0) {
-    config["plugins"] = plugins;
-  }
-
-  if (cachedOxlintConfigPath !== undefined) {
-    return cachedOxlintConfigPath;
-  }
-
-  const cacheDir = ensureCacheDir(root);
-  const configPath = join(cacheDir, "oxlintrc.json");
-  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
-  cachedOxlintConfigPath = configPath;
-  return configPath;
-}
-
-/**
- * Generate a temporary oxfmtrc.json from the mido format.typescript config.
- * Returns the config path, or null if no config is needed.
- */
-function writeOxfmtConfig(root: string, format: FormatTypescriptConfig): string | null {
-  if (cachedOxfmtConfigPath !== undefined) {
-    return cachedOxfmtConfigPath;
-  }
-
-  const opts: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(format)) {
-    if (value !== undefined) {
-      opts[key] = value;
-    }
-  }
-
-  if (Object.keys(opts).length === 0) {
-    cachedOxfmtConfigPath = null;
-    return null;
-  }
-
-  const cacheDir = ensureCacheDir(root);
-  const configPath = join(cacheDir, "oxfmtrc.json");
-  writeFileSync(configPath, JSON.stringify(opts, null, 2) + "\n", "utf-8");
-  cachedOxfmtConfigPath = configPath;
-  return configPath;
-}
-
 /**
  * Find the source directory for a TS package.
  * Prefers src/, falls back to lib/, then package root.
@@ -290,40 +65,6 @@ function findSourceDir(
     return { dir: join(pkgDir, "lib"), isRoot: false };
   }
   return { dir: pkgDir, isRoot: true };
-}
-
-/** Well-known output paths for openapi-typescript, checked in order */
-const WELL_KNOWN_OUTPUT_PATHS: readonly string[] = [
-  "generated/api.d.ts",
-  "src/generated/api.d.ts",
-  "src/api.d.ts",
-];
-
-/**
- * Resolve the output path for openapi-typescript.
- * Priority: existing scripts → existing well-known files → default.
- */
-function resolveOutputPath(
-  pkg: WorkspacePackage,
-  root: string,
-  scripts: Record<string, string>,
-): string {
-  // 1. Parse from existing scripts
-  const fromScript = detectOutputFromScripts(scripts);
-  if (fromScript) {
-    return fromScript;
-  }
-
-  // 2. Check well-known output locations
-  const pkgDir = join(root, pkg.path);
-  for (const candidate of WELL_KNOWN_OUTPUT_PATHS) {
-    if (existsSync(join(pkgDir, candidate))) {
-      return candidate;
-    }
-  }
-
-  // 3. Default
-  return "generated/api.d.ts";
 }
 
 export const typescriptPlugin: EcosystemPlugin = {
@@ -537,78 +278,12 @@ export const typescriptPlugin: EcosystemPlugin = {
 
     // Design token CSS/TS generation
     if (action === ACTION_GENERATE_DESIGN_TOKENS_CSS) {
-      const start = performance.now();
-
-      const rawDomainData = context.domainData;
-      if (!isValidatedTokens(rawDomainData)) {
-        return {
-          success: false,
-          duration: 0,
-          summary: "No token data provided — design plugin must validate first",
-        };
-      }
-      const tokens: ValidatedTokens = rawDomainData;
-
-      // Scaffold package.json if first run
-      if (!existsSync(join(cwd, "package.json"))) {
-        mkdirSync(cwd, { recursive: true });
-        const pkgName = pkg.name || "design-tokens";
-        const pkgJson = {
-          name: pkgName,
-          version: "0.0.0",
-          private: true,
-          main: "generated/tokens.css",
-          types: "generated/tokens.ts",
-        };
-        writeFileSync(join(cwd, "package.json"), JSON.stringify(pkgJson, null, 2) + "\n", "utf-8");
-      }
-
-      const generatedDir = join(cwd, "generated");
-      mkdirSync(generatedDir, { recursive: true });
-
-      const cssContent = generateCSS(tokens);
-      const tsContent = generateTS(tokens);
-
-      writeFileSync(join(generatedDir, "tokens.css"), cssContent, "utf-8");
-      writeFileSync(join(generatedDir, "tokens.ts"), tsContent, "utf-8");
-
-      const duration = Math.round(performance.now() - start);
-      return {
-        success: true,
-        duration,
-        summary: "2 files written",
-      };
+      return executeDesignTokenGeneration(pkg, root, context);
     }
 
     // Direct openapi-typescript invocation
     if (action === ACTION_GENERATE_OPENAPI_TS) {
-      let scripts: Record<string, string> = {};
-      try {
-        const manifest = await readPackageJson(pkg.path, root);
-        scripts = getScripts(manifest);
-      } catch {
-        // manifest unreadable — proceed with empty scripts
-      }
-
-      // Resolve artifact input path (relative to package dir)
-      const artifactPath = context.artifactPath;
-      if (!artifactPath) {
-        // No artifact path from domain plugin — fall back to generate script
-        if (scripts["generate"]) {
-          return runCommand(pm, ["run", "generate"], cwd);
-        }
-        return {
-          success: false,
-          duration: 0,
-          summary: `No artifact path provided and no generate script found in ${pkg.path}`,
-        };
-      }
-
-      const artifactRelative = relative(join(root, pkg.path), join(root, artifactPath));
-      const outputPath = resolveOutputPath(pkg, root, scripts);
-      const runner = pm === "bun" ? "bunx" : "npx";
-
-      return runCommand(runner, ["openapi-typescript", artifactRelative, "-o", outputPath], cwd);
+      return executeOpenAPICodegen(pkg, root, context);
     }
 
     return runCommand(pm, ["run", action], cwd);
