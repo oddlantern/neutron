@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 import chokidar from "chokidar";
 import type { FSWatcher } from "chokidar";
 
-import { writeHooks } from "../commands/install.js";
+import { writeHooks } from "../hooks.js";
 import { loadConfig } from "../config/loader.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
@@ -51,8 +51,13 @@ interface WatcherSession {
   readonly pm: string;
 }
 
+const MS_PER_SECOND = 1000;
+const CONFIG_RELOAD_DEBOUNCE_MS = 500;
+const CHOKIDAR_STABILITY_THRESHOLD_MS = 300;
+const CHOKIDAR_POLL_INTERVAL_MS = 100;
+
 function formatMs(ms: number): string {
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
+  return ms >= MS_PER_SECOND ? `${(ms / MS_PER_SECOND).toFixed(1)}s` : `${ms}ms`;
 }
 
 function log(icon: string, message: string): void {
@@ -625,7 +630,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         logFail(`Config reload failed: ${msg}`);
         logWaiting();
       }
-    }, 500);
+    }, CONFIG_RELOAD_DEBOUNCE_MS);
 
     // Start chokidar watcher
     const watcher = chokidar.watch(allWatchPaths, {
@@ -638,8 +643,8 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         "**/.symlinks/**",
       ],
       awaitWriteFinish: {
-        stabilityThreshold: 300,
-        pollInterval: 100,
+        stabilityThreshold: CHOKIDAR_STABILITY_THRESHOLD_MS,
+        pollInterval: CHOKIDAR_POLL_INTERVAL_MS,
       },
     });
 

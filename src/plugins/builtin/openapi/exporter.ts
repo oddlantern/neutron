@@ -336,6 +336,9 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
   // 1. Resolve entry file
   const entryFile = options.entryFile ?? (await detectEntryFile(packageDir));
   debug?.(`entry file: ${entryFile ?? "not found"}`);
+  if (entryFile) {
+    assertWithinRoot(join(packageDir, entryFile), packageDir);
+  }
   if (!entryFile) {
     return {
       success: false,

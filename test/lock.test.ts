@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import {
   checkIntegrity,
+  enrichEcosystems,
   loadLock,
   mergeLock,
   verifyIntegrity,
@@ -173,5 +174,46 @@ describe("integrity", () => {
     lock.resolved["zod"] = { ...lock.resolved["zod"]!, integrity: "sha256-bad" };
     const violations = checkIntegrity(lock);
     expect(violations).toEqual(["zod"]);
+  });
+});
+
+describe("enrichEcosystems", () => {
+  test("replaces unknown ecosystems with graph data", () => {
+    // Simulate a V1-migrated lock where ecosystems default to ["unknown"]
+    const lock = makeLock({ zod: "^3.0.0" });
+    lock.resolved["zod"] = { ...lock.resolved["zod"]!, ecosystems: ["unknown"] };
+
+    const depEcosystems = new Map<string, readonly string[]>([
+      ["zod", ["typescript", "dart"]],
+    ]);
+
+    const enriched = enrichEcosystems(lock, depEcosystems);
+    expect(enriched.resolved["zod"]?.ecosystems).toEqual(["typescript", "dart"]);
+  });
+
+  test("preserves already-known ecosystems", () => {
+    const lock = makeLock({ zod: "^3.0.0" });
+    // ecosystems already set to ["typescript"] by makeLock — not ["unknown"]
+    const depEcosystems = new Map<string, readonly string[]>([
+      ["zod", ["dart"]],
+    ]);
+
+    const enriched = enrichEcosystems(lock, depEcosystems);
+    // Should not overwrite — entry already has known ecosystem
+    expect(enriched.resolved["zod"]?.ecosystems).toEqual(["typescript"]);
+    // Should return the same reference when nothing changed
+    expect(enriched).toBe(lock);
+  });
+
+  test("leaves unknown when graph has no data for dependency", () => {
+    const lock = makeLock({ zod: "^3.0.0" });
+    lock.resolved["zod"] = { ...lock.resolved["zod"]!, ecosystems: ["unknown"] };
+
+    // Graph has no entry for zod
+    const depEcosystems = new Map<string, readonly string[]>();
+
+    const enriched = enrichEcosystems(lock, depEcosystems);
+    expect(enriched.resolved["zod"]?.ecosystems).toEqual(["unknown"]);
+    expect(enriched).toBe(lock);
   });
 });

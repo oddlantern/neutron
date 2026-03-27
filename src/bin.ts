@@ -95,16 +95,8 @@ async function main(): Promise<void> {
   }
 
   if (command === "install") {
-    const { loadConfig } = await import("./config/loader.js");
     const { runInstall } = await import("./commands/install.js");
-    let config;
-    try {
-      const loaded = await loadConfig();
-      config = loaded.config;
-    } catch {
-      // No mido.yml yet — install with defaults
-    }
-    const exitCode = await runInstall(process.cwd(), config);
+    const exitCode = await runInstall(process.cwd());
     process.exit(exitCode);
   }
 

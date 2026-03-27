@@ -1,15 +1,9 @@
 #!/usr/bin/env node
-import { a as DIM, d as RED, f as RESET, l as ORANGE, n as VERSION } from "./version-DD8ow6ZL.js";
+import { a as DIM, d as RED, f as RESET, l as ORANGE, n as VERSION, v as isRecord } from "./version-BRfsXVk-.js";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { z } from "zod";
 import { parse } from "yaml";
-//#region src/guards.ts
-/** Shared type guards used across the codebase */
-function isRecord(value) {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-//#endregion
 //#region src/parsers/package-json.ts
 const DEP_FIELDS$1 = [
 	["dependencies", "production"],
@@ -200,7 +194,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-BUIVEn4y.js");
+		const { runCheck } = await import("./check-BcpWyd8_.js");
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -208,24 +202,19 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-BRCdVmkP.js");
+		const { runInit } = await import("./init-DndPMyOn.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-EPEU0RuH.js");
+		const { runDev } = await import("./dev-BvM4wS6Q.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { loadConfig } = await import("./loader-D_GOykgb.js").then((n) => n.n);
-		const { runInstall } = await import("./install-6DSaOugm.js");
-		let config;
-		try {
-			config = (await loadConfig()).config;
-		} catch {}
-		const exitCode = await runInstall(process.cwd(), config);
+		const { runInstall } = await import("./install-BkyvVsbp.js");
+		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
 	if (command === "lint") {
@@ -233,7 +222,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-CnA8dIdj.js");
+		const { runLint } = await import("./lint-BHon3ATy.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -247,7 +236,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-BreUKeLs.js");
+		const { runFmt } = await import("./fmt-Bfu2YEwI.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -259,7 +248,7 @@ async function main() {
 	if (command === "build") {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-DWN5SRfQ.js");
+		const { runBuild } = await import("./build-CcRqLV-a.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			package: pkg
@@ -267,7 +256,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-BpTXLzn1.js");
+		const { runPreCommit } = await import("./pre-commit-Bjlrz58L.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
@@ -277,7 +266,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-DGBZGZDw.js");
+		const { runCommitMsg } = await import("./commit-msg-CQ3Th96h.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}
@@ -291,6 +280,6 @@ main().catch((error) => {
 	process.exit(1);
 });
 //#endregion
-export { isRecord as n, printBanner as t };
+export { printBanner as t };
 
 //# sourceMappingURL=bin.js.map
