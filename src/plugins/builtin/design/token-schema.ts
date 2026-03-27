@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isRecord } from "../../../guards.js";
+
 // ─── Primitives ────────────────────────────────────────────────────────────
 
 /** Matches all common CSS color notations: hex, rgb(a), hsl(a) */
@@ -270,12 +272,12 @@ export function validateTokens(raw: unknown): TokenValidationResult {
   const errors: TokenValidationError[] = [];
   const warnings: TokenValidationWarning[] = [];
 
-  if (typeof raw !== "object" || !raw) {
+  if (!isRecord(raw)) {
     errors.push({ path: "(root)", message: "expected an object" });
     return { success: false, data: undefined, errors, warnings };
   }
 
-  const obj = raw as Record<string, unknown>;
+  const obj = raw;
 
   // 1. Validate standard sections
   const standardResult = standardSchema.safeParse(obj);
@@ -324,13 +326,13 @@ export function validateTokens(raw: unknown): TokenValidationResult {
     }
 
     const sectionValue = obj[key];
-    if (typeof sectionValue !== "object" || !sectionValue || Array.isArray(sectionValue)) {
+    if (!isRecord(sectionValue)) {
       continue;
     }
 
     const { parsed, errors: extErrors } = parseExtension(
       key,
-      sectionValue as Record<string, unknown>,
+      sectionValue,
     );
     errors.push(...extErrors);
     extensions[key] = parsed;

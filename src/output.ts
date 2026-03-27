@@ -48,7 +48,8 @@ export function formatSummary(results: readonly CheckResult[]): string {
   const passed = results.filter((r) => r.passed).length;
   const failed = results.length - passed;
 
-  const line = "─".repeat(48);
+  const SEPARATOR_WIDTH = 48;
+  const line = "─".repeat(SEPARATOR_WIDTH);
 
   if (failed === 0) {
     return `\n${DIM}${line}${RESET}\n${GREEN}${BOLD}All ${passed} check(s) passed${RESET}\n`;

@@ -128,6 +128,18 @@ describe('validateCommitMessage', () => {
     expect(formatIssue?.severity).toBe('error');
   });
 
+  test('body line exceeding max length produces warning', () => {
+    const longLine = 'x'.repeat(201);
+    const message = `feat(config): add new option\n\n${longLine}`;
+    const result = validateCommitMessage(message, defaultConfig);
+    // body_max_line_length is a warning, not an error — commit is still valid
+    expect(result.valid).toBe(true);
+    const bodyIssue = result.issues.find((i) => i.field === 'body-max-line-length');
+    expect(bodyIssue).toBeDefined();
+    expect(bodyIssue?.severity).toBe('warning');
+    expect(bodyIssue?.message).toContain('200');
+  });
+
   test('header exactly at max length passes', () => {
     // Construct a header that is exactly 100 chars
     const header = 'feat(config): ' + 'a'.repeat(100 - 'feat(config): '.length);

@@ -60,7 +60,8 @@ export function findVersionMismatches(
   const mismatches: VersionMismatch[] = [];
 
   for (const [depName, occurrences] of depMap) {
-    if (occurrences.length < 2) {
+    const MIN_OCCURRENCES_FOR_CHECK = 2;
+    if (occurrences.length < MIN_OCCURRENCES_FOR_CHECK) {
       continue;
     }
 

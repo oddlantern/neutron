@@ -89,20 +89,16 @@ describe("shared-artifact grouping", () => {
     expect(steps[0].plugin).toBe("design");
   });
 
-  test("registry finds design plugin for tokens.json domain", async () => {
+  test("registry resolves ecosystem plugins for dart and typescript targets", async () => {
     const { ecosystem, domain } = loadPlugins();
     const registry = new PluginRegistry(ecosystem, domain);
 
-    // The design plugin should detect tokens.json
-    const found = await registry.getDomainForArtifact(
-      "packages/design-system/tokens.json",
-      // Use fixture path so the file actually exists for detection
-      `${import.meta.dir}/../fixture-tokens/../fixture-tokens/../../`,
-    );
+    const dartPlugin = registry.getEcosystemForPackage(dartTarget);
+    const tsPlugin = registry.getEcosystemForPackage(tsTarget);
 
-    // Without actual file at root, detectBridge will fail. That's expected.
-    // The point is that the design plugin IS registered.
-    const designPlugin = domain.find((p) => p.name === "design");
-    expect(designPlugin).toBeDefined();
+    expect(dartPlugin).toBeDefined();
+    expect(dartPlugin!.name).toBe("dart");
+    expect(tsPlugin).toBeDefined();
+    expect(tsPlugin!.name).toBe("typescript");
   });
 });

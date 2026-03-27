@@ -43,7 +43,7 @@ const CONFIG_FILENAME = "mido.yml";
 
 interface EcosystemGroup {
   readonly manifest: string;
-  readonly packages: string[];
+  readonly packages: readonly string[];
 }
 
 interface BridgeWithWatch {
@@ -205,8 +205,9 @@ async function runFirstTime(
   bridgesWithWatch.push(...manualBridges);
 
   // Detect env files
+  const MIN_ENV_FILES_FOR_PARITY = 2;
   const envFiles = detectEnvFiles(root, finalSupported);
-  if (envFiles.length >= 2) {
+  if (envFiles.length >= MIN_ENV_FILES_FOR_PARITY) {
     const envLines = envFiles.map((e) => `  ${e.path}`).join("\n");
     log.info(`Env files:\n${envLines}`);
   }
@@ -538,6 +539,22 @@ async function runReconciliation(
     log.success("No changes needed");
   }
 
+  // Offer hooks
+  const installHooks = await confirm({ message: "Install git hooks?", initialValue: true });
+  if (isCancel(installHooks)) {
+    handleCancel();
+  }
+
+  let hooksInstalled = false;
+  if (installHooks) {
+    const { runInstall } = await import("./install.js");
+    const installResult = await runInstall(root, existing);
+    if (installResult !== 0) {
+      return installResult;
+    }
+    hooksInstalled = true;
+  }
+
   // Run health check and offer to fix mismatches
   const checksPass = await runPostInitCheck(parsers);
 
@@ -551,7 +568,7 @@ async function runReconciliation(
     packageCount: totalPackages,
     ecosystemCount: Object.keys(existing.ecosystems).length,
     bridgeCount: updatedBridges.length,
-    hooksInstalled: false,
+    hooksInstalled,
     checksPass,
   });
 }
@@ -1044,7 +1061,7 @@ function buildConfigObject(
     });
   }
 
-  if (envFiles.length >= 2) {
+  if (envFiles.length >= MIN_ENV_FILES_FOR_PARITY) {
     config["env"] = {
       shared: [],
       files: envFiles.map((e) => e.path),
