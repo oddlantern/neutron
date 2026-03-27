@@ -35,16 +35,10 @@ describe("shared-artifact grouping", () => {
   const bridges: readonly Bridge[] = [
     {
       source: "packages/design-system",
-      target: "packages/design-system/clients/dart",
-      artifact: "packages/design-system/tokens.json",
-      run: undefined,
-      watch: ["packages/design-system/tokens.json"],
-      entryFile: undefined,
-      specPath: undefined,
-    },
-    {
-      source: "packages/design-system",
-      target: "packages/design-system/clients/typescript",
+      consumers: [
+        "packages/design-system/clients/dart",
+        "packages/design-system/clients/typescript",
+      ],
       artifact: "packages/design-system/tokens.json",
       run: undefined,
       watch: ["packages/design-system/tokens.json"],

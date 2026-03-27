@@ -64,7 +64,7 @@ describe('detectBridges', () => {
     expect(bridges.length).toBeGreaterThanOrEqual(1);
 
     const bridge = bridges.find(
-      (b) => b.source === 'packages/server' && b.target === 'packages/client',
+      (b) => b.source === 'packages/server' && b.consumers.includes('packages/client'),
     );
     expect(bridge).toBeDefined();
     expect(bridge!.artifact).toContain('openapi.json');

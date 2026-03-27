@@ -6,15 +6,21 @@ const ecosystemSchema = z.object({
   packages: z.array(z.string()).min(1),
 });
 
-const bridgeSchema = z.object({
-  source: z.string(),
-  target: z.string(),
-  artifact: z.string(),
-  run: z.string().optional(),
-  watch: z.array(z.string()).optional(),
-  entryFile: z.string().optional(),
-  specPath: z.string().optional(),
-});
+const bridgeSchema = z
+  .object({
+    source: z.string(),
+    artifact: z.string(),
+    consumers: z.array(z.string()).min(1).optional(),
+    /** @deprecated since v0.4.0. Use `consumers` instead. Auto-migrated on load. */
+    target: z.string().optional(),
+    run: z.string().optional(),
+    watch: z.array(z.string()).optional(),
+    entryFile: z.string().optional(),
+    specPath: z.string().optional(),
+  })
+  .refine((b) => b.consumers || b.target, {
+    message: "Bridge must have either 'consumers' or 'target'",
+  });
 
 const envSchema = z.object({
   shared: z.array(z.string()).min(1),
@@ -106,6 +112,20 @@ const lintSchema = z.object({
   dart: lintDartSchema.optional(),
 });
 
+// ─── Hooks schema ─────────────────────────────────────────────────────────────
+
+/** A hook is either an array of shell commands or `false` to disable it. */
+const hookStepsSchema = z.union([z.array(z.string()).min(1), z.literal(false)]);
+
+const HOOK_NAMES = ["pre-commit", "commit-msg", "post-merge", "post-checkout"] as const;
+
+const hooksSchema = z.object({
+  "pre-commit": hookStepsSchema.optional(),
+  "commit-msg": hookStepsSchema.optional(),
+  "post-merge": hookStepsSchema.optional(),
+  "post-checkout": hookStepsSchema.optional(),
+});
+
 export const configSchema = z.object({
   workspace: z.string(),
   ecosystems: z.record(z.string(), ecosystemSchema).refine((eco) => Object.keys(eco).length >= 1, {
@@ -116,6 +136,7 @@ export const configSchema = z.object({
   commits: commitsSchema.optional(),
   lint: lintSchema.optional(),
   format: formatSchema.optional(),
+  hooks: hooksSchema.optional(),
 });
 
 export type MidoConfig = z.infer<typeof configSchema>;
@@ -130,4 +151,6 @@ export type FormatConfig = z.infer<typeof formatSchema>;
 export type FormatTypescriptConfig = z.infer<typeof formatTypescriptSchema>;
 export type FormatDartConfig = z.infer<typeof formatDartSchema>;
 
-export { DEFAULT_COMMIT_TYPES };
+export type HooksConfig = z.infer<typeof hooksSchema>;
+
+export { DEFAULT_COMMIT_TYPES, HOOK_NAMES };

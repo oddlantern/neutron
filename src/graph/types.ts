@@ -34,10 +34,10 @@ export interface WorkspacePackage {
 export interface Bridge {
   /** Package path that produces the artifact */
   readonly source: string;
-  /** Package path that consumes the artifact */
-  readonly target: string;
-  /** Path to the bridge artifact (e.g., openapi.json) */
+  /** Path to the bridge artifact (e.g., openapi.json, tokens.json) */
   readonly artifact: string;
+  /** Package paths that consume the artifact */
+  readonly consumers: readonly string[];
   /** Override: skip plugin detection, run this script directly */
   readonly run: string | undefined;
   /** Override: watch these paths instead of plugin defaults */

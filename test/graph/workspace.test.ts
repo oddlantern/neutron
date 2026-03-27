@@ -28,21 +28,13 @@ const fixtureConfig: MidoConfig = {
   bridges: [
     {
       source: 'packages/api',
-      target: 'packages/api/clients/dart',
+      consumers: ['packages/api/clients/dart'],
       artifact: 'packages/api/openapi.json',
-      run: undefined,
-      watch: undefined,
-      entryFile: undefined,
-      specPath: undefined,
     },
     {
       source: 'packages/design-system',
-      target: 'apps/flutter',
+      consumers: ['apps/flutter'],
       artifact: 'packages/design-system/tokens.json',
-      run: undefined,
-      watch: undefined,
-      entryFile: undefined,
-      specPath: undefined,
     },
   ],
 };
@@ -80,7 +72,7 @@ describe('buildWorkspaceGraph', () => {
     const graph = await buildWorkspaceGraph(fixtureConfig, FIXTURE_CLEAN, parsers);
     expect(graph.bridges).toHaveLength(2);
     expect(graph.bridges[0]?.source).toBe('packages/api');
-    expect(graph.bridges[0]?.target).toBe('packages/api/clients/dart');
+    expect(graph.bridges[0]?.consumers).toContain('packages/api/clients/dart');
   });
 
   test('workspace name matches config', async () => {

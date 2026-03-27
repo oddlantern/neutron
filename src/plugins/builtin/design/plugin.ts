@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { join } from "node:path";
+
+import { parse as parseYaml } from "yaml";
 
 import type { WorkspacePackage } from "../../../graph/types.js";
 import { RED, RESET, YELLOW } from "../../../output.js";
@@ -37,11 +39,15 @@ function formatValidationErrors(
 }
 
 /**
- * Read and parse a tokens.json file.
+ * Read and parse a token artifact file (JSON or YAML).
  */
-async function readTokens(artifactPath: string, root: string): Promise<unknown> {
+async function readAndParseArtifact(artifactPath: string, root: string): Promise<unknown> {
   const absPath = join(root, artifactPath);
   const content = await readFile(absPath, "utf-8");
+  const ext = artifactPath.split(".").pop()?.toLowerCase();
+  if (ext === "yaml" || ext === "yml") {
+    return parseYaml(content) as unknown;
+  }
   return JSON.parse(content) as unknown;
 }
 
@@ -63,13 +69,13 @@ export const designPlugin: DomainPlugin = {
   name: "design",
 
   async detectBridge(artifact: string, root: string): Promise<boolean> {
-    const filename = basename(artifact);
-    if (filename !== "tokens.json") {
+    const ext = artifact.split(".").pop()?.toLowerCase();
+    if (!ext || !["json", "yaml", "yml"].includes(ext)) {
       return false;
     }
 
     try {
-      const raw = await readTokens(artifact, root);
+      const raw = await readAndParseArtifact(artifact, root);
       return looksLikeTokens(raw);
     } catch {
       return false;
@@ -84,7 +90,7 @@ export const designPlugin: DomainPlugin = {
     const start = performance.now();
 
     try {
-      const raw = await readTokens(artifact, root);
+      const raw = await readAndParseArtifact(artifact, root);
       const result = validateTokens(raw);
 
       if (!result.success) {
@@ -118,7 +124,7 @@ export const designPlugin: DomainPlugin = {
     root: string,
     context: ExecutionContext,
   ): Promise<readonly ExecuteResult[]> {
-    const raw = await readTokens(artifact, root);
+    const raw = await readAndParseArtifact(artifact, root);
     const validation = validateTokens(raw);
     if (!validation.success || !validation.data) {
       return [
@@ -180,7 +186,7 @@ export const designPlugin: DomainPlugin = {
       execute: async (): Promise<ExecuteResult> => {
         const start = performance.now();
         try {
-          const raw = await readTokens(artifact, root);
+          const raw = await readAndParseArtifact(artifact, root);
           const result = validateTokens(raw);
 
           if (!result.success) {

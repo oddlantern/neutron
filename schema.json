@@ -17200,6 +17200,77 @@
       },
       "additionalProperties": false
     },
+    "hooks": {
+      "type": "object",
+      "description": "Git hooks installed by `mido install`. Each hook is a list of shell commands run sequentially (stops on first failure). Set a hook to `false` to disable it. Changes are applied on `mido install` or when mido.yml is saved during `mido dev`.",
+      "properties": {
+        "pre-commit": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Commands to run before each commit. Default: `mido pre-commit` (format check → lint → workspace check)."
+            },
+            {
+              "const": false,
+              "description": "Disable this hook. Removes the hook file if mido-owned."
+            }
+          ]
+        },
+        "commit-msg": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Commands to validate the commit message. Receives the message file path as $1. Default: `mido commit-msg \"$1\"`."
+            },
+            {
+              "const": false,
+              "description": "Disable this hook. Removes the hook file if mido-owned."
+            }
+          ]
+        },
+        "post-merge": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Commands to run after a merge. Default: workspace drift check."
+            },
+            {
+              "const": false,
+              "description": "Disable this hook. Removes the hook file if mido-owned."
+            }
+          ]
+        },
+        "post-checkout": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Commands to run after a branch checkout (not file checkout). Default: workspace drift check."
+            },
+            {
+              "const": false,
+              "description": "Disable this hook. Removes the hook file if mido-owned."
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "commits": {
       "type": "object",
       "description": "Conventional commit validation, enforced by mido's commit-msg git hook. Run `mido install` to set up hooks.",

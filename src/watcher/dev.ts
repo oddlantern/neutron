@@ -3,6 +3,7 @@ import { join, relative } from "node:path";
 import chokidar from "chokidar";
 import type { FSWatcher } from "chokidar";
 
+import { writeHooks } from "../commands/install.js";
 import { loadConfig } from "../config/loader.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
@@ -113,21 +114,27 @@ async function resolveBridges(
       continue;
     }
 
-    const target = packages.get(bridge.target);
-    if (!target) {
-      console.error(`${YELLOW}warn:${RESET} bridge target "${bridge.target}" not found in graph`);
+    // Resolve all consumers
+    const targets: WorkspacePackage[] = [];
+    for (const consumerPath of bridge.consumers) {
+      const consumer = packages.get(consumerPath);
+      if (!consumer) {
+        console.error(
+          `${YELLOW}warn:${RESET} bridge consumer "${consumerPath}" not found in graph`,
+        );
+        continue;
+      }
+      targets.push(consumer);
+    }
+
+    if (targets.length === 0) {
+      console.error(`${YELLOW}warn:${RESET} bridge ${bridge.source} has no resolvable consumers`);
       continue;
     }
 
     const domain = await registry.getDomainForArtifact(bridge.artifact, root);
     const sourcePlugin = registry.getEcosystemForPackage(source);
 
-    // Resolve watch patterns — explicit config takes priority, otherwise
-    // fall back to the source package directory. Note: the default watches
-    // the source package root, which may be wrong when the actual trigger
-    // files live in a different package (e.g., apps/server routes that
-    // packages/api exports as an OpenAPI spec). In those cases, the user
-    // must set watch paths explicitly in mido.yml.
     let watchPatterns: readonly string[];
     if (bridge.watch?.length) {
       watchPatterns = bridge.watch;
@@ -141,7 +148,7 @@ async function resolveBridges(
       domain,
       sourcePlugin,
       source,
-      targets: [target],
+      targets,
     });
   }
 
@@ -348,7 +355,9 @@ function groupBridgesByArtifact(
     // Only group bridges that have a domain plugin with buildPipeline
     if (!bridge.domain?.buildPipeline) {
       // Each non-groupable bridge is its own group of 1
-      groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.target}`, [bridge]);
+      groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.consumers.join(",")}`, [
+        bridge,
+      ]);
       continue;
     }
 
@@ -578,7 +587,9 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
     for (const r of resolved) {
       const debouncer = createDebouncer(() => {
         if (verbose) {
-          logDebug(`debouncer fired for bridge: ${r.bridge.source} \u2192 ${r.bridge.target}`);
+          logDebug(
+            `debouncer fired for bridge: ${r.bridge.source} \u2192 [${r.bridge.consumers.join(", ")}]`,
+          );
         }
         pending.add(r);
         processPending();
@@ -598,6 +609,11 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         const newSession = await startSession();
         if (newSession) {
           session = newSession;
+
+          // Regenerate hooks from updated config (non-interactive)
+          const { config, root: cfgRoot } = await loadConfig();
+          await writeHooks(cfgRoot, config, false);
+
           console.log();
           printBridgeSummary(newSession.resolved, newSession.registry);
           console.log(`  ${DIM}Waiting for changes...${RESET}\n`);
@@ -663,7 +679,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
           matched = true;
           if (verbose) {
             logDebug(
-              `  matched bridge: ${r.bridge.source} \u2192 ${r.bridge.target} (triggering debouncer)`,
+              `  matched bridge: ${r.bridge.source} \u2192 [${r.bridge.consumers.join(", ")}] (triggering debouncer)`,
             );
           }
           const debouncer = bridgeDebouncers.get(r);

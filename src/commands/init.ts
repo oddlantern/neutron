@@ -48,7 +48,7 @@ interface EcosystemGroup {
 
 interface BridgeWithWatch {
   readonly source: string;
-  readonly target: string;
+  readonly consumers: readonly string[];
   readonly artifact: string;
   readonly watch: readonly string[] | undefined;
 }
@@ -162,7 +162,7 @@ async function runFirstTime(
     const bridgeLines = detectedBridges
       .map(
         (b) =>
-          `  ${ORANGE}${b.source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${b.target}${RESET} ${DIM}via${RESET} ${BOLD}${b.artifact}${RESET}`,
+          `  ${ORANGE}${b.source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}[${b.consumers.join(", ")}]${RESET} ${DIM}via${RESET} ${BOLD}${b.artifact}${RESET}`,
       )
       .join("\n");
     log.info(`Detected ${ORANGE}${detectedBridges.length}${RESET} bridge(s):\n${bridgeLines}`);
@@ -189,7 +189,12 @@ async function runFirstTime(
       );
     }
     const watch = await promptWatchPaths(root, b.source, suggestion);
-    bridgesWithWatch.push({ source: b.source, target: b.target, artifact: b.artifact, watch });
+    bridgesWithWatch.push({
+      source: b.source,
+      consumers: b.consumers,
+      artifact: b.artifact,
+      watch,
+    });
   }
 
   // Prompt for additional bridges (includes watch prompt)
@@ -373,18 +378,15 @@ async function runReconciliation(
   }
 
   // Handle existing bridges
-  const existingBridges = existing.bridges ?? [];
-  const updatedBridges: Array<{
-    source: string;
-    target: string;
-    artifact: string;
-    run?: string | undefined;
-    watch?: readonly string[] | undefined;
-  }> = [];
+  const existingBridges = (existing.bridges ?? []).map((b) => ({
+    ...b,
+    consumers: b.consumers ?? (b.target ? [b.target] : []),
+  }));
+  const updatedBridges: BridgeWithWatch[] = [];
 
   for (const bridge of existingBridges) {
     const action = await select({
-      message: `Bridge: ${bridge.source} produces ${basename(bridge.artifact)}, consumed by ${bridge.target}`,
+      message: `Bridge: ${bridge.source} produces ${basename(bridge.artifact)}, consumed by [${bridge.consumers.join(", ")}]`,
       options: [
         { value: "keep", label: "Keep" },
         { value: "modify", label: "Modify" },
@@ -413,10 +415,20 @@ async function runReconciliation(
           // Plugin has a suggestion — show the full watch path menu
           const watch = await promptWatchPaths(root, bridge.source, reconSuggestion);
           if (watch) {
-            updatedBridges.push({ ...bridge, watch: [...watch] });
+            updatedBridges.push({
+              source: bridge.source,
+              consumers: bridge.consumers,
+              artifact: bridge.artifact,
+              watch: [...watch],
+            });
             configChanged = true;
           } else {
-            updatedBridges.push(bridge);
+            updatedBridges.push({
+              source: bridge.source,
+              consumers: bridge.consumers,
+              artifact: bridge.artifact,
+              watch: bridge.watch ? [...bridge.watch] : undefined,
+            });
           }
         } else {
           // No suggestion — ask if they want to add paths manually
@@ -430,17 +442,37 @@ async function runReconciliation(
           if (addWatch) {
             const watch = await promptWatchPaths(root, bridge.source);
             if (watch) {
-              updatedBridges.push({ ...bridge, watch: [...watch] });
+              updatedBridges.push({
+                source: bridge.source,
+                consumers: bridge.consumers,
+                artifact: bridge.artifact,
+                watch: [...watch],
+              });
               configChanged = true;
             } else {
-              updatedBridges.push(bridge);
+              updatedBridges.push({
+                source: bridge.source,
+                consumers: bridge.consumers,
+                artifact: bridge.artifact,
+                watch: bridge.watch ? [...bridge.watch] : undefined,
+              });
             }
           } else {
-            updatedBridges.push(bridge);
+            updatedBridges.push({
+              source: bridge.source,
+              consumers: bridge.consumers,
+              artifact: bridge.artifact,
+              watch: bridge.watch ? [...bridge.watch] : undefined,
+            });
           }
         }
       } else {
-        updatedBridges.push(bridge);
+        updatedBridges.push({
+          source: bridge.source,
+          consumers: bridge.consumers,
+          artifact: bridge.artifact,
+          watch: bridge.watch ? [...bridge.watch] : undefined,
+        });
       }
     } else if (action === "modify") {
       const modified = await promptModifyBridge(
@@ -454,7 +486,12 @@ async function runReconciliation(
         updatedBridges.push(modified);
         configChanged = true;
       } else {
-        updatedBridges.push(bridge);
+        updatedBridges.push({
+          source: bridge.source,
+          consumers: bridge.consumers,
+          artifact: bridge.artifact,
+          watch: bridge.watch ? [...bridge.watch] : undefined,
+        });
       }
     } else {
       configChanged = true;
@@ -469,7 +506,7 @@ async function runReconciliation(
     for (const b of manualBridges) {
       updatedBridges.push({
         source: b.source,
-        target: b.target,
+        consumers: [...b.consumers],
         artifact: b.artifact,
         watch: b.watch?.length ? [...b.watch] : undefined,
       });
@@ -731,7 +768,7 @@ async function promptModifyBridge(
   config: MidoConfig,
   current: {
     readonly source: string;
-    readonly target: string;
+    readonly consumers: readonly string[];
     readonly artifact: string;
     readonly watch?: readonly string[] | undefined;
   },
@@ -749,13 +786,17 @@ async function promptModifyBridge(
     handleCancel();
   }
 
-  const targetPaths = allPaths.filter((p) => p !== source);
-  const target = await select({
-    message: `Target (currently: ${current.target}):`,
-    options: targetPaths.map((p) => ({ value: p, label: p })),
-    initialValue: current.target,
+  const consumerPaths = allPaths.filter((p) => p !== source);
+  const consumers = await multiselect({
+    message: `Consumers (currently: [${current.consumers.join(", ")}]):`,
+    options: consumerPaths.map((p) => ({
+      value: p,
+      label: p,
+      selected: current.consumers.includes(p),
+    })),
+    required: true,
   });
-  if (isCancel(target)) {
+  if (isCancel(consumers)) {
     handleCancel();
   }
 
@@ -787,7 +828,7 @@ async function promptModifyBridge(
 
   const watch = await promptWatchPaths(root, source, modifySuggestion, current.watch);
 
-  return { source, target, artifact: relArtifact, watch };
+  return { source, consumers, artifact: relArtifact, watch };
 }
 
 async function promptAdditionalBridges(
@@ -814,12 +855,13 @@ async function promptAdditionalBridges(
       handleCancel();
     }
 
-    const targetPaths = packagePaths.filter((p) => p !== source);
-    const target = await select({
-      message: "Target (who depends on it):",
-      options: targetPaths.map((p) => ({ value: p, label: p })),
+    const consumerPaths = packagePaths.filter((p) => p !== source);
+    const consumers = await multiselect({
+      message: "Consumers (who depends on it):",
+      options: consumerPaths.map((p) => ({ value: p, label: p })),
+      required: true,
     });
-    if (isCancel(target)) {
+    if (isCancel(consumers)) {
       handleCancel();
     }
 
@@ -868,9 +910,9 @@ async function promptAdditionalBridges(
     }
 
     const watch = await promptWatchPaths(root, source);
-    result.push({ source, target, artifact: relArtifact, watch });
+    result.push({ source, consumers, artifact: relArtifact, watch });
     log.step(
-      `Bridge: ${ORANGE}${source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}${target}${RESET} ${DIM}via${RESET} ${BOLD}${relArtifact}${RESET}`,
+      `Bridge: ${ORANGE}${source}${RESET} ${DIM}\u2192${RESET} ${ORANGE}[${consumers.join(", ")}]${RESET} ${DIM}via${RESET} ${BOLD}${relArtifact}${RESET}`,
     );
 
     const another = await confirm({ message: "Add another bridge?", initialValue: false });
@@ -992,8 +1034,8 @@ function buildConfigObject(
     config["bridges"] = bridges.map((b) => {
       const entry: Record<string, unknown> = {
         source: b.source,
-        target: b.target,
         artifact: b.artifact,
+        consumers: [...b.consumers],
       };
       if (b.watch?.length) {
         entry["watch"] = b.watch;
@@ -1065,6 +1107,18 @@ function buildConfigObject(
     body_max_line_length: 200,
   };
 
+  // Hooks defaults
+  config["hooks"] = {
+    "pre-commit": ["mido pre-commit"],
+    "commit-msg": ['mido commit-msg "$1"'],
+    "post-merge": [
+      'mido check --quiet || echo "⚠ mido: workspace drift detected — run mido check --fix"',
+    ],
+    "post-checkout": [
+      'mido check --quiet || echo "⚠ mido: workspace drift detected — run mido check --fix"',
+    ],
+  };
+
   return config;
 }
 
@@ -1101,6 +1155,10 @@ function renderYaml(config: Record<string, unknown>): string {
     [
       "commits",
       " ─── Commits ───────────────────────────────────────────\n Conventional commit validation, enforced by mido's\n commit-msg git hook. Run `mido install` to set up hooks.",
+    ],
+    [
+      "hooks",
+      " ─── Hooks ─────────────────────────────────────────────\n Git hooks installed by `mido install`. Each hook is a\n list of shell commands run sequentially (stops on first\n failure). Set a hook to `false` to disable it.\n Changes are applied on `mido install` or when mido.yml\n is saved during `mido dev`.",
     ],
   ]);
 

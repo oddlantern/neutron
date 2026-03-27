@@ -29,7 +29,7 @@ function makePackage(name: string, path: string, ecosystem = 'typescript') {
 
 function makeGraph(
   packages: Array<ReturnType<typeof makePackage>>,
-  bridges: Array<{ source: string; target: string; artifact: string }>,
+  bridges: Array<{ source: string; consumers: string[]; artifact: string }>,
   root: string,
 ): WorkspaceGraph {
   return {
@@ -38,7 +38,7 @@ function makeGraph(
     packages: new Map(packages.map((p) => [p.path, p])),
     bridges: bridges.map((b) => ({
       source: b.source,
-      target: b.target,
+      consumers: b.consumers,
       artifact: b.artifact,
       run: undefined,
       watch: undefined,
@@ -58,7 +58,7 @@ describe('checkBridges', () => {
         makePackage('server', 'apps/server', 'typescript'),
         makePackage('client', 'packages/client', 'dart'),
       ],
-      [{ source: 'apps/server', target: 'packages/client', artifact: 'openapi.json' }],
+      [{ source: 'apps/server', consumers: ['packages/client'], artifact: 'openapi.json' }],
       tmpDir,
     );
 
@@ -74,7 +74,7 @@ describe('checkBridges', () => {
 
     const graph = makeGraph(
       [makePackage('client', 'packages/client', 'dart')],
-      [{ source: 'apps/server', target: 'packages/client', artifact: 'openapi.json' }],
+      [{ source: 'apps/server', consumers: ['packages/client'], artifact: 'openapi.json' }],
       tmpDir,
     );
 
@@ -87,22 +87,22 @@ describe('checkBridges', () => {
     expect(sourceIssue?.message).toContain('apps/server');
   });
 
-  test('missing target package produces error', () => {
+  test('missing consumer package produces error', () => {
     writeFileSync(join(tmpDir, 'openapi.json'), '{}');
 
     const graph = makeGraph(
       [makePackage('server', 'apps/server', 'typescript')],
-      [{ source: 'apps/server', target: 'packages/client', artifact: 'openapi.json' }],
+      [{ source: 'apps/server', consumers: ['packages/client'], artifact: 'openapi.json' }],
       tmpDir,
     );
 
     const result = checkBridges(graph);
     expect(result.passed).toBe(false);
-    const targetIssue = result.issues.find(
-      (i) => i.severity === 'error' && i.message.includes('target'),
+    const consumerIssue = result.issues.find(
+      (i) => i.severity === 'error' && i.message.includes('consumer'),
     );
-    expect(targetIssue).toBeDefined();
-    expect(targetIssue?.message).toContain('packages/client');
+    expect(consumerIssue).toBeDefined();
+    expect(consumerIssue?.message).toContain('packages/client');
   });
 
   test('missing artifact file produces error', () => {
@@ -112,7 +112,7 @@ describe('checkBridges', () => {
         makePackage('server', 'apps/server', 'typescript'),
         makePackage('client', 'packages/client', 'dart'),
       ],
-      [{ source: 'apps/server', target: 'packages/client', artifact: 'openapi.json' }],
+      [{ source: 'apps/server', consumers: ['packages/client'], artifact: 'openapi.json' }],
       tmpDir,
     );
 
@@ -133,7 +133,7 @@ describe('checkBridges', () => {
         makePackage('pkg-a', 'packages/a', 'typescript'),
         makePackage('pkg-b', 'packages/b', 'typescript'),
       ],
-      [{ source: 'packages/a', target: 'packages/b', artifact: 'shared.json' }],
+      [{ source: 'packages/a', consumers: ['packages/b'], artifact: 'shared.json' }],
       tmpDir,
     );
 

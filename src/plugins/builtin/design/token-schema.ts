@@ -2,12 +2,14 @@ import { z } from "zod";
 
 // ─── Primitives ────────────────────────────────────────────────────────────
 
-/** Accepts #RRGGBB hex or rgba(...) color values */
-const colorValue = z
-  .string()
-  .refine((v) => /^#[0-9a-fA-F]{6}$/.test(v) || /^rgba?\(/.test(v), {
-    message: "expected hex (#RRGGBB) or rgba() color",
-  });
+/** Matches all common CSS color notations: hex, rgb(a), hsl(a) */
+const COLOR_PATTERN =
+  /^(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\()/;
+
+/** Accepts hex (#RGB, #RRGGBB, #RRGGBBAA), rgb(a)(), and hsl(a)() color values */
+const colorValue = z.string().refine((v) => COLOR_PATTERN.test(v), {
+  message: "expected a CSS color: hex (#RGB/#RRGGBB/#RRGGBBAA), rgb(), rgba(), hsl(), or hsla()",
+});
 
 const themedColor = z.object({
   light: colorValue,

@@ -54,8 +54,8 @@ describe('loadConfig', () => {
     await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid mido config');
   });
 
-  describe('migration: bridge fields from/to/via → source/target/artifact', () => {
-    test('migrates old from/to/via bridge fields to source/target/artifact', async () => {
+  describe('removed migration: bridge fields from/to/via → source/target/artifact', () => {
+    test('throws on old from/to/via format (removed in v0.1.0)', async () => {
       const oldConfig = `
 workspace: test-workspace
 ecosystems:
@@ -70,17 +70,11 @@ bridges:
     via: apps/server/openapi.json
 `;
       writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
-      const loaded = await loadConfig(tmpDir);
-
-      expect(loaded.config.bridges).toHaveLength(1);
-      const bridge = loaded.config.bridges![0];
-      expect(bridge.source).toBe('apps/server');
-      expect(bridge.target).toBe('packages/api');
-      expect(bridge.artifact).toBe('apps/server/openapi.json');
+      await expect(loadConfig(tmpDir)).rejects.toThrow('removed in v0.1.0');
     });
 
-    test('migration is idempotent: running loadConfig again produces identical output', async () => {
-      const oldConfig = `
+    test('accepts already-migrated source/target/artifact format', async () => {
+      const modernConfig = `
 workspace: test-workspace
 ecosystems:
   typescript:
@@ -89,23 +83,19 @@ ecosystems:
       - apps/server
       - packages/api
 bridges:
-  - from: apps/server
-    to: packages/api
-    via: apps/server/openapi.json
+  - source: apps/server
+    consumers:
+      - packages/api
+    artifact: apps/server/openapi.json
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
-
-      const first = await loadConfig(tmpDir);
-      const second = await loadConfig(tmpDir);
-
-      expect(second.config.bridges![0]?.source).toBe(first.config.bridges![0]?.source);
-      expect(second.config.bridges![0]?.target).toBe(first.config.bridges![0]?.target);
-      expect(second.config.bridges![0]?.artifact).toBe(first.config.bridges![0]?.artifact);
+      writeFileSync(join(tmpDir, 'mido.yml'), modernConfig, 'utf-8');
+      const loaded = await loadConfig(tmpDir);
+      expect(loaded.config.bridges).toHaveLength(1);
     });
   });
 
-  describe('migration: flat lint/format → ecosystem-centric', () => {
-    test('migrates old flat lint rules to typescript-nested format', async () => {
+  describe('removed migration: flat lint/format → ecosystem-centric', () => {
+    test('throws on old flat lint rules format (removed in v0.1.0)', async () => {
       const oldConfig = `
 workspace: test-workspace
 ecosystems:
@@ -120,13 +110,10 @@ lint:
     - dist
 `;
       writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
-      const loaded = await loadConfig(tmpDir);
-
-      // After migration, rules should be nested under lint.typescript
-      expect(loaded.config.lint?.typescript?.rules).toBeDefined();
+      await expect(loadConfig(tmpDir)).rejects.toThrow('removed in v0.1.0');
     });
 
-    test('already-migrated config with ecosystem-centric format is unchanged', async () => {
+    test('already-migrated ecosystem-centric format is unchanged', async () => {
       const modernConfig = `
 workspace: test-workspace
 ecosystems:
@@ -164,5 +151,66 @@ lint:
     writeFileSync(join(tmpDir, 'mido.yaml'), MINIMAL_VALID_CONFIG, 'utf-8');
     const loaded = await loadConfig(tmpDir);
     expect(loaded.config.workspace).toBe('test-workspace');
+  });
+
+  describe('hooks config', () => {
+    test('accepts valid hooks with command arrays', async () => {
+      const config = `
+workspace: test-workspace
+ecosystems:
+  typescript:
+    manifest: package.json
+    packages:
+      - apps/server
+hooks:
+  pre-commit:
+    - mido pre-commit
+  commit-msg:
+    - mido commit-msg "$1"
+`;
+      writeFileSync(join(tmpDir, 'mido.yml'), config, 'utf-8');
+      const loaded = await loadConfig(tmpDir);
+      expect(loaded.config.hooks?.["pre-commit"]).toEqual(["mido pre-commit"]);
+      expect(loaded.config.hooks?.["commit-msg"]).toEqual(['mido commit-msg "$1"']);
+    });
+
+    test('accepts false to disable a hook', async () => {
+      const config = `
+workspace: test-workspace
+ecosystems:
+  typescript:
+    manifest: package.json
+    packages:
+      - apps/server
+hooks:
+  pre-commit: false
+  commit-msg:
+    - mido commit-msg "$1"
+`;
+      writeFileSync(join(tmpDir, 'mido.yml'), config, 'utf-8');
+      const loaded = await loadConfig(tmpDir);
+      expect(loaded.config.hooks?.["pre-commit"]).toBe(false);
+    });
+
+    test('omitted hooks section loads fine', async () => {
+      writeFileSync(join(tmpDir, 'mido.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
+      const loaded = await loadConfig(tmpDir);
+      expect(loaded.config.hooks).toBeUndefined();
+    });
+
+    test('rejects empty command array', async () => {
+      const config = `
+workspace: test-workspace
+ecosystems:
+  typescript:
+    manifest: package.json
+    packages:
+      - apps/server
+hooks:
+  pre-commit: []
+`;
+      writeFileSync(join(tmpDir, 'mido.yml'), config, 'utf-8');
+      await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid mido config');
+    });
   });
 });

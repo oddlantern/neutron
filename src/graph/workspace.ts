@@ -93,8 +93,8 @@ export async function buildWorkspaceGraph(
 
   const bridges: Bridge[] = (config.bridges ?? []).map((b) => ({
     source: b.source,
-    target: b.target,
     artifact: b.artifact,
+    consumers: b.consumers ?? (b.target ? [b.target] : []),
     run: b.run,
     watch: b.watch,
     entryFile: b.entryFile,

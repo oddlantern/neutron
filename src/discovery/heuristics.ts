@@ -6,7 +6,7 @@ import type { DiscoveredPackage } from "./scanner.js";
 
 export interface BridgeCandidate {
   readonly source: string;
-  readonly target: string;
+  readonly consumers: readonly string[];
   readonly artifact: string;
   readonly reason: string;
 }
@@ -68,7 +68,7 @@ export async function detectBridges(
         if (isPlausibleConsumer(pkg.path, other.path)) {
           candidates.push({
             source: pkg.path,
-            target: other.path,
+            consumers: [other.path],
             artifact: artifactRel,
             reason: `Found ${artifactName} in ${pkg.path}`,
           });
@@ -104,7 +104,7 @@ export async function detectBridges(
           // Dart package has a path dep to a non-Dart package — bridge candidate
           candidates.push({
             source: targetPkg.path,
-            target: pkg.path,
+            consumers: [pkg.path],
             artifact: `${targetPkg.path}/openapi.json`,
             reason: `Dart path dependency from ${pkg.path} to ${targetPkg.path}`,
           });
@@ -115,20 +115,21 @@ export async function detectBridges(
     }
   }
 
-  // Deduplicate by source+target
-  const seen = new Set<string>();
-  const unique: BridgeCandidate[] = [];
+  // Merge candidates that share source+artifact into one with multiple consumers
+  const merged = new Map<string, BridgeCandidate>();
 
   for (const candidate of candidates) {
-    const key = `${candidate.source}:${candidate.target}`;
-    if (seen.has(key)) {
-      continue;
+    const key = `${candidate.source}::${candidate.artifact}`;
+    const existing = merged.get(key);
+    if (existing) {
+      const allConsumers = [...new Set([...existing.consumers, ...candidate.consumers])];
+      merged.set(key, { ...existing, consumers: allConsumers });
+    } else {
+      merged.set(key, candidate);
     }
-    seen.add(key);
-    unique.push(candidate);
   }
 
-  return unique;
+  return [...merged.values()];
 }
 
 /**
