@@ -12,7 +12,7 @@ function loadTokens(): ValidatedTokens {
   const raw = JSON.parse(readFileSync(FIXTURE_PATH, "utf-8"));
   const result = validateTokens(raw);
   if (!result.data) {
-    throw new Error("Fixture tokens invalid");
+    throw new Error(`Fixture tokens invalid: ${result.errors.map((e) => e.message).join(", ")}`);
   }
   return result.data;
 }
@@ -33,33 +33,32 @@ describe("generateCSS", () => {
 
   test("generates dark-mode color overrides", () => {
     const output = generateCSS(loadTokens());
-    // After [data-theme="dark"], primary should be the dark value
     const darkSection = output.split('[data-theme="dark"]')[1];
     expect(darkSection).toContain("--color-primary: #E07B5A;");
   });
 
   test("generates extension CSS variables with getter prefix", () => {
     const output = generateCSS(loadTokens());
-    // AppColors has _getter: "appColors" → --app-colors-brand
-    expect(output).toContain("--appColors-brand:");
+    expect(output).toContain("--extended-brand:");
+    expect(output).toContain("--genre-fantasy:");
   });
 
-  test("generates spacing variables", () => {
+  test("generates spacing variables including zero", () => {
     const output = generateCSS(loadTokens());
+    expect(output).toContain("--spacing-none: 0px;");
     expect(output).toContain("--spacing-xs: 4px;");
-    expect(output).toContain("--spacing-md: 12px;");
   });
 
   test("generates radius variables", () => {
     const output = generateCSS(loadTokens());
-    expect(output).toContain("--radius-sm: 4px;");
-    expect(output).toContain("--radius-round: 999;");
+    expect(output).toContain("--radius-sm: 2px;");
+    expect(output).toContain("--radius-full: 9999;");
   });
 
   test("generates icon size variables", () => {
     const output = generateCSS(loadTokens());
-    expect(output).toContain("--icon-sm: 18px;");
-    expect(output).toContain("--icon-md: 22px;");
+    expect(output).toContain("--icon-xs: 18px;");
+    expect(output).toContain("--icon-hero: 120px;");
   });
 });
 
@@ -70,24 +69,23 @@ describe("generateTS", () => {
     expect(output).toContain("as const;");
   });
 
-  test("generates DSSpacing", () => {
+  test("generates DSSpacing with zero", () => {
     const output = generateTS(loadTokens());
     expect(output).toContain("export const DSSpacing = {");
+    expect(output).toContain("none: 0,");
     expect(output).toContain("xs: 4,");
-    expect(output).toContain("md: 12,");
   });
 
   test("generates DSRadius", () => {
     const output = generateTS(loadTokens());
     expect(output).toContain("export const DSRadius = {");
-    expect(output).toContain("sm: 4,");
-    expect(output).toContain("round: 999,");
+    expect(output).toContain("full: 9999,");
   });
 
   test("generates DSIconSize", () => {
     const output = generateTS(loadTokens());
     expect(output).toContain("export const DSIconSize = {");
-    expect(output).toContain("sm: 18,");
+    expect(output).toContain("hero: 120,");
   });
 
   test("generates type exports", () => {

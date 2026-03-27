@@ -39,7 +39,10 @@ function isValidatedTokens(value: unknown): value is ValidatedTokens {
   if (!isRecord(value)) {
     return false;
   }
-  return typeof value["color"] === "object" && value["color"] !== null;
+  if (!isRecord(value["standard"])) {
+    return false;
+  }
+  return typeof value["standard"]["color"] === "object" && value["standard"]["color"] !== null;
 }
 
 const WATCH_PATTERNS: readonly string[] = ["lib/**/*.dart", "bin/**/*.dart"];
@@ -80,7 +83,7 @@ function scaffoldDartPackage(pkgDir: string, packageName: string, tokens: Valida
 
   mkdirSync(generatedDir, { recursive: true });
 
-  const needsGoogleFonts = tokens.typography?.provider === "google_fonts";
+  const needsGoogleFonts = tokens.standard.typography?.provider === "google_fonts";
 
   const pubspec = [
     `name: ${packageName}`,

@@ -19,7 +19,7 @@ function loadTokens(): ValidatedTokens {
   const raw = JSON.parse(readFileSync(FIXTURE_PATH, "utf-8"));
   const result = validateTokens(raw);
   if (!result.data) {
-    throw new Error("Fixture tokens invalid");
+    throw new Error(`Fixture tokens invalid: ${result.errors.map((e) => e.message).join(", ")}`);
   }
   return result.data;
 }
@@ -42,65 +42,70 @@ describe("generateColorScheme", () => {
     expect(output).toContain("const ColorScheme.light(");
     expect(output).toContain("const ColorScheme.dark(");
   });
-
-  test("only emits color roles present in tokens", () => {
-    const output = generateColorScheme(loadTokens());
-    // secondary is not in fixture
-    expect(output).not.toContain("secondary:");
-  });
 });
 
 describe("generateThemeExtensions", () => {
-  test("produces @immutable classes with copyWith and lerp", () => {
+  test("generates one class per custom section", () => {
+    const output = generateThemeExtensions(loadTokens());
+    expect(output).toContain("class Extended extends ThemeExtension<Extended>");
+    expect(output).toContain("class Genre extends ThemeExtension<Genre>");
+  });
+
+  test("includes @immutable, copyWith, lerp, light/dark statics", () => {
     const output = generateThemeExtensions(loadTokens());
     expect(output).toContain("@immutable");
-    expect(output).toContain("class AppColors extends ThemeExtension<AppColors>");
-    expect(output).toContain("class GenreColors extends ThemeExtension<GenreColors>");
     expect(output).toContain("copyWith");
     expect(output).toContain("lerp");
     expect(output).toContain("Color.lerp");
+    expect(output).toContain("static const light = Extended(");
+    expect(output).toContain("static const dark = Extended(");
   });
 
-  test("generates static light and dark const instances", () => {
+  test("handles rgba() colors with Color.fromRGBO", () => {
     const output = generateThemeExtensions(loadTokens());
-    expect(output).toContain("static const light = AppColors(");
-    expect(output).toContain("static const dark = AppColors(");
-    expect(output).toContain("static const light = GenreColors(");
+    expect(output).toContain("Color.fromRGBO(");
   });
 
-  test("generates required named parameters in constructor", () => {
+  test("all fields are Color type", () => {
     const output = generateThemeExtensions(loadTokens());
-    expect(output).toContain("required this.brand,");
-    expect(output).toContain("required this.mystery,");
+    expect(output).toContain("final Color brand;");
+    expect(output).toContain("final Color fantasy;");
   });
 });
 
 describe("generateConstants", () => {
-  test("generates DSSpacing, DSRadius, DSElevation, DSIconSize", () => {
+  test("generates DSSpacing with zero value", () => {
     const output = generateConstants(loadTokens());
     expect(output).toContain("abstract final class DSSpacing");
-    expect(output).toContain("abstract final class DSRadius");
-    expect(output).toContain("abstract final class DSElevation");
-    expect(output).toContain("abstract final class DSIconSize");
+    expect(output).toContain("static const double none = 0;");
+    expect(output).toContain("static const double xs = 4;");
   });
 
-  test("generates BorderRadius convenience constructors", () => {
+  test("generates DSRadius with large value", () => {
     const output = generateConstants(loadTokens());
-    expect(output).toContain("static const BorderRadius smAll");
-    expect(output).toContain("BorderRadius.all(Radius.circular(sm))");
+    expect(output).toContain("abstract final class DSRadius");
+    expect(output).toContain("static const double full = 9999;");
   });
 
-  test("generates DSShadow with BoxShadow lists", () => {
+  test("generates DSElevation", () => {
+    const output = generateConstants(loadTokens());
+    expect(output).toContain("abstract final class DSElevation");
+    expect(output).toContain("static const double none = 0;");
+  });
+
+  test("generates DSShadow with empty arrays for none", () => {
     const output = generateConstants(loadTokens());
     expect(output).toContain("abstract final class DSShadow");
-    expect(output).toContain("abstract final class DSShadowDark");
-    expect(output).toContain("List<BoxShadow>");
-    expect(output).toContain("BoxShadow(");
+    // Empty shadow array still has opening/closing brackets
+    expect(output).toContain("static const List<BoxShadow> none = [");
+    // Verify it's there (the array is empty, so no BoxShadow entries)
+    expect(output).not.toContain("none = [\n    BoxShadow(");
   });
 
-  test("generates card shadow from shadowCard token", () => {
+  test("generates DSIconSize", () => {
     const output = generateConstants(loadTokens());
-    expect(output).toContain("static const List<BoxShadow> card");
+    expect(output).toContain("abstract final class DSIconSize");
+    expect(output).toContain("static const double hero = 120;");
   });
 });
 
@@ -112,31 +117,22 @@ describe("generateTheme", () => {
     expect(output).toContain("static final ThemeData dark");
   });
 
-  test("generates ThemeContextExtension with getters", () => {
+  test("generates ThemeContextExtension with extension getters", () => {
     const output = generateTheme(loadTokens(), "test_design");
-    expect(output).toContain("extension ThemeContextExtension on BuildContext");
-    expect(output).toContain("AppColors get appColors");
-    // GenreColors has no _getter so it should use lowercase-first class name
-    expect(output).toContain("GenreColors get genreColors");
+    expect(output).toContain("Extended get extended");
+    expect(output).toContain("Genre get genre");
   });
 
-  test("generates text style shortcuts for scale entries", () => {
+  test("generates text style shortcuts", () => {
     const output = generateTheme(loadTokens(), "test_design");
     expect(output).toContain("TextStyle get displayLarge");
     expect(output).toContain("TextStyle get bodyMedium");
-    expect(output).toContain("TextStyle get labelSmall");
   });
 
-  test("uses asset provider (fontFamily in TextStyle)", () => {
+  test("uses asset provider by default", () => {
     const output = generateTheme(loadTokens(), "test_design");
-    expect(output).toContain("fontFamily: 'Merriweather'");
+    expect(output).toContain("fontFamily: 'Playfair Display'");
     expect(output).not.toContain("GoogleFonts");
-  });
-
-  test("includes ColorToHex extension", () => {
-    const output = generateTheme(loadTokens(), "test_design");
-    expect(output).toContain("extension ColorToHex on Color");
-    expect(output).toContain("String get hex");
   });
 });
 

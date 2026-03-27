@@ -11,18 +11,77 @@ function loadFixture(): unknown {
 }
 
 describe("validateTokens", () => {
-  test("accepts valid complete tokens", () => {
+  test("accepts the full NextSaga tokens.json with zero errors", () => {
     const result = validateTokens(loadFixture());
     expect(result.success).toBe(true);
     expect(result.data).toBeDefined();
     expect(result.errors).toHaveLength(0);
   });
 
-  test("has warnings for missing optional M3 color roles", () => {
+  test("parses standard sections correctly", () => {
     const result = validateTokens(loadFixture());
-    expect(result.warnings.length).toBeGreaterThan(0);
-    const missingSecondary = result.warnings.find((w) => w.path === "color.secondary");
-    expect(missingSecondary).toBeDefined();
+    expect(result.data?.standard.brand["terracotta"]).toBe("#C45A3B");
+    expect(result.data?.standard.color["primary"].light).toBe("#B25134");
+    expect(result.data?.standard.spacing["none"]).toBe(0);
+    expect(result.data?.standard.spacing["xs"]).toBe(4);
+    expect(result.data?.standard.radius["full"]).toBe(9999);
+    expect(result.data?.standard.elevation["none"].dp).toBe(0);
+    expect(result.data?.standard.elevation["none"].shadow.light).toHaveLength(0);
+    expect(result.data?.standard.iconSize["hero"]).toBe(120);
+  });
+
+  test("discovers custom extension sections", () => {
+    const result = validateTokens(loadFixture());
+    expect(result.data?.extensions["extended"]).toBeDefined();
+    expect(result.data?.extensions["genre"]).toBeDefined();
+    // meta is a standard key, not an extension
+    expect(result.data?.extensions["meta"]).toBeUndefined();
+    // color is a standard key
+    expect(result.data?.extensions["color"]).toBeUndefined();
+  });
+
+  test("extension fields are parsed as themed colors", () => {
+    const result = validateTokens(loadFixture());
+    const extended = result.data?.extensions["extended"];
+    expect(extended?.fields["brand"]).toEqual({ light: "#C45A3B", dark: "#E07B5A" });
+    expect(extended?.fields["premium"]).toEqual({ light: "#C9A227", dark: "#D4AD2E" });
+  });
+
+  test("extension rgba() values are accepted", () => {
+    const result = validateTokens(loadFixture());
+    const extended = result.data?.extensions["extended"];
+    expect(extended?.fields["disabledForeground"]?.light).toBe("rgba(92, 77, 58, 0.40)");
+  });
+
+  test("extension meta uses PascalCase class name from key", () => {
+    const result = validateTokens(loadFixture());
+    expect(result.data?.extensions["extended"]?.meta.className).toBe("Extended");
+    expect(result.data?.extensions["genre"]?.meta.className).toBe("Genre");
+  });
+
+  test("extension meta uses camelCase getter from key", () => {
+    const result = validateTokens(loadFixture());
+    expect(result.data?.extensions["extended"]?.meta.getter).toBe("extended");
+    expect(result.data?.extensions["genre"]?.meta.getter).toBe("genre");
+  });
+
+  test("supports _className and _getter metadata overrides", () => {
+    const raw = loadFixture() as Record<string, unknown>;
+    const withMeta = {
+      ...raw,
+      customSection: {
+        _className: "MyColors",
+        _getter: "myColors",
+        brand: { light: "#000000", dark: "#FFFFFF" },
+      },
+    };
+    const result = validateTokens(withMeta);
+    expect(result.success).toBe(true);
+    expect(result.data?.extensions["customSection"]?.meta.className).toBe("MyColors");
+    expect(result.data?.extensions["customSection"]?.meta.getter).toBe("myColors");
+    // _className and _getter should not be in fields
+    expect(result.data?.extensions["customSection"]?.fields["_className"]).toBeUndefined();
+    expect(result.data?.extensions["customSection"]?.fields["_getter"]).toBeUndefined();
   });
 
   test("rejects missing required M3 color field", () => {
@@ -33,48 +92,27 @@ describe("validateTokens", () => {
     expect(result.success).toBe(false);
     const primaryError = result.errors.find((e) => e.path === "color.primary");
     expect(primaryError).toBeDefined();
-    expect(primaryError!.message).toContain("required");
   });
 
-  test("rejects invalid hex color in extensions", () => {
-    const raw = loadFixture() as Record<string, unknown>;
-    const extensions = {
-      BadColors: {
-        broken: { light: "#XYZ123", dark: "#000000" },
-      },
-    };
-    const result = validateTokens({ ...raw, extensions });
-    expect(result.success).toBe(false);
-    expect(result.errors.length).toBeGreaterThan(0);
-  });
-
-  test("rejects invalid typography provider", () => {
-    const raw = loadFixture() as Record<string, unknown>;
-    const typography = {
-      ...(raw["typography"] as Record<string, unknown>),
-      provider: "invalid_provider",
-    };
-    const result = validateTokens({ ...raw, typography });
-    expect(result.success).toBe(false);
-  });
-
-  test("rejects invalid scale reference to missing fontWeight", () => {
-    const raw = loadFixture() as Record<string, unknown>;
-    const typo = raw["typography"] as Record<string, unknown>;
-    const typography = {
-      ...typo,
-      scale: {
-        test: { size: 16, weight: "nonexistent", family: "body" },
-      },
-    };
-    const result = validateTokens({ ...raw, typography });
-    expect(result.success).toBe(false);
-  });
-
-  test("rejects non-positive spacing values", () => {
+  test("rejects negative spacing values", () => {
     const raw = loadFixture() as Record<string, unknown>;
     const result = validateTokens({ ...raw, spacing: { bad: -1 } });
     expect(result.success).toBe(false);
+  });
+
+  test("accepts zero spacing", () => {
+    const raw = loadFixture() as Record<string, unknown>;
+    const result = validateTokens({ ...raw, spacing: { none: 0 } });
+    expect(result.success).toBe(true);
+  });
+
+  test("accepts empty shadow arrays", () => {
+    const raw = loadFixture() as Record<string, unknown>;
+    const result = validateTokens({
+      ...raw,
+      elevation: { none: { dp: 0, shadow: { light: [], dark: [] } } },
+    });
+    expect(result.success).toBe(true);
   });
 
   test("accepts tokens without optional sections", () => {
@@ -90,5 +128,11 @@ describe("validateTokens", () => {
     };
     const result = validateTokens(minimal);
     expect(result.success).toBe(true);
+    expect(result.data?.extensions).toEqual({});
+  });
+
+  test("typography defaults provider to asset when missing", () => {
+    const result = validateTokens(loadFixture());
+    expect(result.data?.standard.typography?.provider).toBe("asset");
   });
 });

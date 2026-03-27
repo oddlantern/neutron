@@ -25,7 +25,10 @@ function isValidatedTokens(value: unknown): value is ValidatedTokens {
   if (!isRecord(value)) {
     return false;
   }
-  return typeof value["color"] === "object" && value["color"] !== null;
+  if (!isRecord(value["standard"])) {
+    return false;
+  }
+  return typeof value["standard"]["color"] === "object" && value["standard"]["color"] !== null;
 }
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];

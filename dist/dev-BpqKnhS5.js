@@ -2,7 +2,7 @@
 import { a as GREEN, f as YELLOW, l as RED, n as CYAN, o as MAGENTA, r as DIM, t as BOLD, u as RESET } from "./output-C8Qm-e8m.js";
 import { t as loadConfig } from "./loader-Bk5qGav2.js";
 import { t as buildWorkspaceGraph } from "./workspace-Bcx1iS1C.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-C3TQvbGO.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-DLp2Kv5H.js";
 import { t as detectPackageManager } from "./pm-detect-mpNBTwyh.js";
 import { readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
@@ -520,4 +520,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-DkhVp_ni.js.map
+//# sourceMappingURL=dev-BpqKnhS5.js.map
