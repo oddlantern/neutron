@@ -46,9 +46,11 @@ async function readAndParseArtifact(artifactPath: string, root: string): Promise
   const content = await readFile(absPath, "utf-8");
   const ext = artifactPath.split(".").pop()?.toLowerCase();
   if (ext === "yaml" || ext === "yml") {
-    return parseYaml(content) as unknown;
+    const parsed: unknown = parseYaml(content);
+    return parsed;
   }
-  return JSON.parse(content) as unknown;
+  const parsed: unknown = JSON.parse(content);
+  return parsed;
 }
 
 /**
