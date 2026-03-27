@@ -155,11 +155,12 @@ Commands:
   check --fix       Interactively resolve version mismatches and update mido.lock
   check --quiet     Silent mode — only output on failure (for hooks)
   dev [--verbose]   Watch bridges and regenerate on changes
+  generate          Run all bridge pipelines (fresh clone / CI)
   lint              Run linters across all packages
   lint --fix        Auto-fix lint issues
   fmt               Format all packages
   fmt --check       Check formatting without fixing
-  build             Build all packages
+  build [--all]     Build library packages (--all includes apps)
   pre-commit        Run full pre-commit validation suite
   commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
@@ -202,18 +203,18 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-vpbZAMGT.js");
+		const { runInit } = await import("./init-Bqmq8iDk.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-BVcL5N2z.js");
+		const { runDev } = await import("./dev-XmkMzeGP.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-CrE4RfyE.js");
+		const { runInstall } = await import("./install-Crdv0j8w.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
@@ -222,7 +223,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-AONeI30z.js");
+		const { runLint } = await import("./lint-B83DN19s.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -236,7 +237,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-BC8_x7D1.js");
+		const { runFmt } = await import("./fmt-DXHNpy-o.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -245,18 +246,30 @@ async function main() {
 		});
 		process.exit(exitCode);
 	}
+	if (command === "generate") {
+		const quiet = args.includes("--quiet");
+		const verbose = args.includes("--verbose");
+		const { runGenerate } = await import("./generate-CJ18gJhq.js");
+		const exitCode = await runGenerate(parsers, {
+			quiet,
+			verbose
+		});
+		process.exit(exitCode);
+	}
 	if (command === "build") {
 		const quiet = args.includes("--quiet");
+		const all = args.includes("--all");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-DFDliGMM.js");
+		const { runBuild } = await import("./build-B4XR9tOZ.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
+			all,
 			package: pkg
 		});
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-C6y81dYN.js");
+		const { runPreCommit } = await import("./pre-commit-CyVUKKmg.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}

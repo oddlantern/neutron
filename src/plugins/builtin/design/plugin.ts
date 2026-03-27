@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -146,14 +147,21 @@ export const designPlugin: DomainPlugin = {
       return [];
     }
 
-    const ctxWithTokens: ExecutionContext = {
-      ...context,
-      artifactPath: artifact,
-      domainData: validation.data,
-    };
+    // Derive source path from artifact (artifact lives in source package)
+    const sourcePath = artifact.split("/").slice(0, -1).join("/") || ".";
 
     const results: ExecuteResult[] = [];
     for (const handler of relevantHandlers) {
+      const outputDir = join(root, sourcePath, "generated", handler.plugin.name);
+      mkdirSync(outputDir, { recursive: true });
+
+      const ctxWithTokens: ExecutionContext = {
+        ...context,
+        artifactPath: artifact,
+        domainData: validation.data,
+        outputDir,
+      };
+
       const result = await handler.plugin.execute(
         handler.capability.action,
         handler.pkg,
@@ -225,6 +233,8 @@ export const designPlugin: DomainPlugin = {
 
     // Step 2+: One step per ecosystem handler
     for (const handler of relevantHandlers) {
+      const outputDir = join(root, _source.path, "generated", handler.plugin.name);
+
       steps.push({
         name: `generate-${handler.plugin.name}`,
         plugin: handler.plugin.name,
@@ -238,10 +248,13 @@ export const designPlugin: DomainPlugin = {
             };
           }
 
+          mkdirSync(outputDir, { recursive: true });
+
           const ctxWithTokens: ExecutionContext = {
             ...context,
             artifactPath: artifact,
             domainData: shared.data,
+            outputDir,
           };
 
           return handler.plugin.execute(

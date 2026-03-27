@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
 import type { WorkspacePackage } from "../../../graph/types.js";
@@ -275,10 +275,20 @@ export const openapiPlugin: DomainPlugin = {
       return [];
     }
 
-    const ctxWithArtifact = { ...context, artifactPath: resolvedArtifact };
-    const results: ExecuteResult[] = [];
+    // Derive source path from artifact
+    const sourcePath = artifact.split("/").slice(0, -1).join("/") || ".";
 
+    const results: ExecuteResult[] = [];
     for (const handler of relevantHandlers) {
+      const outputDir = join(root, sourcePath, "generated", handler.plugin.name);
+      mkdirSync(outputDir, { recursive: true });
+
+      const ctxWithArtifact: ExecutionContext = {
+        ...context,
+        artifactPath: resolvedArtifact,
+        outputDir,
+      };
+
       const result = await handler.plugin.execute(
         handler.capability.action,
         handler.pkg,
@@ -334,14 +344,27 @@ export const openapiPlugin: DomainPlugin = {
     const targetPaths = new Set(targets.map((t) => t.path));
     const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 
-    const ctxWithArtifact = { ...context, artifactPath: downstreamArtifact };
     for (const handler of relevantHandlers) {
+      const outputDir = join(root, source.path, "generated", handler.plugin.name);
+
       steps.push({
         name: `generate-${handler.plugin.name}`,
         plugin: handler.plugin.name,
         description: `${handler.capability.description}...`,
-        execute: () =>
-          handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact),
+        execute: () => {
+          mkdirSync(outputDir, { recursive: true });
+          const ctxWithArtifact: ExecutionContext = {
+            ...context,
+            artifactPath: downstreamArtifact,
+            outputDir,
+          };
+          return handler.plugin.execute(
+            handler.capability.action,
+            handler.pkg,
+            root,
+            ctxWithArtifact,
+          );
+        },
       });
     }
 

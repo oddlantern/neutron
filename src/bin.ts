@@ -33,11 +33,12 @@ Commands:
   check --fix       Interactively resolve version mismatches and update mido.lock
   check --quiet     Silent mode — only output on failure (for hooks)
   dev [--verbose]   Watch bridges and regenerate on changes
+  generate          Run all bridge pipelines (fresh clone / CI)
   lint              Run linters across all packages
   lint --fix        Auto-fix lint issues
   fmt               Format all packages
   fmt --check       Check formatting without fixing
-  build             Build all packages
+  build [--all]     Build library packages (--all includes apps)
   pre-commit        Run full pre-commit validation suite
   commit-msg <file> Validate a commit message (used by git hooks)
   help              Show this help message
@@ -120,11 +121,20 @@ async function main(): Promise<void> {
     process.exit(exitCode);
   }
 
+  if (command === "generate") {
+    const quiet = args.includes("--quiet");
+    const verbose = args.includes("--verbose");
+    const { runGenerate } = await import("./commands/generate.js");
+    const exitCode = await runGenerate(parsers, { quiet, verbose });
+    process.exit(exitCode);
+  }
+
   if (command === "build") {
     const quiet = args.includes("--quiet");
+    const all = args.includes("--all");
     const pkg = getFlagValue(args, "--package");
     const { runBuild } = await import("./commands/build.js");
-    const exitCode = await runBuild(parsers, { quiet, package: pkg });
+    const exitCode = await runBuild(parsers, { quiet, all, package: pkg });
     process.exit(exitCode);
   }
 

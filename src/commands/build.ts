@@ -2,6 +2,7 @@ import { loadConfig } from "../config/loader.js";
 import { groupByEcosystem } from "./group.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
+import type { WorkspacePackage } from "../graph/types.js";
 import { BOLD, DIM, FAIL, PASS, RESET } from "../output.js";
 import { loadPlugins } from "../plugins/loader.js";
 import { PluginRegistry } from "../plugins/registry.js";
@@ -14,6 +15,26 @@ const MS_PER_SECOND = 1000;
 export interface BuildOptions {
   readonly quiet?: boolean | undefined;
   readonly package?: string | undefined;
+  /** Build all packages including apps (leaf nodes). Default: packages only. */
+  readonly all?: boolean | undefined;
+}
+
+/**
+ * Build a set of package paths that have at least one workspace dependent.
+ * Packages with dependents are libraries — packages without are apps (leaf nodes).
+ */
+function findLibraryPaths(
+  packages: ReadonlyMap<string, WorkspacePackage>,
+): ReadonlySet<string> {
+  const hasDependent = new Set<string>();
+
+  for (const pkg of packages.values()) {
+    for (const dep of pkg.localDependencies) {
+      hasDependent.add(dep);
+    }
+  }
+
+  return hasDependent;
 }
 
 /**
@@ -34,8 +55,10 @@ export async function runBuild(
   const context = registry.createContext(graph, root, pm);
 
   const grouped = groupByEcosystem(graph.packages, options);
+  const libraryPaths = options.all ? null : findLibraryPaths(graph.packages);
   let hasErrors = false;
   let builtCount = 0;
+  let skippedApps = 0;
 
   for (const [ecosystem, packages] of grouped) {
     if (!quiet) {
@@ -46,6 +69,15 @@ export async function runBuild(
 
     // Build sequentially within an ecosystem (build order may matter)
     for (const pkg of packages) {
+      // Skip leaf nodes (apps) unless --all
+      if (libraryPaths && !libraryPaths.has(pkg.path)) {
+        skippedApps++;
+        if (!quiet) {
+          console.log(`  ${SKIP} ${pkg.path} ${DIM}— app (use --all to include)${RESET}`);
+        }
+        continue;
+      }
+
       const plugin = registry.getEcosystemForPackage(pkg);
       if (!plugin) {
         if (!quiet) {
@@ -94,7 +126,8 @@ export async function runBuild(
 
   if (!quiet) {
     const icon = hasErrors ? FAIL : PASS;
-    console.log(`\n${icon} ${builtCount} package(s) built${hasErrors ? " (with errors)" : ""}\n`);
+    const appNote = skippedApps > 0 ? ` ${DIM}(${skippedApps} app(s) skipped)${RESET}` : "";
+    console.log(`\n${icon} ${builtCount} package(s) built${hasErrors ? " (with errors)" : ""}${appNote}\n`);
   }
 
   return hasErrors ? 1 : 0;

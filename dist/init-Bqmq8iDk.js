@@ -2,7 +2,7 @@
 import { a as DIM, f as RESET, l as ORANGE, r as BOLD, s as GREEN, v as isRecord } from "./version-BRfsXVk-.js";
 import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-Co8X4jm-.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-HJZ5X6pW.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-DhyqY819.js";
 import { n as runCheck } from "./check-Cqa5CGCo.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -691,7 +691,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-BVcL5N2z.js");
+			const { runDev } = await import("./dev-XmkMzeGP.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -1165,7 +1165,7 @@ async function runReconciliation(root, configPath, parsers) {
 	if (isCancel(installHooks)) handleCancel();
 	let hooksInstalled = false;
 	if (installHooks) {
-		const { runInstall } = await import("./install-CrE4RfyE.js");
+		const { runInstall } = await import("./install-Crdv0j8w.js");
 		const installResult = await runInstall(root, existing);
 		if (installResult !== 0) return installResult;
 		hooksInstalled = true;
@@ -1292,7 +1292,7 @@ async function runFirstTime(root, configPath, parsers) {
 	if (isCancel(installHooks)) handleCancel();
 	let hooksInstalled = false;
 	if (installHooks) {
-		const { runInstall } = await import("./install-CrE4RfyE.js");
+		const { runInstall } = await import("./install-Crdv0j8w.js");
 		const installResult = await runInstall(root);
 		if (installResult !== 0) return installResult;
 		hooksInstalled = true;
@@ -1310,4 +1310,4 @@ async function runFirstTime(root, configPath, parsers) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-vpbZAMGT.js.map
+//# sourceMappingURL=init-Bqmq8iDk.js.map

@@ -243,6 +243,12 @@ export interface ExecutionContext {
   readonly resolvedFiles?: readonly string[] | undefined;
   /** Opaque domain data — passed from domain plugins to ecosystem plugins (e.g., validated design tokens) */
   readonly domainData?: unknown;
+  /**
+   * Output directory for generated code (absolute path).
+   * Domain plugins set this to `<root>/<source>/generated/<ecosystem>/`
+   * so ecosystem plugins write output next to the source, not into consumers.
+   */
+  readonly outputDir?: string | undefined;
 }
 
 export interface EcosystemHandler {

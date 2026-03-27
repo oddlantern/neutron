@@ -108,6 +108,10 @@ function scaffoldDartPackage(pkgDir: string, packageName: string, tokens: Valida
 
 /**
  * Execute design token generation for a Dart/Flutter target.
+ *
+ * When context.outputDir is set (new convention), writes to that directory
+ * (`<source>/generated/dart/`). Falls back to `<consumer>/` for backwards
+ * compatibility.
  */
 async function executeDesignTokenGeneration(
   pkg: WorkspacePackage,
@@ -126,15 +130,16 @@ async function executeDesignTokenGeneration(
   }
   const tokens: ValidatedTokens = rawDomainData;
 
-  const pkgDir = join(root, pkg.path);
+  // Determine output root — new convention writes next to source, not into consumer
+  const outRoot = context.outputDir ?? join(root, pkg.path);
   const packageName = pkg.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
 
   // Scaffold if first run
-  if (!existsSync(join(pkgDir, "pubspec.yaml"))) {
-    scaffoldDartPackage(pkgDir, packageName, tokens);
+  if (!existsSync(join(outRoot, "pubspec.yaml"))) {
+    scaffoldDartPackage(outRoot, packageName, tokens);
   }
 
-  const themeDir = join(pkgDir, "lib", "core", "theme");
+  const themeDir = join(outRoot, "lib", "core", "theme");
   const generatedDir = join(themeDir, "generated");
   mkdirSync(generatedDir, { recursive: true });
 
@@ -161,8 +166,9 @@ async function executeDesignTokenGeneration(
   writeFileSync(join(themeDir, "theme.dart"), themeContent, "utf-8");
 
   // Package barrel
+  mkdirSync(join(outRoot, "lib"), { recursive: true });
   const packageBarrelContent = generatePackageBarrel(packageName);
-  writeFileSync(join(pkgDir, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
+  writeFileSync(join(outRoot, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
 
   const duration = Math.round(performance.now() - start);
   const fileCount = generatedFiles.length + 3; // + barrel + theme + package barrel

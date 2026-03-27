@@ -277,9 +277,12 @@ function resolveOutputPath(pkg, root, scripts) {
 }
 /**
 * Execute design token CSS/TS generation for a TypeScript package.
+*
+* When context.outputDir is set (new convention), writes to that directory
+* (`<source>/generated/typescript/`). Falls back to `<consumer>/generated/`
+* for backwards compatibility.
 */
 async function executeDesignTokenGeneration$1(pkg, root, context) {
-	const cwd = join(root, pkg.path);
 	const start = performance.now();
 	const rawDomainData = context.domainData;
 	if (!isValidatedTokens$1(rawDomainData)) return {
@@ -288,23 +291,22 @@ async function executeDesignTokenGeneration$1(pkg, root, context) {
 		summary: "No token data provided — design plugin must validate first"
 	};
 	const tokens = rawDomainData;
-	if (!existsSync(join(cwd, "package.json"))) {
-		mkdirSync(cwd, { recursive: true });
+	const outDir = context.outputDir ?? join(root, pkg.path, "generated");
+	mkdirSync(outDir, { recursive: true });
+	if (!existsSync(join(outDir, "package.json"))) {
 		const pkgJson = {
-			name: pkg.name || "design-tokens",
+			name: pkg.name ? `${pkg.name}-design-tokens` : "design-tokens",
 			version: "0.0.0",
 			private: true,
-			main: "generated/tokens.css",
-			types: "generated/tokens.ts"
+			main: "tokens.css",
+			types: "tokens.ts"
 		};
-		writeFileSync(join(cwd, "package.json"), JSON.stringify(pkgJson, null, 2) + "\n", "utf-8");
+		writeFileSync(join(outDir, "package.json"), JSON.stringify(pkgJson, null, 2) + "\n", "utf-8");
 	}
-	const generatedDir = join(cwd, "generated");
-	mkdirSync(generatedDir, { recursive: true });
 	const cssContent = generateCSS(tokens);
 	const tsContent = generateTS(tokens);
-	writeFileSync(join(generatedDir, "tokens.css"), cssContent, "utf-8");
-	writeFileSync(join(generatedDir, "tokens.ts"), tsContent, "utf-8");
+	writeFileSync(join(outDir, "tokens.css"), cssContent, "utf-8");
+	writeFileSync(join(outDir, "tokens.ts"), tsContent, "utf-8");
 	return {
 		success: true,
 		duration: Math.round(performance.now() - start),
@@ -313,9 +315,11 @@ async function executeDesignTokenGeneration$1(pkg, root, context) {
 }
 /**
 * Execute OpenAPI TypeScript codegen for a package.
+*
+* When context.outputDir is set (new convention), generates into that directory.
+* Falls back to generating inside the consumer package.
 */
 async function executeOpenAPICodegen(pkg, root, context) {
-	const cwd = join(root, pkg.path);
 	const pm = context.packageManager;
 	let scripts = {};
 	try {
@@ -323,6 +327,7 @@ async function executeOpenAPICodegen(pkg, root, context) {
 	} catch {}
 	const artifactPath = context.artifactPath;
 	if (!artifactPath) {
+		const cwd = join(root, pkg.path);
 		if (scripts["generate"]) return runCommand(pm, ["run", "generate"], cwd);
 		return {
 			success: false,
@@ -330,7 +335,18 @@ async function executeOpenAPICodegen(pkg, root, context) {
 			summary: `No artifact path provided and no generate script found in ${pkg.path}`
 		};
 	}
-	const artifactRelative = relative(join(root, pkg.path), join(root, artifactPath));
+	if (context.outputDir) {
+		mkdirSync(context.outputDir, { recursive: true });
+		const artifactRelative = relative(context.outputDir, join(root, artifactPath));
+		return runCommand(pm === "bun" ? "bunx" : "npx", [
+			"openapi-typescript",
+			artifactRelative,
+			"-o",
+			"api.d.ts"
+		], context.outputDir);
+	}
+	const cwd = join(root, pkg.path);
+	const artifactRelative = relative(cwd, join(root, artifactPath));
 	const outputPath = resolveOutputPath(pkg, root, scripts);
 	return runCommand(pm === "bun" ? "bunx" : "npx", [
 		"openapi-typescript",
@@ -1125,6 +1141,10 @@ function scaffoldDartPackage(pkgDir, packageName, tokens) {
 }
 /**
 * Execute design token generation for a Dart/Flutter target.
+*
+* When context.outputDir is set (new convention), writes to that directory
+* (`<source>/generated/dart/`). Falls back to `<consumer>/` for backwards
+* compatibility.
 */
 async function executeDesignTokenGeneration(pkg, root, context) {
 	const start = performance.now();
@@ -1135,10 +1155,10 @@ async function executeDesignTokenGeneration(pkg, root, context) {
 		summary: "No token data provided — design plugin must validate first"
 	};
 	const tokens = rawDomainData;
-	const pkgDir = join(root, pkg.path);
+	const outRoot = context.outputDir ?? join(root, pkg.path);
 	const packageName = pkg.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
-	if (!existsSync(join(pkgDir, "pubspec.yaml"))) scaffoldDartPackage(pkgDir, packageName, tokens);
-	const themeDir = join(pkgDir, "lib", "core", "theme");
+	if (!existsSync(join(outRoot, "pubspec.yaml"))) scaffoldDartPackage(outRoot, packageName, tokens);
+	const themeDir = join(outRoot, "lib", "core", "theme");
 	const generatedDir = join(themeDir, "generated");
 	mkdirSync(generatedDir, { recursive: true });
 	const colorSchemeContent = generateColorScheme(tokens);
@@ -1159,8 +1179,9 @@ async function executeDesignTokenGeneration(pkg, root, context) {
 	const barrelContent = generateBarrel(generatedFiles);
 	writeFileSync(join(generatedDir, "generated.dart"), barrelContent, "utf-8");
 	writeFileSync(join(themeDir, "theme.dart"), themeContent, "utf-8");
+	mkdirSync(join(outRoot, "lib"), { recursive: true });
 	const packageBarrelContent = generatePackageBarrel(packageName);
-	writeFileSync(join(pkgDir, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
+	writeFileSync(join(outRoot, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
 	return {
 		success: true,
 		duration: Math.round(performance.now() - start),
@@ -1648,13 +1669,17 @@ const designPlugin = {
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 		if (relevantHandlers.length === 0) return [];
-		const ctxWithTokens = {
-			...context,
-			artifactPath: artifact,
-			domainData: validation.data
-		};
+		const sourcePath = artifact.split("/").slice(0, -1).join("/") || ".";
 		const results = [];
 		for (const handler of relevantHandlers) {
+			const outputDir = join(root, sourcePath, "generated", handler.plugin.name);
+			mkdirSync(outputDir, { recursive: true });
+			const ctxWithTokens = {
+				...context,
+				artifactPath: artifact,
+				domainData: validation.data,
+				outputDir
+			};
 			const result = await handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithTokens);
 			results.push(result);
 		}
@@ -1700,24 +1725,29 @@ const designPlugin = {
 		const handlers = await context.findEcosystemHandlers(DOMAIN_NAME, artifact);
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
-		for (const handler of relevantHandlers) steps.push({
-			name: `generate-${handler.plugin.name}`,
-			plugin: handler.plugin.name,
-			description: `${handler.capability.description}...`,
-			execute: async () => {
-				if (!shared.data) return {
-					success: false,
-					duration: 0,
-					summary: "Cannot generate — token validation did not run"
-				};
-				const ctxWithTokens = {
-					...context,
-					artifactPath: artifact,
-					domainData: shared.data
-				};
-				return handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithTokens);
-			}
-		});
+		for (const handler of relevantHandlers) {
+			const outputDir = join(root, _source.path, "generated", handler.plugin.name);
+			steps.push({
+				name: `generate-${handler.plugin.name}`,
+				plugin: handler.plugin.name,
+				description: `${handler.capability.description}...`,
+				execute: async () => {
+					if (!shared.data) return {
+						success: false,
+						duration: 0,
+						summary: "Cannot generate — token validation did not run"
+					};
+					mkdirSync(outputDir, { recursive: true });
+					const ctxWithTokens = {
+						...context,
+						artifactPath: artifact,
+						domainData: shared.data,
+						outputDir
+					};
+					return handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithTokens);
+				}
+			});
+		}
 		return steps;
 	}
 };
@@ -2094,7 +2124,7 @@ async function exportSpec(options) {
 * Reads the package.json and checks all adapters.
 */
 async function detectFrameworkAdapter(pkgPath, root) {
-	const { detectAdapter } = await import("./adapters-BIt9mWKb.js");
+	const { detectAdapter } = await import("./adapters-CV1MobPB.js");
 	try {
 		const manifest = await readPackageJson(pkgPath, root);
 		const allDeps = {};
@@ -2264,12 +2294,16 @@ const openapiPlugin = {
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 		if (relevantHandlers.length === 0) return [];
-		const ctxWithArtifact = {
-			...context,
-			artifactPath: resolvedArtifact
-		};
+		const sourcePath = artifact.split("/").slice(0, -1).join("/") || ".";
 		const results = [];
 		for (const handler of relevantHandlers) {
+			const outputDir = join(root, sourcePath, "generated", handler.plugin.name);
+			mkdirSync(outputDir, { recursive: true });
+			const ctxWithArtifact = {
+				...context,
+				artifactPath: resolvedArtifact,
+				outputDir
+			};
 			const result = await handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact);
 			results.push(result);
 		}
@@ -2302,16 +2336,23 @@ const openapiPlugin = {
 		const handlers = await context.findEcosystemHandlers("openapi", downstreamArtifact);
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
-		const ctxWithArtifact = {
-			...context,
-			artifactPath: downstreamArtifact
-		};
-		for (const handler of relevantHandlers) steps.push({
-			name: `generate-${handler.plugin.name}`,
-			plugin: handler.plugin.name,
-			description: `${handler.capability.description}...`,
-			execute: () => handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact)
-		});
+		for (const handler of relevantHandlers) {
+			const outputDir = join(root, source.path, "generated", handler.plugin.name);
+			steps.push({
+				name: `generate-${handler.plugin.name}`,
+				plugin: handler.plugin.name,
+				description: `${handler.capability.description}...`,
+				execute: () => {
+					mkdirSync(outputDir, { recursive: true });
+					const ctxWithArtifact = {
+						...context,
+						artifactPath: downstreamArtifact,
+						outputDir
+					};
+					return handler.plugin.execute(handler.capability.action, handler.pkg, root, ctxWithArtifact);
+				}
+			});
+		}
 		return steps;
 	},
 	async suggestWatchPaths(source, _artifact, packages, root) {
@@ -2409,4 +2450,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-HJZ5X6pW.js.map
+//# sourceMappingURL=registry-DhyqY819.js.map
