@@ -72,7 +72,8 @@ bridges:
       writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
       const loaded = await loadConfig(tmpDir);
       expect(loaded.config.bridges).toHaveLength(1);
-      expect(loaded.config.bridges?.[0]?.source).toBe('apps/server');
+      // from=consumer → target, to=producer → source
+      expect(loaded.config.bridges?.[0]?.source).toBe('packages/api');
       expect(loaded.config.bridges?.[0]?.artifact).toBe('apps/server/openapi.json');
     });
 
