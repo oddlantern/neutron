@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import { loadConfig } from "../config/loader.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
@@ -82,7 +85,13 @@ export async function runGenerate(
         first.bridge.artifact,
         first.watchPatterns,
       );
-      if (cached) {
+      // Verify output dirs exist — if missing, cache is stale
+      const outputMissing = first.targets.some((t) => {
+        const genDir = join(root, first.bridge.source, "generated", t.ecosystem);
+        return !existsSync(genDir);
+      });
+
+      if (cached && !outputMissing) {
         skipped++;
         if (!quiet && verbose) {
           logStep(`${first.bridge.artifact} — cached, skipping`);
@@ -93,8 +102,13 @@ export async function runGenerate(
 
     try {
       await executeBridgeGroup(group, registry, graph, root, pm, verbose);
-      // Update cache on success
-      await updateCache(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
+      // Only cache if all expected output dirs were actually created
+      const allOutputsExist = group.every((r) =>
+        r.targets.every((t) => existsSync(join(root, r.bridge.source, "generated", t.ecosystem))),
+      );
+      if (allOutputsExist) {
+        await updateCache(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
+      }
     } catch (err: unknown) {
       hasErrors = true;
       const msg = err instanceof Error ? err.message : String(err);

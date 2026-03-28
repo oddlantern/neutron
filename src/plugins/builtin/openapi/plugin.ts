@@ -315,14 +315,17 @@ export const openapiPlugin: DomainPlugin = {
     const ext = artifact.includes(".") ? artifact.slice(artifact.lastIndexOf(".")) : "";
     const base = artifact.slice(0, artifact.length - ext.length);
 
-    // Step 1: Export spec from framework
-    steps.push({
-      name: "export-spec",
-      plugin: "openapi",
-      description: "exporting spec...",
-      outputPaths: [artifact],
-      execute: () => openapiPlugin.exportArtifact(source, artifact, root, context),
-    });
+    // Step 1: Export spec from framework (skip if artifact already exists on disk)
+    const artifactExists = existsSync(join(root, artifact));
+    if (!artifactExists) {
+      steps.push({
+        name: "export-spec",
+        plugin: "openapi",
+        description: "exporting spec...",
+        outputPaths: [artifact],
+        execute: () => openapiPlugin.exportArtifact(source, artifact, root, context),
+      });
+    }
 
     // Step 2: Prepare spec (if detected)
     const prepareInfo = await detectPrepareScript(source, root);

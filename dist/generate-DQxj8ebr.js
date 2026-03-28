@@ -3,7 +3,7 @@ import { r as isRecord } from "./version-M9xRTj7S.js";
 import { c as PASS, i as FAIL, r as DIM, t as BOLD, u as RESET } from "./output-MbJ98jNX.js";
 import { t as loadConfig } from "./loader-CYxgXRd0.js";
 import { t as buildWorkspaceGraph } from "./workspace-22OBPV16.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-COXFlfrT.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BrU4OPPH.js";
 import { t as detectPackageManager } from "./pm-detect-XlYC3uej.js";
 import { d as logStep, n as groupBridgesByArtifact, o as resolveBridges, s as formatMs, t as executeBridgeGroup } from "./runner-CY4mswOr.js";
 import { readFile } from "node:fs/promises";
@@ -146,7 +146,11 @@ async function runGenerate(parsers, options = {}) {
 		if (!first) continue;
 		const bridgeKey = `${first.bridge.source}::${first.bridge.artifact}`;
 		if (!force) {
-			if (await isCacheHit(root, bridgeKey, first.bridge.artifact, first.watchPatterns)) {
+			const cached = await isCacheHit(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
+			const outputMissing = first.targets.some((t) => {
+				return !existsSync(join(root, first.bridge.source, "generated", t.ecosystem));
+			});
+			if (cached && !outputMissing) {
 				skipped++;
 				if (!quiet && verbose) logStep(`${first.bridge.artifact} — cached, skipping`);
 				continue;
@@ -154,7 +158,7 @@ async function runGenerate(parsers, options = {}) {
 		}
 		try {
 			await executeBridgeGroup(group, registry, graph, root, pm, verbose);
-			await updateCache(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
+			if (group.every((r) => r.targets.every((t) => existsSync(join(root, r.bridge.source, "generated", t.ecosystem))))) await updateCache(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
 		} catch (err) {
 			hasErrors = true;
 			const msg = err instanceof Error ? err.message : String(err);
@@ -172,4 +176,4 @@ async function runGenerate(parsers, options = {}) {
 //#endregion
 export { runGenerate };
 
-//# sourceMappingURL=generate-BtTDiaAf.js.map
+//# sourceMappingURL=generate-DQxj8ebr.js.map
