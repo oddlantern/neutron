@@ -160,8 +160,17 @@ async function runDev(parsers, options = {}) {
 			for (const files of Object.values(watched)) fileCount += files.length;
 			logDebug(`chokidar tracking ${Object.keys(watched).length} dir(s), ${fileCount} file(s)`);
 		});
+		/** Paths that should never trigger a bridge rebuild */
+		const IGNORED_SEGMENTS = [
+			"/generated/",
+			"/node_modules/",
+			"/.dart_tool/",
+			"/build/",
+			"/dist/"
+		];
 		function handleFileEvent(event, filePath) {
 			const relPath = relative(root, filePath);
+			if (IGNORED_SEGMENTS.some((seg) => relPath.includes(seg.slice(1)) || filePath.includes(seg))) return;
 			if (verbose) logDebug(`chokidar ${event}: ${filePath}`);
 			if (relPath === CONFIG_FILENAME) {
 				if (verbose) logDebug("config file changed — scheduling reload");
@@ -213,4 +222,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-DGqbl-p-.js.map
+//# sourceMappingURL=dev-DHy72MPL.js.map

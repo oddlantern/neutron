@@ -230,8 +230,16 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       });
     }
 
+    /** Paths that should never trigger a bridge rebuild */
+    const IGNORED_SEGMENTS = ["/generated/", "/node_modules/", "/.dart_tool/", "/build/", "/dist/"];
+
     function handleFileEvent(event: string, filePath: string): void {
       const relPath = relative(root, filePath);
+
+      // Skip generated output and other non-source paths
+      if (IGNORED_SEGMENTS.some((seg) => relPath.includes(seg.slice(1)) || filePath.includes(seg))) {
+        return;
+      }
 
       if (verbose) {
         logDebug(`chokidar ${event}: ${filePath}`);
