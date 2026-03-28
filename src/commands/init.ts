@@ -20,7 +20,7 @@ import {
   buildPackageMap,
   cleanupReplacedTooling,
   formatEcosystemList,
-  groupByEcosystem,
+  groupDiscoveredByEcosystem,
   handleCancel,
   promptAdditionalBridges,
   promptNextSteps,
@@ -148,7 +148,7 @@ async function runFirstTime(
   }
 
   // Group by ecosystem and display
-  const ecosystems = groupByEcosystem(supported);
+  const ecosystems = groupDiscoveredByEcosystem(supported);
   const packageLines = formatEcosystemList(ecosystems);
   log.info(
     `Found ${supported.length} packages across ${Object.keys(ecosystems).length} ecosystems:\n${packageLines}`,
@@ -185,7 +185,7 @@ async function runFirstTime(
     finalSupported = supported.filter((p) => selectedSet.has(p.path));
   }
 
-  const finalEcosystems = groupByEcosystem(finalSupported);
+  const finalEcosystems = groupDiscoveredByEcosystem(finalSupported);
 
   // Detect bridges
   const detectedBridges = [...(await detectBridges(root, finalSupported))];

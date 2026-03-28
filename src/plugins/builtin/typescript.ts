@@ -11,7 +11,7 @@ import type {
   WatchPathSuggestion,
 } from "../types.js";
 import { STANDARD_ACTIONS } from "../types.js";
-import { getScripts, hasDep, readPackageJson, runCommand } from "./exec.js";
+import { getScripts, hasDep, hasResolvedFiles, readPackageJson, runCommand } from "./exec.js";
 import { executeDesignTokenGeneration, executeOpenAPICodegen } from "./typescript-codegen.js";
 import { detectOxlintPlugins, writeOxfmtConfig, writeOxlintConfig } from "./typescript/lint-config.js";
 
@@ -65,6 +65,49 @@ function findSourceDir(
     return { dir: join(pkgDir, "lib"), isRoot: false };
   }
   return { dir: pkgDir, isRoot: true };
+}
+
+function executeFormat(
+  pkg: WorkspacePackage,
+  root: string,
+  cwd: string,
+  context: ExecutionContext,
+  check: boolean,
+): Promise<ExecuteResult> | ExecuteResult {
+  const oxfmt = resolveBin("oxfmt", root);
+  if (oxfmt) {
+    const args: string[] = check ? ["--check"] : [];
+    const fmtTs = context.formatTypescript;
+    if (fmtTs) {
+      const configPath = writeOxfmtConfig(root, fmtTs);
+      if (configPath) {
+        args.push("--config", configPath);
+      }
+    }
+    if (hasResolvedFiles(context)) {
+      args.push(...context.resolvedFiles!);
+    } else {
+      const { dir, isRoot } = findSourceDir(pkg, root);
+      if (isRoot) {
+        args.push("--no-error-on-unmatched-pattern", join(dir, "**/*.ts"), join(dir, "**/*.tsx"));
+      } else {
+        args.push(dir);
+      }
+    }
+    return runCommand(oxfmt, args, cwd);
+  }
+
+  const prettier = resolveBin("prettier", root);
+  if (prettier) {
+    const flag = check ? "--check" : "--write";
+    if (hasResolvedFiles(context)) {
+      return runCommand(prettier, [flag, ...context.resolvedFiles!], cwd);
+    }
+    const { dir } = findSourceDir(pkg, root);
+    return runCommand(prettier, [flag, dir], cwd);
+  }
+
+  return { success: true, duration: 0, summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.` };
 }
 
 export const typescriptPlugin: EcosystemPlugin = {
@@ -152,7 +195,7 @@ export const typescriptPlugin: EcosystemPlugin = {
         if (fix) {
           args.push("--fix");
         }
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+        if (hasResolvedFiles(context)) {
           args.push(...context.resolvedFiles);
         } else {
           const { dir } = findSourceDir(pkg, root);
@@ -162,7 +205,7 @@ export const typescriptPlugin: EcosystemPlugin = {
       }
       const eslint = resolveBin("eslint", root);
       if (eslint) {
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+        if (hasResolvedFiles(context)) {
           const args = fix ? ["--fix", ...context.resolvedFiles] : [...context.resolvedFiles];
           return runCommand(eslint, args, cwd);
         }
@@ -177,88 +220,9 @@ export const typescriptPlugin: EcosystemPlugin = {
       };
     }
 
-    if (action === STANDARD_ACTIONS.FORMAT) {
-      const oxfmt = resolveBin("oxfmt", root);
-      if (oxfmt) {
-        const args: string[] = [];
-        const fmtTs = context.formatTypescript;
-        if (fmtTs) {
-          const configPath = writeOxfmtConfig(root, fmtTs);
-          if (configPath) {
-            args.push("--config", configPath);
-          }
-        }
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          args.push(...context.resolvedFiles);
-        } else {
-          const { dir, isRoot } = findSourceDir(pkg, root);
-          if (isRoot) {
-            args.push(
-              "--no-error-on-unmatched-pattern",
-              join(dir, "**/*.ts"),
-              join(dir, "**/*.tsx"),
-            );
-          } else {
-            args.push(dir);
-          }
-        }
-        return runCommand(oxfmt, args, cwd);
-      }
-      const prettier = resolveBin("prettier", root);
-      if (prettier) {
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          return runCommand(prettier, ["--write", ...context.resolvedFiles], cwd);
-        }
-        const { dir } = findSourceDir(pkg, root);
-        return runCommand(prettier, ["--write", dir], cwd);
-      }
-      return {
-        success: true,
-        duration: 0,
-        summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.`,
-      };
-    }
-
-    if (action === STANDARD_ACTIONS.FORMAT_CHECK) {
-      const oxfmt = resolveBin("oxfmt", root);
-      if (oxfmt) {
-        const args: string[] = ["--check"];
-        const fmtTs = context.formatTypescript;
-        if (fmtTs) {
-          const configPath = writeOxfmtConfig(root, fmtTs);
-          if (configPath) {
-            args.push("--config", configPath);
-          }
-        }
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          args.push(...context.resolvedFiles);
-        } else {
-          const { dir, isRoot } = findSourceDir(pkg, root);
-          if (isRoot) {
-            args.push(
-              "--no-error-on-unmatched-pattern",
-              join(dir, "**/*.ts"),
-              join(dir, "**/*.tsx"),
-            );
-          } else {
-            args.push(dir);
-          }
-        }
-        return runCommand(oxfmt, args, cwd);
-      }
-      const prettier = resolveBin("prettier", root);
-      if (prettier) {
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
-          return runCommand(prettier, ["--check", ...context.resolvedFiles], cwd);
-        }
-        const { dir } = findSourceDir(pkg, root);
-        return runCommand(prettier, ["--check", dir], cwd);
-      }
-      return {
-        success: true,
-        duration: 0,
-        summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.`,
-      };
+    if (action === STANDARD_ACTIONS.FORMAT || action === STANDARD_ACTIONS.FORMAT_CHECK) {
+      const check = action === STANDARD_ACTIONS.FORMAT_CHECK;
+      return executeFormat(pkg, root, cwd, context, check);
     }
 
     if (action === STANDARD_ACTIONS.BUILD) {
@@ -295,6 +259,7 @@ export const typescriptPlugin: EcosystemPlugin = {
       return executeOpenAPICodegen(pkg, root, context);
     }
 
+    // Fallback: delegate to package manager script
     return runCommand(pm, ["run", action], cwd);
   },
 

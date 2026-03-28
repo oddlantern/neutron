@@ -3,9 +3,14 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { isRecord } from "../../guards.js";
-import type { ExecuteResult } from "../types.js";
+import type { ExecuteResult, ExecutionContext } from "../types.js";
 
 export { isRecord };
+
+/** Check if the execution context has pre-resolved file paths */
+export function hasResolvedFiles(context: ExecutionContext): boolean {
+  return !!context.resolvedFiles && context.resolvedFiles.length > 0;
+}
 
 /** Maximum bytes of stdout/stderr to accumulate per process */
 const MAX_OUTPUT_BYTES = 1024 * 1024;

@@ -11,8 +11,8 @@ import {
   groupBridgesByArtifact,
   logStep,
   resolveBridges,
-} from "../watcher/bridge-runner.js";
-import { isCacheHit, updateCache } from "../watcher/pipeline-cache.js";
+} from "../bridges/runner.js";
+import { isCacheHit, updateCache } from "../bridges/cache.js";
 
 export interface GenerateOptions {
   readonly quiet?: boolean | undefined;
