@@ -189,7 +189,7 @@ describe("typescriptPlugin", () => {
       expect(result!.description).toContain("openapi-typescript");
     });
 
-    test("returns null for openapi domain without dependency or script", async () => {
+    test("accepts openapi domain for any TS package (outputDir convention)", async () => {
       const pkg = makePkg({ name: "my-client", ecosystem: "typescript" });
       writeFileSync(
         join(pkgDir, "package.json"),
@@ -202,27 +202,8 @@ describe("typescriptPlugin", () => {
         pkg,
         root,
       );
-      expect(result).toBeNull();
-    });
-
-    test("returns capability for openapi domain with generate script fallback", async () => {
-      const pkg = makePkg({ name: "my-client", ecosystem: "typescript" });
-      writeFileSync(
-        join(pkgDir, "package.json"),
-        JSON.stringify({
-          name: "my-client",
-          scripts: { generate: "some-codegen tool" },
-        }),
-      );
-
-      const result = await typescriptPlugin.canHandleDomainArtifact!(
-        "openapi",
-        "openapi.json",
-        pkg,
-        root,
-      );
       expect(result).not.toBeNull();
-      expect(result!.action).toBe("generate");
+      expect(result!.action).toBe("generate-openapi-ts");
     });
 
     test("returns capability for design-tokens domain with typescript package", async () => {
@@ -458,7 +439,7 @@ describe("dartPlugin", () => {
       expect(result!.description).toContain("swagger_parser");
     });
 
-    test("returns null for openapi without swagger_parser", async () => {
+    test("accepts openapi for any dart package (outputDir convention)", async () => {
       const pkg = makePkg({ name: "api_client", ecosystem: "dart" });
       writeFileSync(
         join(pkgDir, "pubspec.yaml"),
@@ -471,7 +452,8 @@ describe("dartPlugin", () => {
         pkg,
         root,
       );
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result!.action).toBe("generate-openapi-dart");
     });
 
     test("returns capability for design-tokens when target does not exist", async () => {

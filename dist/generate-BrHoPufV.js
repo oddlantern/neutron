@@ -3,7 +3,7 @@ import { r as isRecord } from "./version-M9xRTj7S.js";
 import { c as PASS, i as FAIL, r as DIM, t as BOLD, u as RESET } from "./output-MbJ98jNX.js";
 import { t as loadConfig } from "./loader-CYxgXRd0.js";
 import { t as buildWorkspaceGraph } from "./workspace-22OBPV16.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-BrU4OPPH.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-CmlqPPO7.js";
 import { t as detectPackageManager } from "./pm-detect-XlYC3uej.js";
 import { d as logStep, n as groupBridgesByArtifact, o as resolveBridges, s as formatMs, t as executeBridgeGroup } from "./runner-CY4mswOr.js";
 import { readFile } from "node:fs/promises";
@@ -176,4 +176,4 @@ async function runGenerate(parsers, options = {}) {
 //#endregion
 export { runGenerate };
 
-//# sourceMappingURL=generate-DQxj8ebr.js.map
+//# sourceMappingURL=generate-BrHoPufV.js.map

@@ -292,16 +292,17 @@ export const typescriptPlugin: EcosystemPlugin = {
       return null;
     }
 
+    // Always accept openapi for TS consumers — mido runs openapi-typescript
+    // directly via npx/bunx when using the outputDir convention
+    if (pkg.ecosystem === "typescript") {
+      return {
+        action: ACTION_GENERATE_OPENAPI_TS,
+        description: "TypeScript types via openapi-typescript",
+      };
+    }
+
     try {
       const manifest = await readPackageJson(pkg.path, root);
-
-      // Primary: direct tool invocation via openapi-typescript dependency
-      if (hasDep(manifest, "openapi-typescript")) {
-        return {
-          action: ACTION_GENERATE_OPENAPI_TS,
-          description: "TypeScript types via openapi-typescript",
-        };
-      }
 
       // Fallback: generate script (last resort)
       const scripts = getScripts(manifest);
