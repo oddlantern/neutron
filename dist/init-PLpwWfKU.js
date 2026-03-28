@@ -3,7 +3,7 @@ import { r as isRecord } from "./version-M9xRTj7S.js";
 import { a as GREEN, r as DIM, s as ORANGE, t as BOLD, u as RESET } from "./output-MbJ98jNX.js";
 import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-CYxgXRd0.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-COXFlfrT.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BrU4OPPH.js";
 import { n as runCheck } from "./check-Bny1gMPh.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -688,7 +688,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-QOElnOHx.js");
+			const { runDev } = await import("./dev-vt0LGvvl.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -916,9 +916,9 @@ async function cleanupReplacedTooling(root) {
 			if (scripts && typeof scripts["prepare"] === "string") {
 				const prepare = scripts["prepare"];
 				if (prepare === "husky" || prepare === "husky install") {
-					scripts["prepare"] = "mido init && mido generate";
+					scripts["prepare"] = "mido generate";
 					await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + "\n", "utf-8");
-					log.step("Updated scripts.prepare → \"mido init && mido generate\"");
+					log.step("Updated scripts.prepare → \"mido generate\"");
 				}
 			}
 		}
@@ -1139,7 +1139,7 @@ async function runReconciliation(root, configPath, parsers) {
 		const { unlink } = await import("node:fs/promises");
 		await unlink(configPath);
 		log.step(`Removed broken ${CONFIG_FILENAME}`);
-		const { runInit } = await import("./init-D-4uh_Ul.js");
+		const { runInit } = await import("./init-PLpwWfKU.js");
 		return runInit(root, parsers);
 	}
 	s.stop("Scan complete");
@@ -1501,4 +1501,4 @@ async function runFirstTime(root, configPath, parsers) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-D-4uh_Ul.js.map
+//# sourceMappingURL=init-PLpwWfKU.js.map

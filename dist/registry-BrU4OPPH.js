@@ -2407,7 +2407,7 @@ const openapiPlugin = {
 		const steps = [];
 		const ext = artifact.includes(".") ? artifact.slice(artifact.lastIndexOf(".")) : "";
 		const base = artifact.slice(0, artifact.length - ext.length);
-		steps.push({
+		if (!existsSync(join(root, artifact))) steps.push({
 			name: "export-spec",
 			plugin: "openapi",
 			description: "exporting spec...",
@@ -2545,4 +2545,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-COXFlfrT.js.map
+//# sourceMappingURL=registry-BrU4OPPH.js.map

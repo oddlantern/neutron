@@ -365,9 +365,9 @@ export async function cleanupReplacedTooling(root: string): Promise<void> {
       if (scripts && typeof scripts["prepare"] === "string") {
         const prepare = scripts["prepare"];
         if (prepare === "husky" || prepare === "husky install") {
-          scripts["prepare"] = "mido init && mido generate";
+          scripts["prepare"] = "mido generate";
           await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + "\n", "utf-8");
-          log.step('Updated scripts.prepare → "mido init && mido generate"');
+          log.step('Updated scripts.prepare → "mido generate"');
         }
       }
     }

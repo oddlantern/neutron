@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { r as STANDARD_ACTIONS } from "./registry-COXFlfrT.js";
-import { t as runEcosystemCommand } from "./ecosystem-runner-BFrPh_q1.js";
+import { r as STANDARD_ACTIONS } from "./registry-BrU4OPPH.js";
+import { t as runEcosystemCommand } from "./ecosystem-runner-CSvxf8t6.js";
 //#region src/commands/test.ts
 /**
 * Run tests across all packages in the workspace.
@@ -17,4 +17,4 @@ async function runTest(parsers, options = {}) {
 //#endregion
 export { runTest };
 
-//# sourceMappingURL=test-BaEpWTRj.js.map
+//# sourceMappingURL=test-DAPhuEjs.js.map
