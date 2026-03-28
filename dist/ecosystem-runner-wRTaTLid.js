@@ -3,7 +3,7 @@ import { c as PASS, i as FAIL, r as DIM, t as BOLD, u as RESET } from "./output-
 import { t as loadConfig } from "./loader-CYxgXRd0.js";
 import { t as buildWorkspaceGraph } from "./workspace-22OBPV16.js";
 import { t as groupByEcosystem } from "./group-C7C6m5mM.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-BrU4OPPH.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-CmlqPPO7.js";
 import { t as detectPackageManager } from "./pm-detect-XlYC3uej.js";
 import { join, relative } from "node:path";
 import { readdirSync, statSync } from "node:fs";
@@ -183,4 +183,4 @@ async function runEcosystemCommand(parsers, options, runnerConfig) {
 //#endregion
 export { runEcosystemCommand as t };
 
-//# sourceMappingURL=ecosystem-runner-CSvxf8t6.js.map
+//# sourceMappingURL=ecosystem-runner-wRTaTLid.js.map

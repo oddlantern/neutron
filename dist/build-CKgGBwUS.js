@@ -3,7 +3,7 @@ import { c as PASS, i as FAIL, r as DIM, t as BOLD, u as RESET } from "./output-
 import { t as loadConfig } from "./loader-CYxgXRd0.js";
 import { t as buildWorkspaceGraph } from "./workspace-22OBPV16.js";
 import { t as groupByEcosystem } from "./group-C7C6m5mM.js";
-import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-BrU4OPPH.js";
+import { n as loadPlugins, r as STANDARD_ACTIONS, t as PluginRegistry } from "./registry-CmlqPPO7.js";
 import { t as detectPackageManager } from "./pm-detect-XlYC3uej.js";
 //#region src/commands/build.ts
 const SKIP = `${DIM}·${RESET}`;
@@ -78,4 +78,4 @@ async function runBuild(parsers, options = {}) {
 //#endregion
 export { runBuild };
 
-//# sourceMappingURL=build-DIm5KBfv.js.map
+//# sourceMappingURL=build-CKgGBwUS.js.map

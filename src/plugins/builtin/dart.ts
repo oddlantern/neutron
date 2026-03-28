@@ -389,16 +389,13 @@ export const dartPlugin: EcosystemPlugin = {
       return null;
     }
 
-    try {
-      const manifest = await readPubspec(pkg, root);
-      if (hasDep(manifest, "swagger_parser", DART_DEP_FIELDS)) {
-        return {
-          action: ACTION_GENERATE_OPENAPI_DART,
-          description: "Dart client via swagger_parser + build_runner",
-        };
-      }
-    } catch {
-      // manifest unreadable
+    // Always accept openapi for dart consumers — mido scaffolds the
+    // generated package with swagger_parser when using outputDir convention
+    if (pkg.ecosystem === "dart") {
+      return {
+        action: ACTION_GENERATE_OPENAPI_DART,
+        description: "Dart client via swagger_parser + build_runner",
+      };
     }
 
     return null;

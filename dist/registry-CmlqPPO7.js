@@ -647,13 +647,12 @@ const typescriptPlugin = {
 			return null;
 		}
 		if (domain !== "openapi") return null;
+		if (pkg.ecosystem === "typescript") return {
+			action: ACTION_GENERATE_OPENAPI_TS,
+			description: "TypeScript types via openapi-typescript"
+		};
 		try {
-			const manifest = await readPackageJson(pkg.path, root);
-			if (hasDep(manifest, "openapi-typescript")) return {
-				action: ACTION_GENERATE_OPENAPI_TS,
-				description: "TypeScript types via openapi-typescript"
-			};
-			if (getScripts(manifest)["generate"]) return {
+			if (getScripts(await readPackageJson(pkg.path, root))["generate"]) return {
 				action: "generate",
 				description: "Generate via package script"
 			};
@@ -1407,12 +1406,10 @@ const dartPlugin = {
 			return null;
 		}
 		if (domain !== "openapi") return null;
-		try {
-			if (hasDep(await readPubspec(pkg, root), "swagger_parser", DART_DEP_FIELDS)) return {
-				action: ACTION_GENERATE_OPENAPI_DART,
-				description: "Dart client via swagger_parser + build_runner"
-			};
-		} catch {}
+		if (pkg.ecosystem === "dart") return {
+			action: ACTION_GENERATE_OPENAPI_DART,
+			description: "Dart client via swagger_parser + build_runner"
+		};
 		return null;
 	},
 	async suggestWatchPaths(pkg, root) {
@@ -2545,4 +2542,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-BrU4OPPH.js.map
+//# sourceMappingURL=registry-CmlqPPO7.js.map
