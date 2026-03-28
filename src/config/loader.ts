@@ -90,10 +90,15 @@ interface Migration {
   readonly removedAt: string;
 }
 
-/** v0.0.2 → v0.0.3: Bridge fields from/to/via → source/target/artifact */
+/**
+ * v0.0.2 → v0.0.3: Bridge fields from/to/via → source/target/artifact
+ *
+ * Old semantics: `from` = consumer, `to` = producer, `via` = artifact
+ * New semantics: `source` = producer, `target` = consumer, `artifact` = artifact
+ */
 const BRIDGE_FIELD_RENAMES: ReadonlyMap<string, string> = new Map([
-  ["from", "source"],
-  ["to", "target"],
+  ["from", "target"],
+  ["to", "source"],
   ["via", "artifact"],
 ]);
 
