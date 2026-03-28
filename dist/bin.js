@@ -227,7 +227,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-TRuFNlvX.js");
+		const { runInit } = await import("./init-DGR3JfXq.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
@@ -248,7 +248,7 @@ async function main() {
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-DmG1Azs_.js");
+		const { runDev } = await import("./dev-DGqbl-p-.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}

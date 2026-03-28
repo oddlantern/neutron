@@ -210,6 +210,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         "**/build/**",
         "**/dist/**",
         "**/.symlinks/**",
+        "**/generated/**",
       ],
       awaitWriteFinish: {
         stabilityThreshold: CHOKIDAR_STABILITY_THRESHOLD_MS,

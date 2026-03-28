@@ -145,7 +145,8 @@ async function runDev(parsers, options = {}) {
 				"**/.dart_tool/**",
 				"**/build/**",
 				"**/dist/**",
-				"**/.symlinks/**"
+				"**/.symlinks/**",
+				"**/generated/**"
 			],
 			awaitWriteFinish: {
 				stabilityThreshold: CHOKIDAR_STABILITY_THRESHOLD_MS,
@@ -212,4 +213,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-DmG1Azs_.js.map
+//# sourceMappingURL=dev-DGqbl-p-.js.map
