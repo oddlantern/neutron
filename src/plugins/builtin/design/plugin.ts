@@ -147,8 +147,10 @@ export const designPlugin: DomainPlugin = {
       return [];
     }
 
-    // Derive source path from artifact (artifact lives in source package)
+    // Derive source path and name from artifact (artifact lives in source package)
     const sourcePath = artifact.split("/").slice(0, -1).join("/") || ".";
+    const sourcePkg = context.graph.packages.get(sourcePath);
+    const sourceName = sourcePkg?.name ?? sourcePath.split("/").pop() ?? "generated";
 
     const results: ExecuteResult[] = [];
     for (const handler of relevantHandlers) {
@@ -157,6 +159,7 @@ export const designPlugin: DomainPlugin = {
 
       const ctxWithTokens: ExecutionContext = {
         ...context,
+        sourceName,
         artifactPath: artifact,
         domainData: validation.data,
         outputDir,
@@ -252,6 +255,7 @@ export const designPlugin: DomainPlugin = {
 
           const ctxWithTokens: ExecutionContext = {
             ...context,
+            sourceName: _source.name,
             artifactPath: artifact,
             domainData: shared.data,
             outputDir,

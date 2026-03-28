@@ -31,8 +31,12 @@ function getChangedFiles(root: string, base: string): readonly string[] {
   }
 }
 
+/** Path segments that indicate generated/non-source files */
+const IGNORED_SEGMENTS = ["/generated/", "/node_modules/", "/.dart_tool/", "/build/", "/dist/"];
+
 /**
  * Map changed files to the packages they belong to.
+ * Filters out generated output and other non-source paths.
  */
 function filesToPackages(
   changedFiles: readonly string[],
@@ -41,6 +45,11 @@ function filesToPackages(
   const affected = new Set<string>();
 
   for (const file of changedFiles) {
+    // Skip generated/non-source paths
+    if (IGNORED_SEGMENTS.some((seg) => file.includes(seg.slice(1)))) {
+      continue;
+    }
+
     for (const [path] of packages) {
       if (file.startsWith(path + "/") || file === path) {
         affected.add(path);

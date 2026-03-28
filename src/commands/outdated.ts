@@ -253,10 +253,16 @@ export async function runOutdated(
   const patchCount = outdated.filter((d) => d.severity === "patch").length;
 
   console.log(
-    `${DIM}${outdated.length} outdated: ${RED}${majorCount} major${RESET}${DIM}, ${YELLOW}${minorCount} minor${RESET}${DIM}, ${patchCount} patch${RESET}\n`,
+    `${DIM}${outdated.length} outdated: ${RED}${majorCount} major${RESET}${DIM}, ${YELLOW}${minorCount} minor${RESET}${DIM}, ${patchCount} patch${RESET}`,
+  );
+  console.log(
+    `${DIM}Use your package manager to update (bun update, dart pub upgrade).${RESET}`,
+  );
+  console.log(
+    `${DIM}Then run ${BOLD}mido check${RESET} ${DIM}to verify version consistency.${RESET}\n`,
   );
 
-  return 1;
+  return 0;
 }
 
 /**

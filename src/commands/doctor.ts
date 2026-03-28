@@ -156,21 +156,30 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
     }
   }
 
-  // Print results
-  let hasIssues = false;
+  // Print results — warnings are informational, only failures cause exit code 1
+  let hasFailures = false;
+  let hasWarnings = false;
   for (const r of results) {
     const icon = r.status === "ok" ? PASS : r.status === "warn" ? WARN : FAIL;
-    if (r.status !== "ok") {
-      hasIssues = true;
+    if (r.status === "fail") {
+      hasFailures = true;
+    }
+    if (r.status === "warn") {
+      hasWarnings = true;
     }
     console.log(`  ${icon} ${BOLD}${r.label}${RESET} ${DIM}${r.detail}${RESET}`);
   }
 
   console.log();
 
-  if (hasIssues) {
-    console.log(`${YELLOW}Some issues found.${RESET}\n`);
+  if (hasFailures) {
+    console.log(`${RED}Issues found — fix errors above.${RESET}\n`);
     return 1;
+  }
+
+  if (hasWarnings) {
+    console.log(`${GREEN}All good.${RESET} ${DIM}Warnings are informational.${RESET}\n`);
+    return 0;
   }
 
   console.log(`${GREEN}All checks passed.${RESET}\n`);

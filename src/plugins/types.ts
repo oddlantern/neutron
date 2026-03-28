@@ -243,6 +243,8 @@ export interface ExecutionContext {
   readonly formatDart?: FormatDartConfig | undefined;
   /** Pre-resolved file paths (relative to package root) — plugins use these instead of scanning directories */
   readonly resolvedFiles?: readonly string[] | undefined;
+  /** Source package name for generated output naming (e.g., "design-system", "api") */
+  readonly sourceName?: string | undefined;
   /** Opaque domain data — passed from domain plugins to ecosystem plugins (e.g., validated design tokens) */
   readonly domainData?: unknown;
   /**

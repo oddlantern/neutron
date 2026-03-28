@@ -323,8 +323,11 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       console.log(`\n  ${DIM}Shutting down...${RESET}`);
       if (session) {
         teardownSession(session);
+        session = null;
       }
       resolve(0);
+      // Force exit — chokidar keeps the event loop alive
+      setTimeout(() => process.exit(0), 100);
     };
 
     process.on("SIGINT", cleanup);

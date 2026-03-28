@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { loadConfig } from "../config/loader.js";
@@ -332,7 +332,9 @@ export async function runGraph(
 
   // HTML — write to .mido/graph.html and open
   const html = generateHtml(nodes, edges, graph.name);
-  const outputPath = join(root, ".mido", "graph.html");
+  const midoDir = join(root, ".mido");
+  mkdirSync(midoDir, { recursive: true });
+  const outputPath = join(midoDir, "graph.html");
   writeFileSync(outputPath, html, "utf-8");
   console.log(`${BOLD}mido graph${RESET} ${DIM}\u2192 ${outputPath}${RESET}`);
 

@@ -140,7 +140,11 @@ export async function executeDesignTokenGeneration(
 
   // Scaffold package.json if first run
   if (!existsSync(join(outDir, "package.json"))) {
-    const pkgName = pkg.name ? `${pkg.name}-design-tokens` : "design-tokens";
+    const workspace = context.graph.name;
+    const rawSource = context.sourceName ?? "generated";
+    // Strip npm scope if present (e.g. "@nextsaga/api" → "api")
+    const source = rawSource.replace(/^@[^/]+\//, "");
+    const pkgName = workspace ? `@${workspace}/${source}` : source;
     const pkgJson = {
       name: pkgName,
       version: "0.0.0",
@@ -204,6 +208,25 @@ export async function executeOpenAPICodegen(
   // Determine output location
   if (context.outputDir) {
     mkdirSync(context.outputDir, { recursive: true });
+
+    // Scaffold package.json if first run
+    if (!existsSync(join(context.outputDir, "package.json"))) {
+      const workspace = context.graph.name;
+      const rawSource = (context.sourceName ?? "generated").replace(/^@[^/]+\//, "");
+      const pkgName = workspace ? `@${workspace}/${rawSource}` : rawSource;
+      const pkgJson = {
+        name: pkgName,
+        version: "0.0.0",
+        private: true,
+        types: "api.d.ts",
+      };
+      writeFileSync(
+        join(context.outputDir, "package.json"),
+        JSON.stringify(pkgJson, null, 2) + "\n",
+        "utf-8",
+      );
+    }
+
     const artifactRelative = relative(context.outputDir, join(root, artifactPath));
     const outputPath = "api.d.ts";
     const runner = pm === "bun" ? "bunx" : "npx";
