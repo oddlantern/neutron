@@ -47,9 +47,12 @@
             "type": "string",
             "description": "Package that produces the artifact."
           },
-          "target": {
-            "type": "string",
-            "description": "Package that consumes the artifact."
+          "consumers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Packages that consume the artifact."
           },
           "artifact": {
             "type": "string",
@@ -77,7 +80,7 @@
         },
         "required": [
           "source",
-          "target",
+          "consumers",
           "artifact"
         ]
       }

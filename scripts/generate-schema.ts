@@ -194,7 +194,11 @@ const midoSchema = {
         type: 'object',
         properties: {
           source: { type: 'string', description: 'Package that produces the artifact.' },
-          target: { type: 'string', description: 'Package that consumes the artifact.' },
+          consumers: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Packages that consume the artifact.',
+          },
           artifact: {
             type: 'string',
             description: 'Path to the shared file (e.g. openapi.json).',
@@ -214,7 +218,7 @@ const midoSchema = {
           },
           specPath: { type: 'string', description: 'Custom OpenAPI spec endpoint path.' },
         },
-        required: ['source', 'target', 'artifact'],
+        required: ['source', 'consumers', 'artifact'],
       },
     },
     env: {
