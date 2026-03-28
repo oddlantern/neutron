@@ -267,53 +267,24 @@ export const typescriptPlugin: EcosystemPlugin = {
     domain: string,
     _artifact: string,
     pkg: WorkspacePackage,
-    root: string,
+    _root: string,
   ): Promise<DomainCapability | null> {
+    if (pkg.ecosystem !== "typescript") {
+      return null;
+    }
+
     if (domain === "design-tokens") {
-      // Accept if target is a TS package or doesn't exist yet (first run)
-      const pkgJsonPath = join(root, pkg.path, "package.json");
-      if (!existsSync(pkgJsonPath)) {
-        return {
-          action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
-          description: "CSS custom properties + TS constants",
-        };
-      }
-      // Existing TS package — accept
-      if (pkg.ecosystem === "typescript") {
-        return {
-          action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
-          description: "CSS custom properties + TS constants",
-        };
-      }
-      return null;
+      return {
+        action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
+        description: "CSS custom properties + TS constants",
+      };
     }
 
-    if (domain !== "openapi") {
-      return null;
-    }
-
-    // Always accept openapi for TS consumers — mido runs openapi-typescript
-    // directly via npx/bunx when using the outputDir convention
-    if (pkg.ecosystem === "typescript") {
+    if (domain === "openapi") {
       return {
         action: ACTION_GENERATE_OPENAPI_TS,
         description: "TypeScript types via openapi-typescript",
       };
-    }
-
-    try {
-      const manifest = await readPackageJson(pkg.path, root);
-
-      // Fallback: generate script (last resort)
-      const scripts = getScripts(manifest);
-      if (scripts["generate"]) {
-        return {
-          action: "generate",
-          description: "Generate via package script",
-        };
-      }
-    } catch {
-      // manifest unreadable
     }
 
     return null;

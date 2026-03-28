@@ -2,7 +2,7 @@
 import { f as YELLOW, l as RED, r as DIM, u as RESET } from "./output-MbJ98jNX.js";
 import { t as loadConfig } from "./loader-CYxgXRd0.js";
 import { t as buildWorkspaceGraph } from "./workspace-22OBPV16.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-CmlqPPO7.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-C8GTLy-v.js";
 import { t as detectPackageManager } from "./pm-detect-XlYC3uej.js";
 import { a as printStartup, c as logChange, d as logStep, f as logWaiting, i as printBridgeSummary, l as logDebug, n as groupBridgesByArtifact, o as resolveBridges, r as matchesBridge, t as executeBridgeGroup, u as logFail } from "./runner-CY4mswOr.js";
 import { t as writeHooks } from "./hooks-BiffFA25.js";
@@ -228,4 +228,4 @@ async function runDev(parsers, options = {}) {
 //#endregion
 export { runDev };
 
-//# sourceMappingURL=dev-DSiLK8iJ.js.map
+//# sourceMappingURL=dev-Bsd-2X-Z.js.map

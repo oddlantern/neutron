@@ -52,7 +52,7 @@ export async function executeOpenAPIDartGeneration(
       "  freezed: ^3.2.0",
       "  json_serializable: '^6.13.0'",
       "  retrofit_generator: '>=10.2.0'",
-      "  swagger_parser: ^2.0.0",
+      "  swagger_parser: ^1.43.0",
       "",
     ];
     writeFileSync(join(outDir, "pubspec.yaml"), pubspec.join("\n"), "utf-8");

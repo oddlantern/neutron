@@ -342,15 +342,21 @@ export const openapiPlugin: DomainPlugin = {
       });
     }
 
-    // Step 3+: Downstream generators from ecosystem plugins
-    // If a prepare step exists, downstream generators should consume the prepared artifact
-    // (determined at build time, not by checking filesystem — the file may not exist yet)
+    // Step 3+: Generate for each consumer ecosystem
+    // Deduplicate by ecosystem — one generation step per ecosystem, not per consumer
     const downstreamArtifact = prepareInfo ? `${base}.prepared${ext}` : artifact;
     const handlers = await context.findEcosystemHandlers("openapi", downstreamArtifact);
     const targetPaths = new Set(targets.map((t) => t.path));
     const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 
+    // Deduplicate by ecosystem — if 3 TS consumers exist, generate TS once
+    const seenEcosystems = new Set<string>();
     for (const handler of relevantHandlers) {
+      if (seenEcosystems.has(handler.plugin.name)) {
+        continue;
+      }
+      seenEcosystems.add(handler.plugin.name);
+
       const outputDir = join(root, source.path, "generated", handler.plugin.name);
 
       steps.push({

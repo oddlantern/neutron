@@ -89,6 +89,7 @@ describe("OpenAPI TS codegen — outputDir scaffolding", () => {
 
 describe("OpenAPI Dart codegen — outputDir scaffolding", () => {
   test("scaffolds pubspec.yaml with workspace-scoped name", async () => {
+    // dart pub get may take a while or fail — we only test scaffolding
     const { executeOpenAPIDartGeneration } = await import(
       "../../src/plugins/builtin/dart/openapi-codegen.js"
     );
@@ -113,8 +114,9 @@ describe("OpenAPI Dart codegen — outputDir scaffolding", () => {
       outputDir,
     });
 
-    // Will fail at dart pub get (no dart SDK in CI), but scaffold should happen
-    await executeOpenAPIDartGeneration(pkg, tmpDir, context);
+    // Will fail at dart pub get, but scaffold should happen before that
+    const result = await executeOpenAPIDartGeneration(pkg, tmpDir, context);
+    // Result may fail (dart pub get) but scaffold is what we're testing
 
     const pubspecPath = join(outputDir, "pubspec.yaml");
     expect(existsSync(pubspecPath)).toBe(true);
@@ -127,5 +129,5 @@ describe("OpenAPI Dart codegen — outputDir scaffolding", () => {
     // swagger_parser.yaml should be created
     const swaggerConfig = join(outputDir, "swagger_parser.yaml");
     expect(existsSync(swaggerConfig)).toBe(true);
-  });
+  }, 30_000);
 });

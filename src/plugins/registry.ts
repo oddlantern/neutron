@@ -109,8 +109,15 @@ export class PluginRegistry {
       formatTypescript: options?.formatConfig?.typescript,
       formatDart: options?.formatConfig?.dart,
       findEcosystemHandlers: async (domain: string, artifact: string) => {
-        const allTargets = [...graph.packages.values()];
-        return this.findEcosystemHandlers(domain, artifact, allTargets, root);
+        // Pass only bridge targets, not all packages — domain plugins filter further
+        const bridgeTargetPaths = new Set<string>();
+        for (const bridge of graph.bridges) {
+          for (const consumer of bridge.consumers) {
+            bridgeTargetPaths.add(consumer);
+          }
+        }
+        const targets = [...graph.packages.values()].filter((p) => bridgeTargetPaths.has(p.path));
+        return this.findEcosystemHandlers(domain, artifact, targets, root);
       },
     };
   }

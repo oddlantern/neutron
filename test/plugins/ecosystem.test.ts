@@ -493,7 +493,7 @@ describe("dartPlugin", () => {
       expect(result!.action).toBe("generate-design-tokens");
     });
 
-    test("returns null for design-tokens when non-Flutter dart package", async () => {
+    test("accepts design-tokens for any dart package (pure ecosystem match)", async () => {
       const pkg = makePkg({ name: "plain_dart", ecosystem: "dart" });
       writeFileSync(
         join(pkgDir, "pubspec.yaml"),
@@ -506,7 +506,8 @@ describe("dartPlugin", () => {
         pkg,
         root,
       );
-      expect(result).toBeNull();
+      expect(result).not.toBeNull();
+      expect(result!.action).toBe("generate-design-tokens");
     });
 
     test("returns null for unknown domain", async () => {

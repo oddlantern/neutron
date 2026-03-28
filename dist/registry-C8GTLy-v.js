@@ -634,29 +634,16 @@ const typescriptPlugin = {
 		if (action === ACTION_GENERATE_OPENAPI_TS) return executeOpenAPICodegen(pkg, root, context);
 		return runCommand(pm, ["run", action], cwd);
 	},
-	async canHandleDomainArtifact(domain, _artifact, pkg, root) {
-		if (domain === "design-tokens") {
-			if (!existsSync(join(root, pkg.path, "package.json"))) return {
-				action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
-				description: "CSS custom properties + TS constants"
-			};
-			if (pkg.ecosystem === "typescript") return {
-				action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
-				description: "CSS custom properties + TS constants"
-			};
-			return null;
-		}
-		if (domain !== "openapi") return null;
-		if (pkg.ecosystem === "typescript") return {
+	async canHandleDomainArtifact(domain, _artifact, pkg, _root) {
+		if (pkg.ecosystem !== "typescript") return null;
+		if (domain === "design-tokens") return {
+			action: ACTION_GENERATE_DESIGN_TOKENS_CSS,
+			description: "CSS custom properties + TS constants"
+		};
+		if (domain === "openapi") return {
 			action: ACTION_GENERATE_OPENAPI_TS,
 			description: "TypeScript types via openapi-typescript"
 		};
-		try {
-			if (getScripts(await readPackageJson(pkg.path, root))["generate"]) return {
-				action: "generate",
-				description: "Generate via package script"
-			};
-		} catch {}
 		return null;
 	},
 	async suggestWatchPaths(pkg, root) {
@@ -1115,7 +1102,7 @@ async function executeOpenAPIDartGeneration(_pkg, root, context) {
 			"  freezed: ^3.2.0",
 			"  json_serializable: '^6.13.0'",
 			"  retrofit_generator: '>=10.2.0'",
-			"  swagger_parser: ^2.0.0",
+			"  swagger_parser: ^1.43.0",
 			""
 		];
 		writeFileSync(join(outDir, "pubspec.yaml"), pubspec.join("\n"), "utf-8");
@@ -1391,22 +1378,13 @@ const dartPlugin = {
 			};
 		}
 	},
-	async canHandleDomainArtifact(domain, _artifact, pkg, root) {
-		if (domain === "design-tokens") {
-			if (!existsSync(join(root, pkg.path, "pubspec.yaml"))) return {
-				action: ACTION_GENERATE_DESIGN_TOKENS,
-				description: "Flutter theme (M3 ColorScheme, extensions, constants)"
-			};
-			try {
-				if (isFlutterPackage(await readPubspec(pkg, root))) return {
-					action: ACTION_GENERATE_DESIGN_TOKENS,
-					description: "Flutter theme (M3 ColorScheme, extensions, constants)"
-				};
-			} catch {}
-			return null;
-		}
-		if (domain !== "openapi") return null;
-		if (pkg.ecosystem === "dart") return {
+	async canHandleDomainArtifact(domain, _artifact, pkg, _root) {
+		if (pkg.ecosystem !== "dart") return null;
+		if (domain === "design-tokens") return {
+			action: ACTION_GENERATE_DESIGN_TOKENS,
+			description: "Flutter theme (M3 ColorScheme, extensions, constants)"
+		};
+		if (domain === "openapi") return {
 			action: ACTION_GENERATE_OPENAPI_DART,
 			description: "Dart client via swagger_parser + build_runner"
 		};
@@ -1813,7 +1791,10 @@ const designPlugin = {
 		const handlers = await context.findEcosystemHandlers(DOMAIN_NAME, artifact);
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
+		const seenEcosystems = /* @__PURE__ */ new Set();
 		for (const handler of relevantHandlers) {
+			if (seenEcosystems.has(handler.plugin.name)) continue;
+			seenEcosystems.add(handler.plugin.name);
 			const outputDir = join(root, _source.path, "generated", handler.plugin.name);
 			steps.push({
 				name: `generate-${handler.plugin.name}`,
@@ -2427,7 +2408,10 @@ const openapiPlugin = {
 		const handlers = await context.findEcosystemHandlers("openapi", downstreamArtifact);
 		const targetPaths = new Set(targets.map((t) => t.path));
 		const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
+		const seenEcosystems = /* @__PURE__ */ new Set();
 		for (const handler of relevantHandlers) {
+			if (seenEcosystems.has(handler.plugin.name)) continue;
+			seenEcosystems.add(handler.plugin.name);
 			const outputDir = join(root, source.path, "generated", handler.plugin.name);
 			steps.push({
 				name: `generate-${handler.plugin.name}`,
@@ -2533,8 +2517,10 @@ var PluginRegistry = class {
 			formatTypescript: options?.formatConfig?.typescript,
 			formatDart: options?.formatConfig?.dart,
 			findEcosystemHandlers: async (domain, artifact) => {
-				const allTargets = [...graph.packages.values()];
-				return this.findEcosystemHandlers(domain, artifact, allTargets, root);
+				const bridgeTargetPaths = /* @__PURE__ */ new Set();
+				for (const bridge of graph.bridges) for (const consumer of bridge.consumers) bridgeTargetPaths.add(consumer);
+				const targets = [...graph.packages.values()].filter((p) => bridgeTargetPaths.has(p.path));
+				return this.findEcosystemHandlers(domain, artifact, targets, root);
 			}
 		};
 	}
@@ -2542,4 +2528,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-CmlqPPO7.js.map
+//# sourceMappingURL=registry-C8GTLy-v.js.map

@@ -14,6 +14,7 @@ const SKIP_DIRS = new Set([
   "build",
   "dist",
   "example",
+  "generated",
   "ios",
   "linux",
   "macos",

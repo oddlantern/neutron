@@ -229,13 +229,18 @@ export const designPlugin: DomainPlugin = {
       },
     });
 
-    // Discover ecosystem handlers for downstream generation
+    // Discover ecosystem handlers — one per unique ecosystem among targets
     const handlers = await context.findEcosystemHandlers(DOMAIN_NAME, artifact);
     const targetPaths = new Set(targets.map((t) => t.path));
     const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 
-    // Step 2+: One step per ecosystem handler
+    // Deduplicate by ecosystem
+    const seenEcosystems = new Set<string>();
     for (const handler of relevantHandlers) {
+      if (seenEcosystems.has(handler.plugin.name)) {
+        continue;
+      }
+      seenEcosystems.add(handler.plugin.name);
       const outputDir = join(root, _source.path, "generated", handler.plugin.name);
 
       steps.push({

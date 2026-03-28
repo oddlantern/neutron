@@ -360,38 +360,20 @@ export const dartPlugin: EcosystemPlugin = {
     domain: string,
     _artifact: string,
     pkg: WorkspacePackage,
-    root: string,
+    _root: string,
   ): Promise<DomainCapability | null> {
+    if (pkg.ecosystem !== "dart") {
+      return null;
+    }
+
     if (domain === "design-tokens") {
-      // Accept if target is a Flutter package or doesn't exist yet (first run)
-      const pubspecPath = join(root, pkg.path, "pubspec.yaml");
-      if (!existsSync(pubspecPath)) {
-        return {
-          action: ACTION_GENERATE_DESIGN_TOKENS,
-          description: "Flutter theme (M3 ColorScheme, extensions, constants)",
-        };
-      }
-      try {
-        const manifest = await readPubspec(pkg, root);
-        if (isFlutterPackage(manifest)) {
-          return {
-            action: ACTION_GENERATE_DESIGN_TOKENS,
-            description: "Flutter theme (M3 ColorScheme, extensions, constants)",
-          };
-        }
-      } catch {
-        // manifest unreadable
-      }
-      return null;
+      return {
+        action: ACTION_GENERATE_DESIGN_TOKENS,
+        description: "Flutter theme (M3 ColorScheme, extensions, constants)",
+      };
     }
 
-    if (domain !== "openapi") {
-      return null;
-    }
-
-    // Always accept openapi for dart consumers — mido scaffolds the
-    // generated package with swagger_parser when using outputDir convention
-    if (pkg.ecosystem === "dart") {
+    if (domain === "openapi") {
       return {
         action: ACTION_GENERATE_OPENAPI_DART,
         description: "Dart client via swagger_parser + build_runner",
