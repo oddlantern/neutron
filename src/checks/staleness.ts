@@ -8,10 +8,9 @@ const CHECK_NAME = "staleness";
 
 /**
  * Check whether generated output directories exist for all bridges.
+ * All bridges should produce `<source>/generated/<ecosystem>/`.
  *
- * Only reports warnings (not errors) since projects may not yet use
- * the generated/ convention. The check is informational — it doesn't
- * block pre-commit or CI.
+ * Reports warnings (not errors) — doesn't block pre-commit or CI.
  */
 export async function checkStaleness(
   graph: WorkspaceGraph,
@@ -47,7 +46,7 @@ export async function checkStaleness(
 
   return {
     check: CHECK_NAME,
-    passed: true, // Warnings don't fail the check
+    passed: true,
     summary: issues.length > 0
       ? `${issues.length} generated output(s) missing`
       : `${presentCount} generated output(s) present`,

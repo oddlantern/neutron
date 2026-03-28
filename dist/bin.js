@@ -204,7 +204,7 @@ async function main() {
 	if (command === "affected") {
 		const base = getFlagValue(args, "--base");
 		const json = args.includes("--json");
-		const { runAffected } = await import("./affected-BHOoXvnO.js");
+		const { runAffected } = await import("./affected-CetNDYH9.js");
 		const exitCode = await runAffected(parsers, {
 			base,
 			json
@@ -214,7 +214,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-DFZ6Qyy_.js").then((n) => n.t);
+		const { runCheck } = await import("./check-Bny1gMPh.js").then((n) => n.t);
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -227,14 +227,14 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-xF1ZTw4h.js");
+		const { runInit } = await import("./init-CFridF15.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "graph") {
 		const format = args.includes("--dot") ? "dot" : args.includes("--ascii") ? "ascii" : "html";
 		const noOpen = args.includes("--no-open");
-		const { runGraph } = await import("./graph-Btl6ntc7.js");
+		const { runGraph } = await import("./graph-DxNVyeIR.js");
 		const exitCode = await runGraph(parsers, {
 			format,
 			open: !noOpen
@@ -242,13 +242,13 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "doctor") {
-		const { runDoctor } = await import("./doctor-D6paQ3I7.js");
+		const { runDoctor } = await import("./doctor-DC3IyAEH.js");
 		const exitCode = await runDoctor(parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-DHy72MPL.js");
+		const { runDev } = await import("./dev-DD5bT-Bt.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
@@ -262,7 +262,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-DQ7_nSUK.js");
+		const { runLint } = await import("./lint-D2EW7IZV.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -276,7 +276,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-JGMoEAJy.js");
+		const { runFmt } = await import("./fmt-B3rdRCjZ.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -289,7 +289,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const verbose = args.includes("--verbose");
 		const force = args.includes("--force");
-		const { runGenerate } = await import("./generate-B3mSju8R.js");
+		const { runGenerate } = await import("./generate-DPpE5x74.js");
 		const exitCode = await runGenerate(parsers, {
 			quiet,
 			verbose,
@@ -299,7 +299,7 @@ async function main() {
 	}
 	if (command === "outdated") {
 		const json = args.includes("--json");
-		const { runOutdated } = await import("./outdated-DwCVJmSM.js");
+		const { runOutdated } = await import("./outdated-_MuVyfU8.js");
 		const exitCode = await runOutdated(parsers, { json });
 		process.exit(exitCode);
 	}
@@ -307,7 +307,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runTest } = await import("./test-DInT3U5J.js");
+		const { runTest } = await import("./test-mZYIapwE.js");
 		const exitCode = await runTest(parsers, {
 			quiet,
 			package: pkg,
@@ -319,7 +319,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const all = args.includes("--all");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-jPkZbuiQ.js");
+		const { runBuild } = await import("./build-BA7RjXXX.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			all,
@@ -329,12 +329,12 @@ async function main() {
 	}
 	if (command === "ci") {
 		const verbose = args.includes("--verbose");
-		const { runCi } = await import("./ci-DL8SLXMi.js");
+		const { runCi } = await import("./ci-BOahFapm.js");
 		const exitCode = await runCi(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-BeF9B-6j.js");
+		const { runPreCommit } = await import("./pre-commit-DjjNwmMI.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
@@ -359,7 +359,13 @@ async function main() {
 		const exitCode = await runWhy(parsers, depName, { json });
 		process.exit(exitCode);
 	}
-	console.error(`Unknown command: ${command}\nRun "mido help" for usage.`);
+	if (command === "version" || command === "--v") {
+		console.log(VERSION);
+		process.exit(0);
+	}
+	printBanner();
+	console.error(`\nUnknown command: "${command}"\n`);
+	console.log(HELP);
 	process.exit(1);
 }
 main().catch((error) => {

@@ -23,6 +23,7 @@ import {
   generateThemeExtensions,
 } from "./dart/token-codegen.js";
 import { hasDep, isRecord, runCommand } from "./exec.js";
+import { executeOpenAPIDartGeneration } from "./dart/openapi-codegen.js";
 
 /** Dart-specific dependency fields */
 const DART_DEP_FIELDS: readonly string[] = [
@@ -132,7 +133,11 @@ async function executeDesignTokenGeneration(
 
   // Determine output root — new convention writes next to source, not into consumer
   const outRoot = context.outputDir ?? join(root, pkg.path);
-  const packageName = pkg.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
+  const workspace = context.graph.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
+  // Strip npm scope if present (e.g. "@nextsaga/api" → "api")
+  const rawSource = (context.sourceName ?? "generated").replace(/^@[^/]+\//, "");
+  const source = rawSource.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
+  const packageName = workspace ? `${workspace}_${source}` : source;
 
   // Scaffold if first run
   if (!existsSync(join(outRoot, "pubspec.yaml"))) {
@@ -328,7 +333,11 @@ export const dartPlugin: EcosystemPlugin = {
         return runCommand("dart", ["run", "swagger_parser"], cwd);
 
       case ACTION_GENERATE_OPENAPI_DART: {
-        // Run swagger_parser then build_runner
+        // New convention: generate into outputDir
+        if (context.outputDir) {
+          return executeOpenAPIDartGeneration(pkg, root, context);
+        }
+        // Legacy: run in consumer package
         const swaggerResult = await runCommand("dart", ["run", "swagger_parser"], cwd);
         if (!swaggerResult.success) {
           return swaggerResult;

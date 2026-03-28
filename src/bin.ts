@@ -227,7 +227,15 @@ async function main(): Promise<void> {
     process.exit(exitCode);
   }
 
-  console.error(`Unknown command: ${command}\nRun "mido help" for usage.`);
+  // Handle common typos for version flag
+  if (command === "version" || command === "--v") {
+    console.log(VERSION);
+    process.exit(0);
+  }
+
+  printBanner();
+  console.error(`\nUnknown command: "${command}"\n`);
+  console.log(HELP);
   process.exit(1);
 }
 

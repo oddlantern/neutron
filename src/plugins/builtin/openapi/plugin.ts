@@ -275,8 +275,10 @@ export const openapiPlugin: DomainPlugin = {
       return [];
     }
 
-    // Derive source path from artifact
+    // Derive source path and name from artifact
     const sourcePath = artifact.split("/").slice(0, -1).join("/") || ".";
+    const sourcePkg = context.graph.packages.get(sourcePath);
+    const sourceName = sourcePkg?.name ?? sourcePath.split("/").pop() ?? "generated";
 
     const results: ExecuteResult[] = [];
     for (const handler of relevantHandlers) {
@@ -285,6 +287,7 @@ export const openapiPlugin: DomainPlugin = {
 
       const ctxWithArtifact: ExecutionContext = {
         ...context,
+        sourceName,
         artifactPath: resolvedArtifact,
         outputDir,
       };
@@ -355,6 +358,7 @@ export const openapiPlugin: DomainPlugin = {
           mkdirSync(outputDir, { recursive: true });
           const ctxWithArtifact: ExecutionContext = {
             ...context,
+            sourceName: source.name,
             artifactPath: downstreamArtifact,
             outputDir,
           };
