@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -18,7 +18,11 @@ interface DiagResult {
 
 function getVersion(cmd: string): string | null {
   try {
-    return execSync(`${cmd} --version`, { encoding: "utf-8", timeout: 5000 }).trim();
+    const result = spawnSync(cmd, ["--version"], { encoding: "utf-8", timeout: 5000 });
+    if (result.status !== 0 || !result.stdout) {
+      return null;
+    }
+    return result.stdout.trim();
   } catch {
     return null;
   }

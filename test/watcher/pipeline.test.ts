@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 
 import type { ExecutablePipelineStep, ExecuteResult } from '../../src/plugins/types.js';
-import { runPipeline } from '../../src/watcher/pipeline.js';
+import { runPipeline } from '../../src/bridges/pipeline.js';
 
 function makeTempDir(): string {
   return realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-pipeline-')));

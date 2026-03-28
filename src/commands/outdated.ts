@@ -1,4 +1,5 @@
 import { loadConfig } from "../config/loader.js";
+import { isRecord } from "../guards.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
 import type { ParserRegistry } from "../graph/workspace.js";
 import type { WorkspacePackage } from "../graph/types.js";
@@ -75,14 +76,14 @@ function collectDeps(
 /**
  * Strip semver prefix characters to get the raw version.
  */
-function stripRange(range: string): string {
+export function stripRange(range: string): string {
   return range.replace(/^[\^~>=<\s]+/, "").split(/\s/)[0] ?? range;
 }
 
 /**
  * Compare two semver strings and determine the severity of the update.
  */
-function classifyUpdate(current: string, latest: string): "major" | "minor" | "patch" | null {
+export function classifyUpdate(current: string, latest: string): "major" | "minor" | "patch" | null {
   const [cMajor, cMinor] = current.split(".").map(Number);
   const [lMajor, lMinor] = latest.split(".").map(Number);
 
@@ -114,8 +115,11 @@ async function fetchNpmLatest(name: string): Promise<string | null> {
     if (!res.ok) {
       return null;
     }
-    const data = (await res.json()) as { version?: string };
-    return data.version ?? null;
+    const data: unknown = await res.json();
+    if (!isRecord(data) || typeof data["version"] !== "string") {
+      return null;
+    }
+    return data["version"];
   } catch {
     return null;
   }
@@ -133,8 +137,15 @@ async function fetchPubLatest(name: string): Promise<string | null> {
     if (!res.ok) {
       return null;
     }
-    const data = (await res.json()) as { latest?: { version?: string } };
-    return data.latest?.version ?? null;
+    const data: unknown = await res.json();
+    if (!isRecord(data)) {
+      return null;
+    }
+    const latest = data["latest"];
+    if (!isRecord(latest) || typeof latest["version"] !== "string") {
+      return null;
+    }
+    return latest["version"];
   } catch {
     return null;
   }

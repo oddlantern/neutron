@@ -340,9 +340,9 @@ export async function runGraph(
 
   if (options.open !== false) {
     try {
-      const { execSync: exec } = await import("node:child_process");
+      const { spawnSync: spawn } = await import("node:child_process");
       const openCmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
-      exec(`${openCmd} "${outputPath}"`);
+      spawn(openCmd, [outputPath], { stdio: "ignore" });
     } catch {
       // Can't open browser — user can open manually
     }

@@ -22,7 +22,7 @@ import {
   generateTheme,
   generateThemeExtensions,
 } from "./dart/token-codegen.js";
-import { hasDep, isRecord, runCommand } from "./exec.js";
+import { hasDep, hasResolvedFiles, isRecord, runCommand } from "./exec.js";
 import { executeOpenAPIDartGeneration } from "./dart/openapi-codegen.js";
 
 /** Dart-specific dependency fields */
@@ -253,7 +253,7 @@ export const dartPlugin: EcosystemPlugin = {
         if (context.lintDart?.strict) {
           args.push("--fatal-infos");
         }
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+        if (hasResolvedFiles(context)) {
           args.push(...context.resolvedFiles);
         } else {
           args.push(".");
@@ -262,7 +262,7 @@ export const dartPlugin: EcosystemPlugin = {
       }
 
       case STANDARD_ACTIONS.LINT_FIX:
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+        if (hasResolvedFiles(context)) {
           return runCommand("dart", ["fix", "--apply", ...context.resolvedFiles], cwd);
         }
         return runCommand("dart", ["fix", "--apply", "."], cwd);
@@ -273,7 +273,7 @@ export const dartPlugin: EcosystemPlugin = {
         if (context.formatDart?.lineLength) {
           args.push("--line-length", String(context.formatDart.lineLength));
         }
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+        if (hasResolvedFiles(context)) {
           args.push(...context.resolvedFiles);
         } else {
           const libDir = join(cwd, "lib");
@@ -293,7 +293,7 @@ export const dartPlugin: EcosystemPlugin = {
         if (context.formatDart?.lineLength) {
           args.push("--line-length", String(context.formatDart.lineLength));
         }
-        if (context.resolvedFiles && context.resolvedFiles.length > 0) {
+        if (hasResolvedFiles(context)) {
           args.push(...context.resolvedFiles);
         } else {
           const libDir = join(cwd, "lib");
@@ -308,6 +308,7 @@ export const dartPlugin: EcosystemPlugin = {
       }
 
       case STANDARD_ACTIONS.BUILD:
+      case ACTION_CODEGEN:
         return runCommand(
           "dart",
           ["run", "build_runner", "build", "--delete-conflicting-outputs"],
@@ -321,13 +322,6 @@ export const dartPlugin: EcosystemPlugin = {
 
       case ACTION_PUB_GET:
         return runCommand(dartCmd, ["pub", "get"], cwd);
-
-      case ACTION_CODEGEN:
-        return runCommand(
-          "dart",
-          ["run", "build_runner", "build", "--delete-conflicting-outputs"],
-          cwd,
-        );
 
       case ACTION_GENERATE_API:
         return runCommand("dart", ["run", "swagger_parser"], cwd);

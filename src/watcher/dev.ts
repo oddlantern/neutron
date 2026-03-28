@@ -24,8 +24,8 @@ import {
   printBridgeSummary,
   printStartup,
   resolveBridges,
-} from "./bridge-runner.js";
-import type { ResolvedBridge } from "./bridge-runner.js";
+} from "../bridges/runner.js";
+import type { ResolvedBridge } from "../bridges/runner.js";
 import { createDebouncer } from "./debouncer.js";
 import type { Debouncer } from "./debouncer.js";
 
@@ -305,17 +305,19 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
 
   printStartup(session.resolved, session.registry);
 
-  // Background outdated check (non-blocking)
-  import("../commands/outdated.js")
-    .then(({ quickOutdatedCheck }) => quickOutdatedCheck(parsers))
-    .then((msg) => {
-      if (msg) {
-        console.log(`  ${YELLOW}${msg}${RESET}\n`);
-      }
-    })
-    .catch(() => {
-      // Silently ignore — network may be unavailable
-    });
+  // Background outdated check — delayed to not interfere with startup
+  setTimeout(() => {
+    import("../commands/outdated.js")
+      .then(({ quickOutdatedCheck }) => quickOutdatedCheck(parsers))
+      .then((msg) => {
+        if (msg) {
+          console.log(`  ${YELLOW}${msg}${RESET}\n`);
+        }
+      })
+      .catch(() => {
+        // Silently ignore — network may be unavailable
+      });
+  }, 3000);
 
   // Handle graceful shutdown
   return new Promise<number>((resolve) => {
@@ -326,8 +328,11 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
         session = null;
       }
       resolve(0);
-      // Force exit — chokidar keeps the event loop alive
-      setTimeout(() => process.exit(0), 100);
+      // Exception to the bin.ts-only process.exit rule:
+      // chokidar v4 keeps the event loop alive even after watcher.close().
+      // Without this, Ctrl+C hangs indefinitely. See ANA-006.
+      const EXIT_DELAY_MS = 100;
+      setTimeout(() => process.exit(0), EXIT_DELAY_MS);
     };
 
     process.on("SIGINT", cleanup);

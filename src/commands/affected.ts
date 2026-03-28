@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 import { loadConfig } from "../config/loader.js";
 import { buildWorkspaceGraph } from "../graph/workspace.js";
@@ -18,11 +18,14 @@ export interface AffectedOptions {
  */
 function getChangedFiles(root: string, base: string): readonly string[] {
   try {
-    const output = execSync(`git diff --name-only ${base} HEAD`, {
+    const result = spawnSync("git", ["diff", "--name-only", base, "HEAD"], {
       cwd: root,
       encoding: "utf-8",
     });
-    return output
+    if (result.status !== 0) {
+      return [];
+    }
+    return (result.stdout ?? "")
       .trim()
       .split("\n")
       .filter((line) => line.length > 0);
@@ -38,7 +41,7 @@ const IGNORED_SEGMENTS = ["/generated/", "/node_modules/", "/.dart_tool/", "/bui
  * Map changed files to the packages they belong to.
  * Filters out generated output and other non-source paths.
  */
-function filesToPackages(
+export function filesToPackages(
   changedFiles: readonly string[],
   packages: ReadonlyMap<string, WorkspacePackage>,
 ): ReadonlySet<string> {
@@ -63,7 +66,7 @@ function filesToPackages(
 /**
  * Build a reverse dependency map: for each package, which packages depend on it.
  */
-function buildReverseDeps(
+export function buildReverseDeps(
   packages: ReadonlyMap<string, WorkspacePackage>,
 ): ReadonlyMap<string, readonly string[]> {
   const reverse = new Map<string, string[]>();
@@ -85,7 +88,7 @@ function buildReverseDeps(
 /**
  * Build a reverse bridge map: for each source, which packages consume its artifacts.
  */
-function buildReverseBridges(
+export function buildReverseBridges(
   bridges: readonly { readonly source: string; readonly consumers: readonly string[] }[],
 ): ReadonlyMap<string, readonly string[]> {
   const reverse = new Map<string, string[]>();
@@ -111,7 +114,7 @@ function buildReverseBridges(
  * Walk the graph forward from a set of directly changed packages,
  * following both dependency edges and bridge edges.
  */
-function walkForward(
+export function walkForward(
   directlyChanged: ReadonlySet<string>,
   reverseDeps: ReadonlyMap<string, readonly string[]>,
   reverseBridges: ReadonlyMap<string, readonly string[]>,

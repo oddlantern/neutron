@@ -287,8 +287,8 @@ export interface SpawnedServer {
   readonly child: ChildProcess;
   readonly port: number;
   readonly exitHandler: () => void;
-  readonly outputChunks: string[];
-  readonly earlyExitRef: { earlyExit: boolean; exitCode: number | null };
+  readonly outputChunks: readonly string[];
+  readonly earlyExitRef: { readonly earlyExit: boolean; readonly exitCode: number | null };
 }
 
 /**
@@ -341,7 +341,7 @@ export function spawnServer(
   child.stderr?.on("data", collectOutput);
 
   // Handle early exit (e.g., syntax error, missing dependency)
-  const earlyExitRef = { earlyExit: false, exitCode: null as number | null };
+  const earlyExitRef: { earlyExit: boolean; exitCode: number | null } = { earlyExit: false, exitCode: null };
   child.on("exit", (code) => {
     earlyExitRef.earlyExit = true;
     earlyExitRef.exitCode = code;

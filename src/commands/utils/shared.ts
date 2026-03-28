@@ -7,9 +7,14 @@ import { BOLD, DIM, ORANGE, RESET } from "../../output.js";
 export const CONFIG_FILENAME = "mido.yml";
 export const MIN_ENV_FILES_FOR_PARITY = 2;
 
+export const ECOSYSTEM_MANIFESTS: Readonly<Record<string, string>> = {
+  typescript: "package.json",
+  dart: "pubspec.yaml",
+};
+
 export interface EcosystemGroup {
   readonly manifest: string;
-  readonly packages: string[];
+  readonly packages: readonly string[];
 }
 
 export interface BridgeWithWatch {
@@ -83,12 +88,8 @@ export function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): 
       packages: [...eco.packages, pkg.path].sort(),
     };
   } else {
-    const manifestNames: Record<string, string> = {
-      typescript: "package.json",
-      dart: "pubspec.yaml",
-    };
     config.ecosystems[pkg.ecosystem] = {
-      manifest: manifestNames[pkg.ecosystem] ?? pkg.manifest,
+      manifest: ECOSYSTEM_MANIFESTS[pkg.ecosystem] ?? pkg.manifest,
       packages: [pkg.path],
     };
   }
@@ -125,31 +126,25 @@ export function formatEcosystemList(ecosystems: Record<string, EcosystemGroup>):
   return lines.join("\n");
 }
 
-export function groupByEcosystem(
+export function groupDiscoveredByEcosystem(
   packages: readonly DiscoveredPackage[],
 ): Record<string, EcosystemGroup> {
-  const groups: Record<string, EcosystemGroup> = {};
-
-  const manifestNames: Record<string, string> = {
-    typescript: "package.json",
-    dart: "pubspec.yaml",
-  };
+  // Collect into mutable arrays first, then freeze into readonly
+  const temp: Record<string, { manifest: string; packages: string[] }> = {};
 
   for (const pkg of packages) {
-    if (!groups[pkg.ecosystem]) {
-      groups[pkg.ecosystem] = {
-        manifest: manifestNames[pkg.ecosystem] ?? pkg.manifest,
+    if (!temp[pkg.ecosystem]) {
+      temp[pkg.ecosystem] = {
+        manifest: ECOSYSTEM_MANIFESTS[pkg.ecosystem] ?? pkg.manifest,
         packages: [],
       };
     }
-    const group = groups[pkg.ecosystem];
-    if (group) {
-      group.packages.push(pkg.path);
-    }
+    temp[pkg.ecosystem]?.packages.push(pkg.path);
   }
 
-  for (const group of Object.values(groups)) {
-    group.packages.sort();
+  const groups: Record<string, EcosystemGroup> = {};
+  for (const [eco, group] of Object.entries(temp)) {
+    groups[eco] = { manifest: group.manifest, packages: group.packages.sort() };
   }
 
   return groups;

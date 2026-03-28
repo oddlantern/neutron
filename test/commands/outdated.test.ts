@@ -1,22 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-// Test the internal helpers — strip range and classify update
-
-function stripRange(range: string): string {
-  return range.replace(/^[\^~>=<\s]+/, "").split(/\s/)[0] ?? range;
-}
-
-function classifyUpdate(current: string, latest: string): "major" | "minor" | "patch" | null {
-  const [cMajor, cMinor] = current.split(".").map(Number);
-  const [lMajor, lMinor] = latest.split(".").map(Number);
-  if (cMajor === undefined || cMinor === undefined || lMajor === undefined || lMinor === undefined) {
-    return null;
-  }
-  if (lMajor > cMajor) return "major";
-  if (lMinor > cMinor) return "minor";
-  if (latest !== current) return "patch";
-  return null;
-}
+import { stripRange, classifyUpdate } from "../../src/commands/outdated.js";
 
 describe("outdated — stripRange", () => {
   test("strips ^", () => expect(stripRange("^1.2.3")).toBe("1.2.3"));
