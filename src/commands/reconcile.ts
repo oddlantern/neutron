@@ -55,10 +55,27 @@ export async function runReconciliation(
   try {
     const loaded = await loadConfig(root);
     existing = loaded.config;
-  } catch {
+  } catch (err: unknown) {
     s.stop("Failed to load existing config");
-    log.error(`Could not parse existing ${CONFIG_FILENAME}. Delete it and run init again.`);
-    return 1;
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn(`Could not parse existing ${CONFIG_FILENAME}: ${msg}`);
+
+    const replace = await confirm({
+      message: "Replace with a fresh scan?",
+      initialValue: true,
+    });
+    if (isCancel(replace) || !replace) {
+      handleCancel();
+    }
+
+    // Delete the broken config and re-run as first-time init
+    const { unlink } = await import("node:fs/promises");
+    await unlink(configPath);
+    log.step(`Removed broken ${CONFIG_FILENAME}`);
+
+    // Re-import to avoid circular — runInit delegates to runFirstTime
+    const { runInit } = await import("./init.js");
+    return runInit(root, parsers);
   }
 
   s.stop("Scan complete");

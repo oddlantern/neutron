@@ -54,8 +54,8 @@ describe('loadConfig', () => {
     await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid mido config');
   });
 
-  describe('removed migration: bridge fields from/to/via → source/target/artifact', () => {
-    test('throws on old from/to/via format (removed in v0.1.0)', async () => {
+  describe('migration: bridge fields from/to/via → source/target/artifact', () => {
+    test('auto-migrates old from/to/via format', async () => {
       const oldConfig = `
 workspace: test-workspace
 ecosystems:
@@ -70,7 +70,10 @@ bridges:
     via: apps/server/openapi.json
 `;
       writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
-      await expect(loadConfig(tmpDir)).rejects.toThrow('removed in v0.1.0');
+      const loaded = await loadConfig(tmpDir);
+      expect(loaded.config.bridges).toHaveLength(1);
+      expect(loaded.config.bridges?.[0]?.source).toBe('apps/server');
+      expect(loaded.config.bridges?.[0]?.artifact).toBe('apps/server/openapi.json');
     });
 
     test('accepts already-migrated source/target/artifact format', async () => {
@@ -94,8 +97,8 @@ bridges:
     });
   });
 
-  describe('removed migration: flat lint/format → ecosystem-centric', () => {
-    test('throws on old flat lint rules format (removed in v0.1.0)', async () => {
+  describe('migration: flat lint/format → ecosystem-centric', () => {
+    test('auto-migrates old flat lint rules format', async () => {
       const oldConfig = `
 workspace: test-workspace
 ecosystems:
@@ -110,7 +113,8 @@ lint:
     - dist
 `;
       writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
-      await expect(loadConfig(tmpDir)).rejects.toThrow('removed in v0.1.0');
+      const loaded = await loadConfig(tmpDir);
+      expect(loaded.config.lint?.typescript).toBeDefined();
     });
 
     test('already-migrated ecosystem-centric format is unchanged', async () => {

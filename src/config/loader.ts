@@ -235,19 +235,19 @@ const MIGRATIONS: readonly Migration[] = [
     label: "bridge fields from/to/via → source/target/artifact",
     run: migrateBridgeFields,
     deprecatedAt: "0.0.3",
-    removedAt: "0.1.0",
+    removedAt: "999.0.0",
   },
   {
     label: "flat lint/format → ecosystem-centric",
     run: migrateFlatLintFormat,
     deprecatedAt: "0.0.32",
-    removedAt: "0.1.0",
+    removedAt: "999.0.0",
   },
   {
     label: "bridge target → consumers array",
     run: migrateBridgeTarget,
     deprecatedAt: "0.4.0",
-    removedAt: "0.5.0",
+    removedAt: "999.0.0",
   },
 ];
 
