@@ -26,29 +26,37 @@ mido — cross-ecosystem monorepo workspace tool
 Usage:
   mido <command> [options]
 
-Commands:
-  init              Scan repo and generate mido.yml
-  install           Install git hooks
-  check             Run all workspace consistency checks
-  check --fix       Interactively resolve version mismatches and update mido.lock
-  check --quiet     Silent mode — only output on failure (for hooks)
-  dev [--verbose]   Watch bridges and regenerate on changes
-  generate          Run all bridge pipelines (fresh clone / CI)
-  lint              Run linters across all packages
-  lint --fix        Auto-fix lint issues
-  fmt               Format all packages
-  fmt --check       Check formatting without fixing
-  build [--all]     Build library packages (--all includes apps)
-  pre-commit        Run full pre-commit validation suite
-  commit-msg <file> Validate a commit message (used by git hooks)
-  help              Show this help message
+Setup:
+  init              Scan repo, generate mido.yml, install hooks
+  install           Write git hooks to .git/hooks/
+  add               Scaffold a new package in the workspace
 
-Flags (lint, fmt, build):
+Development:
+  dev [--verbose]   Watch bridges and regenerate on changes
+  generate          Run all bridge pipelines (--force to skip cache)
+  lint [--fix]      Run linters across all packages
+  fmt [--check]     Format all packages
+  test              Run tests across all packages
+  build [--all]     Build library packages (--all includes apps)
+
+Workspace health:
+  check [--fix]     Version consistency, bridge validation, env parity
+  doctor            Diagnostic: config, hooks, tools, generated output
+  outdated          Check for newer dependency versions
+  why <dep>         Show which packages use a dependency
+  graph             Interactive D3.js dependency graph (--dot, --ascii)
+
+CI / automation:
+  ci                Full pipeline: generate → build → lint → test → check
+  affected          Packages affected by changes (--base <ref>, --json)
+  pre-commit        Format check + lint + workspace check
+  commit-msg <file> Validate conventional commit message
+
+Common flags:
   --quiet              Only show failures
   --package <path>     Target a specific package
-
-Flags (lint, fmt):
-  --ecosystem <name>   Target a specific ecosystem (typescript, dart)
+  --ecosystem <name>   Target a specific ecosystem (lint, fmt, test)
+  --json               Machine-readable output (affected, outdated, why)
 
 Config:
   mido.yml          Workspace config (searched upward from cwd)
@@ -74,6 +82,14 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
+  if (command === "affected") {
+    const base = getFlagValue(args, "--base");
+    const json = args.includes("--json");
+    const { runAffected } = await import("./commands/affected.js");
+    const exitCode = await runAffected(parsers, { base, json });
+    process.exit(exitCode);
+  }
+
   if (command === "check") {
     const fix = args.includes("--fix");
     const quiet = args.includes("--quiet") || args.includes("--hook");
@@ -82,9 +98,29 @@ async function main(): Promise<void> {
     process.exit(exitCode);
   }
 
+  if (command === "add") {
+    const { runAdd } = await import("./commands/add.js");
+    const exitCode = await runAdd();
+    process.exit(exitCode);
+  }
+
   if (command === "init") {
     const { runInit } = await import("./commands/init.js");
     const exitCode = await runInit(process.cwd(), parsers);
+    process.exit(exitCode);
+  }
+
+  if (command === "graph") {
+    const format = args.includes("--dot") ? "dot" : args.includes("--ascii") ? "ascii" : "html";
+    const noOpen = args.includes("--no-open");
+    const { runGraph } = await import("./commands/graph.js");
+    const exitCode = await runGraph(parsers, { format, open: !noOpen });
+    process.exit(exitCode);
+  }
+
+  if (command === "doctor") {
+    const { runDoctor } = await import("./commands/doctor.js");
+    const exitCode = await runDoctor(parsers);
     process.exit(exitCode);
   }
 
@@ -124,8 +160,25 @@ async function main(): Promise<void> {
   if (command === "generate") {
     const quiet = args.includes("--quiet");
     const verbose = args.includes("--verbose");
+    const force = args.includes("--force");
     const { runGenerate } = await import("./commands/generate.js");
-    const exitCode = await runGenerate(parsers, { quiet, verbose });
+    const exitCode = await runGenerate(parsers, { quiet, verbose, force });
+    process.exit(exitCode);
+  }
+
+  if (command === "outdated") {
+    const json = args.includes("--json");
+    const { runOutdated } = await import("./commands/outdated.js");
+    const exitCode = await runOutdated(parsers, { json });
+    process.exit(exitCode);
+  }
+
+  if (command === "test") {
+    const quiet = args.includes("--quiet");
+    const pkg = getFlagValue(args, "--package");
+    const ecosystem = getFlagValue(args, "--ecosystem");
+    const { runTest } = await import("./commands/test.js");
+    const exitCode = await runTest(parsers, { quiet, package: pkg, ecosystem });
     process.exit(exitCode);
   }
 
@@ -135,6 +188,13 @@ async function main(): Promise<void> {
     const pkg = getFlagValue(args, "--package");
     const { runBuild } = await import("./commands/build.js");
     const exitCode = await runBuild(parsers, { quiet, all, package: pkg });
+    process.exit(exitCode);
+  }
+
+  if (command === "ci") {
+    const verbose = args.includes("--verbose");
+    const { runCi } = await import("./commands/ci.js");
+    const exitCode = await runCi(parsers, { verbose });
     process.exit(exitCode);
   }
 
@@ -152,6 +212,18 @@ async function main(): Promise<void> {
     }
     const { runCommitMsg } = await import("./commands/commit-msg.js");
     const exitCode = await runCommitMsg(filePath);
+    process.exit(exitCode);
+  }
+
+  if (command === "why") {
+    const depName = args[1];
+    if (!depName) {
+      console.error("Usage: mido why <dependency>");
+      process.exit(1);
+    }
+    const json = args.includes("--json");
+    const { runWhy } = await import("./commands/why.js");
+    const exitCode = await runWhy(parsers, depName, { json });
     process.exit(exitCode);
   }
 

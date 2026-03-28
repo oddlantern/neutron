@@ -161,7 +161,19 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
 
     // Config reload debouncer — fires when mido.yml changes
     const configDebouncer = createDebouncer(async () => {
-      logStep("mido.yml changed \u2014 reloading config...");
+      logStep("mido.yml changed \u2014 validating...");
+
+      // Validate config before tearing down the current session
+      try {
+        await loadConfig();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logFail(`Invalid config — keeping current session: ${msg}`);
+        logWaiting();
+        return;
+      }
+
+      logStep("config valid \u2014 reloading...");
 
       if (session) {
         teardownSession(session);
@@ -283,6 +295,18 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
   }
 
   printStartup(session.resolved, session.registry);
+
+  // Background outdated check (non-blocking)
+  import("../commands/outdated.js")
+    .then(({ quickOutdatedCheck }) => quickOutdatedCheck(parsers))
+    .then((msg) => {
+      if (msg) {
+        console.log(`  ${YELLOW}${msg}${RESET}\n`);
+      }
+    })
+    .catch(() => {
+      // Silently ignore — network may be unavailable
+    });
 
   // Handle graceful shutdown
   return new Promise<number>((resolve) => {

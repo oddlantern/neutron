@@ -59,6 +59,12 @@ export async function runCheck(
     results.push(await checkEnvParity(config.env, root));
   }
 
+  // 4. Generated output staleness (only if bridges are declared)
+  if (graph.bridges.length > 0) {
+    const { checkStaleness } = await import("../checks/staleness.js");
+    results.push(await checkStaleness(graph, root));
+  }
+
   const allPassed = results.every((r) => r.passed);
 
   // In quiet mode, suppress all output when passing

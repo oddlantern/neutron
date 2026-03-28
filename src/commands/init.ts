@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { confirm, intro, isCancel, log, multiselect, select, spinner, text } from "@clack/prompts";
@@ -28,6 +28,74 @@ import {
   runPostInitCheck,
 } from "./utils/shared.js";
 import { runReconciliation } from "./reconcile.js";
+import { isRecord } from "../guards.js";
+
+// ─── Prepare / gitignore wiring ──────────────────────────────────────────────
+
+/**
+ * Add "mido generate" to the prepare script in root package.json.
+ * If prepare already exists and doesn't mention mido, chains with &&.
+ */
+async function wirePrepareScript(root: string): Promise<void> {
+  const pkgPath = join(root, "package.json");
+  if (!existsSync(pkgPath)) {
+    return;
+  }
+
+  const raw = await readFile(pkgPath, "utf-8");
+  const pkg: unknown = JSON.parse(raw);
+  if (!isRecord(pkg)) {
+    return;
+  }
+
+  const scripts = isRecord(pkg["scripts"]) ? pkg["scripts"] : {};
+  const current = typeof scripts["prepare"] === "string" ? scripts["prepare"] : "";
+
+  if (current.includes("mido generate")) {
+    return; // Already wired
+  }
+
+  const newPrepare = current ? `${current} && mido generate` : "mido generate";
+  scripts["prepare"] = newPrepare;
+  pkg["scripts"] = scripts;
+
+  await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
+  log.step(`Added ${BOLD}"prepare": "mido generate"${RESET} to package.json`);
+}
+
+/**
+ * Add generated/ to .gitignore for bridge source directories.
+ */
+async function wireGitignore(
+  root: string,
+  bridges: readonly { readonly source: string }[],
+): Promise<void> {
+  const gitignorePath = join(root, ".gitignore");
+  let content = "";
+
+  if (existsSync(gitignorePath)) {
+    content = await readFile(gitignorePath, "utf-8");
+  }
+
+  // Collect unique source paths that need generated/ ignored
+  const sources = new Set(bridges.map((b) => b.source));
+  const linesToAdd: string[] = [];
+
+  for (const source of sources) {
+    const entry = `${source}/generated/`;
+    if (!content.includes(entry)) {
+      linesToAdd.push(entry);
+    }
+  }
+
+  if (linesToAdd.length === 0) {
+    return;
+  }
+
+  const section = "\n# mido generated output\n" + linesToAdd.join("\n") + "\n";
+  await writeFile(gitignorePath, content.trimEnd() + "\n" + section, "utf-8");
+  log.step(`Added ${linesToAdd.length} generated path(s) to .gitignore`);
+}
 
 /**
  * Interactive setup that scans the repo and generates mido.yml.
@@ -215,6 +283,12 @@ async function runFirstTime(
 
   // Clean up replaced tooling
   await cleanupReplacedTooling(root);
+
+  // Wire prepare script if bridges exist
+  if (bridgesWithWatch.length > 0) {
+    await wirePrepareScript(root);
+    await wireGitignore(root, bridgesWithWatch);
+  }
 
   // Run health check and offer to fix mismatches
   const checksPass = await runPostInitCheck(parsers);

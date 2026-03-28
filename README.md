@@ -8,24 +8,65 @@ Cross-ecosystem monorepo workspace tool. One config, every language, all bridges
 
 TypeScript monorepos have syncpack. Dart monorepos have melos. Neither sees the other. If your repo contains both — plus generated API clients and design tokens bridging them — version mismatches, stale artifacts, and env drift go undetected until something breaks at runtime.
 
+## What mido replaces
+
+### Tools
+
+| Tool | What it does | mido equivalent |
+|------|-------------|-----------------|
+| Husky | Git hooks | `mido install` + `hooks:` in mido.yml |
+| commitlint | Conventional commit validation | `mido commit-msg` + `commits:` config |
+| lint-staged | Run linters on staged files | `mido pre-commit` |
+| Prettier | Code formatting | `mido fmt` (oxfmt, bundled) |
+| ESLint | Linting | `mido lint` (oxlint, bundled) |
+| Biome | Lint + format | `mido lint` + `mido fmt` |
+| syncpack | Version consistency across packages | `mido check --fix` |
+| npm outdated / dart pub outdated | Dependency freshness (per ecosystem) | `mido outdated` (cross-ecosystem) |
+
+### Scripts and workflows
+
+| Manual workflow | What it does | mido equivalent |
+|----------------|-------------|-----------------|
+| Per-package `generate` scripts | API codegen, design tokens | `mido generate` (all bridges, cached) |
+| `bun test` / `dart test` per package | Running tests | `mido test` (cross-ecosystem, parallel) |
+| Bespoke CI pipeline steps | Build + lint + test + check | `mido ci` (single command) |
+| Figuring out what changed | Deciding what to rebuild | `mido affected --base origin/main` |
+| Checking dependency versions manually | Finding outdated deps | `mido outdated` (shared deps highlighted) |
+
+### What mido does NOT replace
+
+- **Package managers** — bun, npm, yarn, dart, flutter (mido calls them, doesn't replace them)
+- **Compilers** — TypeScript, Dart (mido orchestrates, doesn't compile)
+- **App builds** — `flutter build`, Docker, deploy scripts (mido builds library packages, not apps)
+- **Infrastructure** — CI/CD config, Docker, k8s (mido provides `mido ci` but doesn't own your pipeline)
+
 ## Install
 
 ```bash
 bun add -D @oddlantern/mido   # or npm/pnpm/yarn
 ```
 
-## Quick start
+## Getting started
 
 ```bash
-mido init         # Scan repo, generate mido.yml interactively
-mido install      # Install git hooks
-mido generate     # Run all bridge pipelines
-mido dev          # Watch bridges and regenerate on changes
+mido init       # Scan repo, generate mido.yml, install hooks, wire prepare script
+mido dev        # Start watching — you're ready to develop
 ```
+
+That's it. `mido init` handles everything:
+
+- Detects ecosystems and packages
+- Discovers bridges between them
+- Generates `mido.yml` with sensible defaults
+- Installs git hooks (pre-commit, commit-msg, post-merge, post-checkout)
+- Adds `"prepare": "mido generate"` to your root `package.json`
+- Adds `generated/` entries to `.gitignore` for bridge sources
+
+After init, every `bun install` on a fresh clone automatically runs `mido generate` to produce all generated code. No manual steps.
 
 ## Config
 
-`mido init` scans your repo and proposes a `mido.yml`. Example:
+`mido init` generates a `mido.yml`. Example:
 
 ```yaml
 workspace: my-project
@@ -83,26 +124,62 @@ hooks:
 
 ## Commands
 
+### Setup
+
 | Command | Description |
 |---------|-------------|
-| `mido init` | Scan repo, detect ecosystems/bridges, generate mido.yml |
+| `mido init` | Scan repo, generate mido.yml, install hooks |
 | `mido install` | Write git hooks to `.git/hooks/` |
-| `mido generate` | Run all bridge pipelines (fresh clone / CI) |
+| `mido add` | Scaffold a new package in the workspace |
+
+### Development
+
+| Command | Description |
+|---------|-------------|
 | `mido dev [--verbose]` | Watch bridges and regenerate on changes |
-| `mido check` | Run all workspace consistency checks |
-| `mido check --fix` | Interactively resolve version mismatches |
-| `mido check --quiet` | Silent on success (for hooks) |
+| `mido generate [--force]` | Run all bridge pipelines (uses cache, `--force` to skip) |
 | `mido lint [--fix]` | Run linters across all packages |
 | `mido fmt [--check]` | Format all packages |
-| `mido build` | Build all packages |
+| `mido test` | Run tests across all packages |
+| `mido build [--all]` | Build library packages (`--all` includes apps) |
+
+### Workspace health
+
+| Command | Description |
+|---------|-------------|
+| `mido check [--fix] [--quiet]` | Version consistency, bridge validation, env parity, staleness |
+| `mido doctor` | Diagnostic: config, hooks, tools, generated output |
+| `mido outdated [--json]` | Check for newer dependency versions across ecosystems |
+| `mido why <dep>` | Show which packages use a dependency |
+
+### CI / automation
+
+| Command | Description |
+|---------|-------------|
+| `mido ci` | Full pipeline: generate, build, lint, test, check |
+| `mido affected [--base ref] [--json]` | Packages affected by changes (follows dependency + bridge edges) |
+| `mido graph [--dot] [--ascii]` | Interactive D3.js dependency graph |
+
+### Git hooks
+
+| Command | Description |
+|---------|-------------|
 | `mido pre-commit` | Format check + lint + workspace check |
 | `mido commit-msg <file>` | Validate conventional commit message |
 
-### Flags (lint, fmt, build)
+### Other
 
-- `--quiet` — only show failures
-- `--package <path>` — target a specific package
-- `--ecosystem <name>` — target a specific ecosystem (lint, fmt only)
+| Command | Description |
+|---------|-------------|
+| `mido help` | Show all commands and flags |
+| `mido --version` | Show version |
+
+### Common flags
+
+- `--quiet` — only show failures (lint, fmt, test, build, check)
+- `--package <path>` — target a specific package (lint, fmt, test, build)
+- `--ecosystem <name>` — target a specific ecosystem (lint, fmt, test)
+- `--json` — machine-readable output (affected, outdated, why)
 
 ## Bridges
 
@@ -125,13 +202,17 @@ bridges:
 5. Consumers import from the generated package via workspace dependencies
 
 ```
-apps/server/generated/typescript/   # openapi-typescript output
-apps/server/generated/dart/         # swagger_parser output
+apps/server/generated/typescript/      # openapi-typescript output
+apps/server/generated/dart/            # swagger_parser output
 packages/design/generated/typescript/  # CSS + TS constants
 packages/design/generated/dart/        # Flutter theme
 ```
 
-The `generated/` directories are gitignored. Run `mido generate` after clone or in CI.
+The `generated/` directories are gitignored — `mido generate` runs automatically via the `prepare` script on `bun install`.
+
+### Pipeline caching
+
+`mido generate` hashes bridge inputs (artifact + watched files) and skips unchanged bridges. Use `--force` to regenerate everything.
 
 ### Domain plugins
 
@@ -143,6 +224,23 @@ The `generated/` directories are gitignored. Run `mido generate` after clone or 
 - **typescript** — oxlint, oxfmt (bundled), openapi-typescript, CSS/TS design token codegen
 - **dart** — dart analyze, dart format, swagger_parser, Flutter theme codegen
 
+## CI integration
+
+Single command replaces bespoke CI configs:
+
+```yaml
+# GitHub Actions example
+- run: bun install      # triggers mido generate via prepare script
+- run: bunx mido ci     # generate → build → lint → test → check
+```
+
+For monorepos with conditional builds:
+
+```yaml
+- run: bunx mido affected --base origin/main --json > affected.json
+# Use affected.json to conditionally trigger app-specific builds
+```
+
 ## Checks
 
 `mido check` validates workspace consistency:
@@ -150,6 +248,7 @@ The `generated/` directories are gitignored. Run `mido generate` after clone or 
 - **versions** — flags dependencies with different version ranges across packages
 - **bridges** — validates cross-ecosystem edges and artifact presence
 - **env** — checks shared environment keys exist in all declared env files
+- **staleness** — warns when generated output is missing
 
 ## Lint and format
 

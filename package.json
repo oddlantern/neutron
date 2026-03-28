@@ -1,10 +1,10 @@
 {
   "name": "@oddlantern/mido",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Cross-ecosystem monorepo workspace tool",
   "type": "module",
   "bin": {
-    "mido": "./dist/bin.js"
+    "mido": "dist/bin.js"
   },
   "files": [
     "dist",
@@ -18,7 +18,7 @@
     "lint": "oxlint src/",
     "format": "oxfmt src/",
     "format:check": "oxfmt --check src/",
-    "prepare": "mido install"
+    "prepare": "node dist/bin.js install"
   },
   "keywords": [
     "monorepo",
@@ -33,7 +33,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oddlantern/mido"
+    "url": "git+https://github.com/oddlantern/mido.git"
+  },
+  "homepage": "https://github.com/oddlantern/mido#readme",
+  "bugs": {
+    "url": "https://github.com/oddlantern/mido/issues"
   },
   "engines": {
     "node": ">=20.19.0"

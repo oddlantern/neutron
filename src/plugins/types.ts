@@ -13,6 +13,7 @@ export const STANDARD_ACTIONS: {
   readonly FORMAT: "format";
   readonly FORMAT_CHECK: "format:check";
   readonly BUILD: "build";
+  readonly TEST: "test";
   readonly TYPECHECK: "typecheck";
   readonly CODEGEN: "codegen";
 } = {
@@ -21,6 +22,7 @@ export const STANDARD_ACTIONS: {
   FORMAT: "format",
   FORMAT_CHECK: "format:check",
   BUILD: "build",
+  TEST: "test",
   TYPECHECK: "typecheck",
   CODEGEN: "codegen",
 };

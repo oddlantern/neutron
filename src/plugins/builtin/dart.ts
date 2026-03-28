@@ -209,6 +209,9 @@ export const dartPlugin: EcosystemPlugin = {
         actions.push(ACTION_CODEGEN);
       }
 
+      // Test — always available for Dart packages
+      actions.push(STANDARD_ACTIONS.TEST);
+
       if (hasDep(manifest, "swagger_parser", DART_DEP_FIELDS)) {
         actions.push(ACTION_GENERATE_API);
       }
@@ -305,6 +308,11 @@ export const dartPlugin: EcosystemPlugin = {
           ["run", "build_runner", "build", "--delete-conflicting-outputs"],
           cwd,
         );
+
+      case STANDARD_ACTIONS.TEST: {
+        const testCmd = flutter ? "flutter" : "dart";
+        return runCommand(testCmd, ["test"], cwd);
+      }
 
       case ACTION_PUB_GET:
         return runCommand(dartCmd, ["pub", "get"], cwd);

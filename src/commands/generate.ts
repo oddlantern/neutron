@@ -9,20 +9,22 @@ import {
   executeBridgeGroup,
   formatMs,
   groupBridgesByArtifact,
+  logStep,
   resolveBridges,
 } from "../watcher/bridge-runner.js";
+import { isCacheHit, updateCache } from "../watcher/pipeline-cache.js";
 
 export interface GenerateOptions {
   readonly quiet?: boolean | undefined;
   readonly verbose?: boolean | undefined;
+  /** Skip cache and regenerate everything */
+  readonly force?: boolean | undefined;
 }
 
 /**
  * Run all bridge pipelines to generate artifacts.
  *
- * This is the non-watch equivalent of what `mido dev` does on file change —
- * it resolves all bridges, groups them by artifact, and executes each pipeline.
- * Use after a fresh clone or in CI to produce all generated code.
+ * Uses an input hash cache to skip unchanged bridges. Pass --force to regenerate everything.
  *
  * @returns exit code (0 = all generated, 1 = failure)
  */
@@ -30,7 +32,7 @@ export async function runGenerate(
   parsers: ParserRegistry,
   options: GenerateOptions = {},
 ): Promise<number> {
-  const { quiet = false, verbose = false } = options;
+  const { quiet = false, verbose = false, force = false } = options;
   const { config, root } = await loadConfig();
   const graph = await buildWorkspaceGraph(config, root, parsers);
   const plugins = loadPlugins();
@@ -61,11 +63,38 @@ export async function runGenerate(
 
   const groups = groupBridgesByArtifact(resolved);
   let hasErrors = false;
+  let skipped = 0;
   const start = performance.now();
 
   for (const group of groups) {
+    const first = group[0];
+    if (!first) {
+      continue;
+    }
+
+    const bridgeKey = `${first.bridge.source}::${first.bridge.artifact}`;
+
+    // Check cache unless --force
+    if (!force) {
+      const cached = await isCacheHit(
+        root,
+        bridgeKey,
+        first.bridge.artifact,
+        first.watchPatterns,
+      );
+      if (cached) {
+        skipped++;
+        if (!quiet && verbose) {
+          logStep(`${first.bridge.artifact} — cached, skipping`);
+        }
+        continue;
+      }
+    }
+
     try {
       await executeBridgeGroup(group, registry, graph, root, pm, verbose);
+      // Update cache on success
+      await updateCache(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
     } catch (err: unknown) {
       hasErrors = true;
       const msg = err instanceof Error ? err.message : String(err);
@@ -76,8 +105,9 @@ export async function runGenerate(
   const duration = Math.round(performance.now() - start);
   if (!quiet) {
     const icon = hasErrors ? FAIL : PASS;
+    const skipNote = skipped > 0 ? ` ${DIM}(${skipped} cached)${RESET}` : "";
     console.log(
-      `\n${icon} ${resolved.length} bridge(s) processed (${formatMs(duration)})${hasErrors ? " (with errors)" : ""}\n`,
+      `\n${icon} ${resolved.length} bridge(s) processed (${formatMs(duration)})${hasErrors ? " (with errors)" : ""}${skipNote}\n`,
     );
   }
 

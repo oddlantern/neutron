@@ -96,6 +96,11 @@ export const typescriptPlugin: EcosystemPlugin = {
         actions.push(STANDARD_ACTIONS.BUILD);
       }
 
+      // Test — if there's a test script
+      if (scripts["test"]) {
+        actions.push(STANDARD_ACTIONS.TEST);
+      }
+
       // Typecheck — if typescript dep or tsconfig exists
       if (hasDep(manifest, "typescript") || existsSync(join(root, pkg.path, "tsconfig.json"))) {
         actions.push(STANDARD_ACTIONS.TYPECHECK);
@@ -258,6 +263,10 @@ export const typescriptPlugin: EcosystemPlugin = {
 
     if (action === STANDARD_ACTIONS.BUILD) {
       return runCommand(pm, ["run", "build"], cwd);
+    }
+
+    if (action === STANDARD_ACTIONS.TEST) {
+      return runCommand(pm, ["run", "test"], cwd);
     }
 
     if (action === STANDARD_ACTIONS.TYPECHECK) {
