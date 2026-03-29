@@ -104,14 +104,16 @@ function generateCategoryClass(
     lines.push("");
   }
 
-  // Dynamic accessor for the entire category
+  // Dynamic accessor for the entire category — only when entries share a prefix pattern
   const firstEntry = svgEntries[0];
-  if (firstEntry) {
+  if (firstEntry && svgEntries.length > 1) {
     const pathParts = firstEntry.relativePath.split("/");
     const dir = pathParts.slice(0, -1).join("/");
     const hasCommonDir = svgEntries.every((e) => e.relativePath.startsWith(dir + "/"));
+    // Check if files use the {category}_{key} naming convention (prefix came from filename)
+    const usesPrefix = svgEntries.every((e) => e.name.startsWith(`${category.name}_`));
 
-    if (hasCommonDir) {
+    if (hasCommonDir && usesPrefix) {
       lines.push(`  /// Dynamic accessor — loads by key from the ${category.name} directory.`);
       lines.push("  static Widget byKey(String key, {double? size, Color? color}) =>");
       lines.push("    SvgPicture.asset(");
@@ -124,6 +126,45 @@ function generateCategoryClass(
       lines.push("        : null,");
       lines.push("    );");
     }
+  }
+
+  lines.push("}");
+  return lines.join("\n");
+}
+
+/** Raster image extensions */
+const IMAGE_EXTENSIONS: ReadonlySet<string> = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+
+/**
+ * Generate a typed Dart class for a category of raster images.
+ * Returns Image.asset widgets instead of SvgPicture.
+ */
+function generateImageClass(
+  category: AssetCategory,
+  prefix: string,
+  packageName: string,
+): string | null {
+  const imageEntries = category.entries.filter((e) => IMAGE_EXTENSIONS.has(e.ext));
+  if (imageEntries.length === 0) {
+    return null;
+  }
+
+  const className = `${prefix}${toPascalCase(category.name)}Image`;
+  const lines: string[] = [];
+
+  lines.push(`abstract final class ${className} {`);
+
+  for (const entry of imageEntries) {
+    const methodName = toCamelCase(entry.key);
+    lines.push(`  static Widget ${methodName}({double? width, double? height, BoxFit? fit}) =>`);
+    lines.push("    Image.asset(");
+    lines.push(`      'assets/${entry.relativePath}',`);
+    lines.push(`      package: '${packageName}',`);
+    lines.push("      width: width,");
+    lines.push("      height: height,");
+    lines.push("      fit: fit ?? BoxFit.contain,");
+    lines.push("    );");
+    lines.push("");
   }
 
   lines.push("}");
@@ -344,6 +385,27 @@ export async function executeDartAssetGeneration(
     classLines.push("");
 
     const fileName = "icons.generated.dart";
+    writeFileSync(join(libDir, fileName), classLines.join("\n"), "utf-8");
+    generatedFiles.push(fileName);
+  }
+
+  // Generate image classes (PNG, JPG, etc.)
+  const imageClasses: string[] = [];
+  for (const category of regularCategories) {
+    const classCode = generateImageClass(category, prefix, packageName);
+    if (classCode) {
+      imageClasses.push(classCode);
+    }
+  }
+
+  if (imageClasses.length > 0) {
+    const classLines: string[] = [HEADER, ""];
+    classLines.push("import 'package:flutter/material.dart';");
+    classLines.push("");
+    classLines.push(imageClasses.join("\n\n"));
+    classLines.push("");
+
+    const fileName = "images.generated.dart";
     writeFileSync(join(libDir, fileName), classLines.join("\n"), "utf-8");
     generatedFiles.push(fileName);
   }

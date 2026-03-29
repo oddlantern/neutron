@@ -230,7 +230,7 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-Cyax6lCO.js");
+		const { runInit } = await import("./init-AxovLYo9.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
@@ -251,7 +251,7 @@ async function main() {
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-CcE2PEUo.js");
+		const { runDev } = await import("./dev-BNyQ8rvw.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
@@ -266,7 +266,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-BfrmEl8c.js");
+		const { runLint } = await import("./lint-DHVGemRz.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -280,7 +280,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-CKcpJeB_.js");
+		const { runFmt } = await import("./fmt-CAxca_3N.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -294,7 +294,7 @@ async function main() {
 		const verbose = args.includes("--verbose");
 		const force = args.includes("--force");
 		const dryRun = args.includes("--dry-run");
-		const { runGenerate } = await import("./generate-BCcQtTvn.js");
+		const { runGenerate } = await import("./generate-Cl5L7Yg4.js");
 		const exitCode = await runGenerate(parsers, {
 			quiet,
 			verbose,
@@ -333,7 +333,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runTest } = await import("./test-D197P0P1.js");
+		const { runTest } = await import("./test-D1xV-Hzu.js");
 		const exitCode = await runTest(parsers, {
 			quiet,
 			package: pkg,
@@ -345,7 +345,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const all = args.includes("--all");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-C5a1Quay.js");
+		const { runBuild } = await import("./build-COR9TdNs.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			all,
@@ -355,12 +355,12 @@ async function main() {
 	}
 	if (command === "ci") {
 		const verbose = args.includes("--verbose");
-		const { runCi } = await import("./ci-B1qD6sGy.js");
+		const { runCi } = await import("./ci-CgoiJaNd.js");
 		const exitCode = await runCi(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-D8fXNL5x.js");
+		const { runPreCommit } = await import("./pre-commit-CyfzhbJZ.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
