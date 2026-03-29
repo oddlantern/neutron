@@ -4,7 +4,7 @@ import { c as PASS, r as DIM, t as BOLD, u as RESET } from "./output-MbJ98jNX.js
 import { t as loadConfig } from "./loader-FFG_yaOW.js";
 import { t as buildWorkspaceGraph } from "./workspace-D1ScM76h.js";
 import { n as formatDiagnostics, t as DiagnosticCollector } from "./diagnostic-ua3edMsw.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-B0j5Offx.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-Db0pIOLj.js";
 import { t as detectPackageManager } from "./pm-detect-BtRYHQXQ.js";
 import { d as logStep, n as groupBridgesByArtifact, o as resolveBridges, s as formatMs, t as executeBridgeGroup } from "./runner-BQvvMff9.js";
 import { readFile } from "node:fs/promises";
@@ -179,4 +179,4 @@ async function runGenerate(parsers, options = {}) {
 //#endregion
 export { runGenerate };
 
-//# sourceMappingURL=generate-DIIFa62n.js.map
+//# sourceMappingURL=generate-BCcQtTvn.js.map

@@ -280,7 +280,7 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("    final r = (this.r * 255).round().toRadixString(16).padLeft(2, '0');");
   lines.push("    final g = (this.g * 255).round().toRadixString(16).padLeft(2, '0');");
   lines.push("    final b = (this.b * 255).round().toRadixString(16).padLeft(2, '0');");
-  lines.push("    return '#\\$r\\$g\\$b';");
+  lines.push("    return '#\$r\$g\$b';");
   lines.push("  }");
   lines.push("}");
   lines.push("");

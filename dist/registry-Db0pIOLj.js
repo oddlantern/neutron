@@ -923,7 +923,7 @@ function generateTheme(tokens, packageName) {
 	lines.push("    final r = (this.r * 255).round().toRadixString(16).padLeft(2, '0');");
 	lines.push("    final g = (this.g * 255).round().toRadixString(16).padLeft(2, '0');");
 	lines.push("    final b = (this.b * 255).round().toRadixString(16).padLeft(2, '0');");
-	lines.push("    return '#\\$r\\$g\\$b';");
+	lines.push("    return '#$r$g$b';");
 	lines.push("  }");
 	lines.push("}");
 	lines.push("");
@@ -3757,4 +3757,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-B0j5Offx.js.map
+//# sourceMappingURL=registry-Db0pIOLj.js.map
