@@ -106,9 +106,9 @@ describe("asset scanner", () => {
 
     const manifest = scanAssets(tmpDir, "testapp");
     expect(manifest.allEntries).toHaveLength(1);
-    // "wren-head" has a hyphen but no underscore prefix, so parent dir "icons" is category
-    expect(manifest.allEntries[0]?.category).toBe("icons");
-    expect(manifest.allEntries[0]?.key).toBe("wren-head");
+    // "wren-head" normalized to "wren_head", split on first underscore → category "wren", key "head"
+    expect(manifest.allEntries[0]?.category).toBe("wren");
+    expect(manifest.allEntries[0]?.key).toBe("head");
   });
 
   test("stores workspace name in manifest", () => {

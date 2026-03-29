@@ -30,15 +30,17 @@ function inferCategoryAndKey(
   name: string,
   parentDir: string,
 ): { readonly category: string; readonly key: string } {
-  const underscoreIdx = name.indexOf("_");
+  // Normalize: replace hyphens with underscores for consistent inference
+  const normalized = name.replace(/-/g, "_");
+  const underscoreIdx = normalized.indexOf("_");
   if (underscoreIdx > 0) {
     return {
-      category: name.slice(0, underscoreIdx),
-      key: name.slice(underscoreIdx + 1),
+      category: normalized.slice(0, underscoreIdx),
+      key: normalized.slice(underscoreIdx + 1),
     };
   }
   // No prefix — use parent directory as category, full name as key
-  return { category: parentDir || "misc", key: name };
+  return { category: parentDir || "misc", key: normalized };
 }
 
 /**
