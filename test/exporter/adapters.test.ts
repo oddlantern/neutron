@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
-import { detectAdapter } from '../../src/plugins/builtin/openapi/adapters/index.js';
-import { elysiaAdapter } from '../../src/plugins/builtin/openapi/adapters/elysia.js';
-import { honoAdapter } from '../../src/plugins/builtin/openapi/adapters/hono.js';
-import { expressAdapter } from '../../src/plugins/builtin/openapi/adapters/express.js';
-import { fastifyAdapter } from '../../src/plugins/builtin/openapi/adapters/fastify.js';
-import { koaAdapter } from '../../src/plugins/builtin/openapi/adapters/koa.js';
-import { nestjsAdapter } from '../../src/plugins/builtin/openapi/adapters/nestjs.js';
+import { detectAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/index.js';
+import { elysiaAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/elysia.js';
+import { honoAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/hono.js';
+import { expressAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/express.js';
+import { fastifyAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/fastify.js';
+import { koaAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/koa.js';
+import { nestjsAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/nestjs.js';
 
 describe('framework adapter detection', () => {
   test('elysia adapter detects elysia + @elysiajs/openapi', () => {

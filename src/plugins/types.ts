@@ -3,8 +3,8 @@ import type {
   FormatTypescriptConfig,
   LintDartConfig,
   LintTypescriptConfig,
-} from "../config/schema.js";
-import type { WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
+} from "@/config/schema";
+import type { WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 
 /** Standard action names shared across ecosystem plugins */
 export const STANDARD_ACTIONS: {

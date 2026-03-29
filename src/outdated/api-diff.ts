@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { TypeDiff } from "./types.js";
+import type { TypeDiff } from "@/outdated/types";
 
 // ── TypeScript export extraction ─────────────────────────────────────
 

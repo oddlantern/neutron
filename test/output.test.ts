@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { CheckIssue, CheckResult } from "../src/checks/types.js";
+import type { CheckIssue, CheckResult } from "../src/checks/types";
 import {
   BOLD,
   CYAN,
@@ -17,7 +17,7 @@ import {
   formatCheckResult,
   formatHeader,
   formatSummary,
-} from "../src/output.js";
+} from "../src/output";
 
 const ESC = "\x1b[";
 

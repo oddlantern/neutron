@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { collectDeps, stripRange, classifyUpdate, buildWorkspaceDepsMap } from "../../src/outdated/collect.js";
-import type { WorkspacePackage } from "../../src/graph/types.js";
+import { collectDeps, stripRange, classifyUpdate, buildWorkspaceDepsMap } from "@/outdated/collect";
+import type { WorkspacePackage } from "@/graph/types";
 
 function makePkg(
   name: string,

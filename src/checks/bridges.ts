@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import type { WorkspaceGraph } from "../graph/types.js";
-import type { CheckIssue, CheckResult } from "./types.js";
+import type { WorkspaceGraph } from "@/graph/types";
+import type { CheckIssue, CheckResult } from "@/checks/types";
 
 /**
  * Validate that all declared bridges reference existing packages

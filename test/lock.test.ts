@@ -10,8 +10,8 @@ import {
   mergeLock,
   verifyIntegrity,
   writeLock,
-} from "../src/lock.js";
-import type { LockEntry, LockUpdate, MidoLock } from "../src/lock.js";
+} from "../src/lock";
+import type { LockEntry, LockUpdate, MidoLock } from "../src/lock";
 
 let tmpDir: string;
 

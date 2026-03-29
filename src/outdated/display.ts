@@ -1,7 +1,7 @@
-import { BOLD, DIM, GREEN, ORANGE, RED, RESET, YELLOW } from "../output.js";
+import { BOLD, DIM, GREEN, ORANGE, RED, RESET, YELLOW } from "@/output";
 
-import { stripRange } from "./collect.js";
-import type { OutdatedDep, RiskScore, StaticAnalysisResult, ValidationResult } from "./types.js";
+import { stripRange } from "@/outdated/collect";
+import type { OutdatedDep, RiskScore, StaticAnalysisResult, ValidationResult } from "@/outdated/types";
 
 export const SEVERITY_COLOR: Readonly<Record<string, string>> = { major: RED, minor: YELLOW, patch: DIM };
 const SEVERITY_LABEL: Readonly<Record<string, string>> = { major: "MAJOR", minor: "MINOR", patch: "PATCH" };

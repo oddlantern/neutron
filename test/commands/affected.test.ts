@@ -5,8 +5,8 @@ import {
   buildReverseDeps,
   buildReverseBridges,
   walkForward,
-} from "../../src/commands/affected.js";
-import type { WorkspacePackage, Bridge } from "../../src/graph/types.js";
+} from "@/commands/affected";
+import type { WorkspacePackage, Bridge } from "@/graph/types";
 
 type GraphPackages = ReadonlyMap<string, WorkspacePackage>;
 

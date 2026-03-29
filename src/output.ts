@@ -1,4 +1,4 @@
-import type { CheckIssue, CheckResult } from "./checks/types.js";
+import type { CheckIssue, CheckResult } from "@/checks/types";
 
 // ANSI color codes — no dependency needed
 export const RESET = "\x1b[0m";

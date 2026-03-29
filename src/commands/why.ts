@@ -1,7 +1,7 @@
-import { loadConfig } from "../config/loader.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, ORANGE, RESET } from "../output.js";
+import { loadConfig } from "@/config/loader";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import { BOLD, DIM, ORANGE, RESET } from "@/output";
 
 export interface WhyOptions {
   readonly json?: boolean | undefined;

@@ -1,12 +1,12 @@
-import type { FormatConfig, LintConfig } from "../config/schema.js";
-import type { WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
+import type { FormatConfig, LintConfig } from "@/config/schema";
+import type { WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 import type {
   DomainPlugin,
   EcosystemHandler,
   EcosystemPlugin,
   ExecutionContext,
   WatchPathSuggestion,
-} from "./types.js";
+} from "@/plugins/types";
 
 /**
  * Holds loaded plugins and provides context factory for plugin execution.

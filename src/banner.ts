@@ -1,5 +1,5 @@
-import { DIM, ORANGE, RESET } from "./output.js";
-import { VERSION } from "./version.js";
+import { DIM, ORANGE, RESET } from "@/output";
+import { VERSION } from "@/version";
 
 const ART = `\
 ░███     ░███ ░██████░███████     ░██████

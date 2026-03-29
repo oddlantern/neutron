@@ -1,9 +1,9 @@
-import { packageJsonParser } from "./parsers/package-json.js";
-import { pubspecParser } from "./parsers/pubspec.js";
-import type { ManifestParser } from "./parsers/types.js";
-import { printBanner } from "./banner.js";
-import { RED, RESET } from "./output.js";
-import { VERSION } from "./version.js";
+import { packageJsonParser } from "@/parsers/package-json";
+import { pubspecParser } from "@/parsers/pubspec";
+import type { ManifestParser } from "@/parsers/types";
+import { printBanner } from "@/banner";
+import { RED, RESET } from "@/output";
+import { VERSION } from "@/version";
 
 // Parser registry — add new ecosystem parsers here
 const parsers = new Map<string, ManifestParser>([
@@ -40,6 +40,7 @@ Development:
   build [--all]     Build library packages (--all includes apps)
 
 Workspace health:
+  rename <name>     Rename workspace (cascades to all manifests)
   check [--fix]     Version consistency, bridge validation, env parity
   doctor            Diagnostic: config, hooks, tools, generated output
   outdated          Check for newer dependency versions (--deep, --verify)
@@ -86,7 +87,7 @@ async function main(): Promise<void> {
   if (command === "affected") {
     const base = getFlagValue(args, "--base");
     const json = args.includes("--json");
-    const { runAffected } = await import("./commands/affected.js");
+    const { runAffected } = await import("@/commands/affected");
     const exitCode = await runAffected(parsers, { base, json });
     process.exit(exitCode);
   }
@@ -94,19 +95,19 @@ async function main(): Promise<void> {
   if (command === "check") {
     const fix = args.includes("--fix");
     const quiet = args.includes("--quiet") || args.includes("--hook");
-    const { runCheck } = await import("./commands/check.js");
+    const { runCheck } = await import("@/commands/check");
     const exitCode = await runCheck(parsers, { fix, quiet });
     process.exit(exitCode);
   }
 
   if (command === "add") {
-    const { runAdd } = await import("./commands/add.js");
+    const { runAdd } = await import("@/commands/add");
     const exitCode = await runAdd();
     process.exit(exitCode);
   }
 
   if (command === "init") {
-    const { runInit } = await import("./commands/init.js");
+    const { runInit } = await import("@/commands/init");
     const exitCode = await runInit(process.cwd(), parsers);
     process.exit(exitCode);
   }
@@ -114,26 +115,26 @@ async function main(): Promise<void> {
   if (command === "graph") {
     const format = args.includes("--dot") ? "dot" : args.includes("--ascii") ? "ascii" : "html";
     const noOpen = args.includes("--no-open");
-    const { runGraph } = await import("./commands/graph.js");
+    const { runGraph } = await import("@/commands/graph");
     const exitCode = await runGraph(parsers, { format, open: !noOpen });
     process.exit(exitCode);
   }
 
   if (command === "doctor") {
-    const { runDoctor } = await import("./commands/doctor.js");
+    const { runDoctor } = await import("@/commands/doctor");
     const exitCode = await runDoctor(parsers);
     process.exit(exitCode);
   }
 
   if (command === "dev") {
     const verbose = args.includes("--verbose");
-    const { runDev } = await import("./watcher/dev.js");
+    const { runDev } = await import("@/watcher/dev");
     const exitCode = await runDev(parsers, { verbose });
     process.exit(exitCode);
   }
 
   if (command === "install") {
-    const { runInstall } = await import("./commands/install.js");
+    const { runInstall } = await import("@/commands/install");
     const exitCode = await runInstall(process.cwd());
     process.exit(exitCode);
   }
@@ -143,7 +144,7 @@ async function main(): Promise<void> {
     const quiet = args.includes("--quiet");
     const pkg = getFlagValue(args, "--package");
     const ecosystem = getFlagValue(args, "--ecosystem");
-    const { runLint } = await import("./commands/lint.js");
+    const { runLint } = await import("@/commands/lint");
     const exitCode = await runLint(parsers, { fix, quiet, package: pkg, ecosystem });
     process.exit(exitCode);
   }
@@ -153,7 +154,7 @@ async function main(): Promise<void> {
     const quiet = args.includes("--quiet");
     const pkg = getFlagValue(args, "--package");
     const ecosystem = getFlagValue(args, "--ecosystem");
-    const { runFmt } = await import("./commands/fmt.js");
+    const { runFmt } = await import("@/commands/fmt");
     const exitCode = await runFmt(parsers, { check, quiet, package: pkg, ecosystem });
     process.exit(exitCode);
   }
@@ -162,7 +163,7 @@ async function main(): Promise<void> {
     const quiet = args.includes("--quiet");
     const verbose = args.includes("--verbose");
     const force = args.includes("--force");
-    const { runGenerate } = await import("./commands/generate.js");
+    const { runGenerate } = await import("@/commands/generate");
     const exitCode = await runGenerate(parsers, { quiet, verbose, force });
     process.exit(exitCode);
   }
@@ -172,7 +173,7 @@ async function main(): Promise<void> {
     const deep = args.includes("--deep");
     const verify = args.includes("--verify");
     const ci = args.includes("--ci");
-    const { runOutdated } = await import("./commands/outdated.js");
+    const { runOutdated } = await import("@/commands/outdated");
     const exitCode = await runOutdated(parsers, { json, deep, verify, ci });
     process.exit(exitCode);
   }
@@ -180,7 +181,7 @@ async function main(): Promise<void> {
   if (command === "upgrade") {
     const all = args.includes("--all");
     const verify = args.includes("--verify");
-    const { runUpgrade } = await import("./commands/upgrade.js");
+    const { runUpgrade } = await import("@/commands/upgrade");
     const exitCode = await runUpgrade(parsers, { all, verify });
     process.exit(exitCode);
   }
@@ -189,7 +190,7 @@ async function main(): Promise<void> {
     const quiet = args.includes("--quiet");
     const pkg = getFlagValue(args, "--package");
     const ecosystem = getFlagValue(args, "--ecosystem");
-    const { runTest } = await import("./commands/test.js");
+    const { runTest } = await import("@/commands/test");
     const exitCode = await runTest(parsers, { quiet, package: pkg, ecosystem });
     process.exit(exitCode);
   }
@@ -198,20 +199,20 @@ async function main(): Promise<void> {
     const quiet = args.includes("--quiet");
     const all = args.includes("--all");
     const pkg = getFlagValue(args, "--package");
-    const { runBuild } = await import("./commands/build.js");
+    const { runBuild } = await import("@/commands/build");
     const exitCode = await runBuild(parsers, { quiet, all, package: pkg });
     process.exit(exitCode);
   }
 
   if (command === "ci") {
     const verbose = args.includes("--verbose");
-    const { runCi } = await import("./commands/ci.js");
+    const { runCi } = await import("@/commands/ci");
     const exitCode = await runCi(parsers, { verbose });
     process.exit(exitCode);
   }
 
   if (command === "pre-commit") {
-    const { runPreCommit } = await import("./commands/pre-commit.js");
+    const { runPreCommit } = await import("@/commands/pre-commit");
     const exitCode = await runPreCommit(parsers);
     process.exit(exitCode);
   }
@@ -222,7 +223,7 @@ async function main(): Promise<void> {
       console.error("Usage: mido commit-msg <file>");
       process.exit(1);
     }
-    const { runCommitMsg } = await import("./commands/commit-msg.js");
+    const { runCommitMsg } = await import("@/commands/commit-msg");
     const exitCode = await runCommitMsg(filePath);
     process.exit(exitCode);
   }
@@ -234,8 +235,20 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     const json = args.includes("--json");
-    const { runWhy } = await import("./commands/why.js");
+    const { runWhy } = await import("@/commands/why");
     const exitCode = await runWhy(parsers, depName, { json });
+    process.exit(exitCode);
+  }
+
+  if (command === "rename") {
+    const newName = args[1];
+    if (!newName) {
+      console.error("Usage: mido rename <new-name> [--include-platform-ids]");
+      process.exit(1);
+    }
+    const includePlatformIds = args.includes("--include-platform-ids");
+    const { runRename } = await import("@/commands/rename");
+    const exitCode = await runRename(parsers, newName, { includePlatformIds });
     process.exit(exitCode);
   }
 

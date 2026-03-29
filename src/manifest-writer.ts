@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { isMap, parseDocument } from "yaml";
 import { z } from "zod";
 
-import { isRecord } from "./guards.js";
+import { isRecord } from "@/guards";
 
 const DEFAULT_INDENT = "  ";
 

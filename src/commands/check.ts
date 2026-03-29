@@ -1,14 +1,14 @@
-import { loadConfig } from "../config/loader.js";
-import type { CheckResult } from "../checks/types.js";
-import { checkBridges } from "../checks/bridges.js";
-import { checkEnvParity } from "../checks/env.js";
-import { checkVersionConsistency, collectDeps, findVersionMismatches } from "../checks/versions.js";
-import { buildWorkspaceGraph, type ParserRegistry } from "../graph/workspace.js";
-import { formatCheckResult, formatHeader, formatSummary } from "../output.js";
-import { enrichEcosystems, loadLock, mergeLock, writeLock } from "../lock.js";
-import type { LockUpdate } from "../lock.js";
-import { promptVersionResolution, type DepChoice } from "../prompt.js";
-import { applyManifestUpdate } from "../manifest-writer.js";
+import { loadConfig } from "@/config/loader";
+import type { CheckResult } from "@/checks/types";
+import { checkBridges } from "@/checks/bridges";
+import { checkEnvParity } from "@/checks/env";
+import { checkVersionConsistency, collectDeps, findVersionMismatches } from "@/checks/versions";
+import { buildWorkspaceGraph, type ParserRegistry } from "@/graph/workspace";
+import { formatCheckResult, formatHeader, formatSummary } from "@/output";
+import { enrichEcosystems, loadLock, mergeLock, writeLock } from "@/lock";
+import type { LockUpdate } from "@/lock";
+import { promptVersionResolution, type DepChoice } from "@/prompt";
+import { applyManifestUpdate } from "@/manifest-writer";
 
 export interface CheckOptions {
   readonly fix?: boolean;
@@ -61,7 +61,7 @@ export async function runCheck(
 
   // 4. Generated output staleness (only if bridges are declared)
   if (graph.bridges.length > 0) {
-    const { checkStaleness } = await import("../checks/staleness.js");
+    const { checkStaleness } = await import("@/checks/staleness");
     results.push(await checkStaleness(graph, root));
   }
 

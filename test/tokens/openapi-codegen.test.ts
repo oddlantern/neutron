@@ -2,9 +2,9 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { executeOpenAPICodegen } from "../../src/plugins/builtin/typescript-codegen.js";
-import type { ExecutionContext } from "../../src/plugins/types.js";
-import type { WorkspaceGraph, WorkspacePackage } from "../../src/graph/types.js";
+import { executeOpenAPICodegen } from "@/plugins/builtin/ecosystem/typescript/openapi-codegen";
+import type { ExecutionContext } from "@/plugins/types";
+import type { WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 
 function makePkg(name: string, path: string): WorkspacePackage {
   return { name, path, ecosystem: "typescript", version: "0.0.0", dependencies: [], localDependencies: [] };
@@ -90,8 +90,7 @@ describe("OpenAPI TS codegen — outputDir scaffolding", () => {
 describe("OpenAPI Dart codegen — outputDir scaffolding", () => {
   test("scaffolds pubspec.yaml with workspace-scoped name", async () => {
     // dart pub get may take a while or fail — we only test scaffolding
-    const { executeOpenAPIDartGeneration } = await import(
-      "../../src/plugins/builtin/dart/openapi-codegen.js"
+    const { executeOpenAPIDartGeneration } = await import("@/plugins/builtin/ecosystem/dart/openapi-codegen"
     );
 
     const outputDir = join(tmpDir, "generated", "dart");

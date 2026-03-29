@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isRecord } from "./guards.js";
+import { isRecord } from "@/guards";
 
 /** Absolute path to the mido package root directory. */
 export const MIDO_ROOT: string = join(dirname(fileURLToPath(import.meta.url)), "..");

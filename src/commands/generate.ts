@@ -1,22 +1,22 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { loadConfig } from "../config/loader.js";
-import { DiagnosticCollector, formatDiagnostics } from "../diagnostic.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, PASS, RESET } from "../output.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
-import { detectPackageManager } from "../pm-detect.js";
+import { loadConfig } from "@/config/loader";
+import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import { BOLD, DIM, PASS, RESET } from "@/output";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
+import { detectPackageManager } from "@/pm-detect";
 import {
   executeBridgeGroup,
   formatMs,
   groupBridgesByArtifact,
   logStep,
   resolveBridges,
-} from "../bridges/runner.js";
-import { isCacheHit, updateCache } from "../bridges/cache.js";
+} from "@/bridges/runner";
+import { isCacheHit, updateCache } from "@/bridges/cache";
 
 export interface GenerateOptions {
   readonly quiet?: boolean | undefined;

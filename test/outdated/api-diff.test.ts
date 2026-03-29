@@ -9,7 +9,7 @@ import {
   extractDartExports,
   diffExports,
   findUsedSymbols,
-} from "../../src/outdated/api-diff.js";
+} from "@/outdated/api-diff";
 
 describe("extractTypescriptExports", () => {
   test("extracts exported functions", () => {

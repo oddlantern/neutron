@@ -1,4 +1,4 @@
-import { CYAN, DIM, GREEN, MAGENTA, RED, RESET } from "../output.js";
+import { CYAN, DIM, GREEN, MAGENTA, RED, RESET } from "@/output";
 
 const MS_PER_SECOND = 1000;
 const MAX_OUTPUT_LINES = 15;

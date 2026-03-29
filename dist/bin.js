@@ -163,9 +163,11 @@ Development:
   build [--all]     Build library packages (--all includes apps)
 
 Workspace health:
+  rename <name>     Rename workspace (cascades to all manifests)
   check [--fix]     Version consistency, bridge validation, env parity
   doctor            Diagnostic: config, hooks, tools, generated output
-  outdated          Check for newer dependency versions
+  outdated          Check for newer dependency versions (--deep, --verify)
+  upgrade           Upgrade outdated dependencies (--all, --verify)
   why <dep>         Show which packages use a dependency
   graph             Interactive D3.js dependency graph (--dot, --ascii)
 
@@ -214,7 +216,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-Bny1gMPh.js").then((n) => n.t);
+		const { runCheck } = await import("./check-qJ6B_1Uc.js").then((n) => n.t);
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -227,14 +229,14 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-D93fAJ-A.js");
+		const { runInit } = await import("./init-CEAqWauT.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "graph") {
 		const format = args.includes("--dot") ? "dot" : args.includes("--ascii") ? "ascii" : "html";
 		const noOpen = args.includes("--no-open");
-		const { runGraph } = await import("./graph-DSby1cZj.js");
+		const { runGraph } = await import("./graph-CQvzNP8i.js");
 		const exitCode = await runGraph(parsers, {
 			format,
 			open: !noOpen
@@ -242,18 +244,18 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "doctor") {
-		const { runDoctor } = await import("./doctor-sAV3DNtz.js");
+		const { runDoctor } = await import("./doctor-D8JJ-gsw.js");
 		const exitCode = await runDoctor(parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-yh_-COfa.js");
+		const { runDev } = await import("./dev-D9FJ058f.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
-		const { runInstall } = await import("./install-C-rEgKHD.js");
+		const { runInstall } = await import("./install-Dmkn7G7u.js");
 		const exitCode = await runInstall(process.cwd());
 		process.exit(exitCode);
 	}
@@ -262,7 +264,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-DP_Pqr1J.js");
+		const { runLint } = await import("./lint-CWAc3RIL.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -276,7 +278,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-yrXFhVGx.js");
+		const { runFmt } = await import("./fmt-Ckhrfxs1.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -289,7 +291,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const verbose = args.includes("--verbose");
 		const force = args.includes("--force");
-		const { runGenerate } = await import("./generate-BwL-q-XY.js");
+		const { runGenerate } = await import("./generate-BSpilDW8.js");
 		const exitCode = await runGenerate(parsers, {
 			quiet,
 			verbose,
@@ -299,15 +301,33 @@ async function main() {
 	}
 	if (command === "outdated") {
 		const json = args.includes("--json");
-		const { runOutdated } = await import("./outdated-Cfa4MzAn.js");
-		const exitCode = await runOutdated(parsers, { json });
+		const deep = args.includes("--deep");
+		const verify = args.includes("--verify");
+		const ci = args.includes("--ci");
+		const { runOutdated } = await import("./outdated-DbSdLbC0.js");
+		const exitCode = await runOutdated(parsers, {
+			json,
+			deep,
+			verify,
+			ci
+		});
+		process.exit(exitCode);
+	}
+	if (command === "upgrade") {
+		const all = args.includes("--all");
+		const verify = args.includes("--verify");
+		const { runUpgrade } = await import("./upgrade-Bz4TIgUA.js");
+		const exitCode = await runUpgrade(parsers, {
+			all,
+			verify
+		});
 		process.exit(exitCode);
 	}
 	if (command === "test") {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runTest } = await import("./test-Dp6t8iON.js");
+		const { runTest } = await import("./test-D4IC8mm4.js");
 		const exitCode = await runTest(parsers, {
 			quiet,
 			package: pkg,
@@ -319,7 +339,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const all = args.includes("--all");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-BkpovorT.js");
+		const { runBuild } = await import("./build-CDtiAOLH.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			all,
@@ -329,12 +349,12 @@ async function main() {
 	}
 	if (command === "ci") {
 		const verbose = args.includes("--verbose");
-		const { runCi } = await import("./ci-Bzfi1LEo.js");
+		const { runCi } = await import("./ci-CEW9izda.js");
 		const exitCode = await runCi(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-P-aNN2V0.js");
+		const { runPreCommit } = await import("./pre-commit-BF1mb63I.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
@@ -344,7 +364,7 @@ async function main() {
 			console.error("Usage: mido commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-D9mHgBsX.js");
+		const { runCommitMsg } = await import("./commit-msg-B4V8e2kD.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}
@@ -355,8 +375,19 @@ async function main() {
 			process.exit(1);
 		}
 		const json = args.includes("--json");
-		const { runWhy } = await import("./why-D592jZga.js");
+		const { runWhy } = await import("./why-DWjldy_W.js");
 		const exitCode = await runWhy(parsers, depName, { json });
+		process.exit(exitCode);
+	}
+	if (command === "rename") {
+		const newName = args[1];
+		if (!newName) {
+			console.error("Usage: mido rename <new-name> [--include-platform-ids]");
+			process.exit(1);
+		}
+		const includePlatformIds = args.includes("--include-platform-ids");
+		const { runRename } = await import("./rename-Cdj2OHfa.js");
+		const exitCode = await runRename(parsers, newName, { includePlatformIds });
 		process.exit(exitCode);
 	}
 	if (command === "version" || command === "--v") {

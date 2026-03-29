@@ -1,10 +1,10 @@
 import { spawnSync } from "node:child_process";
 
-import { loadConfig } from "../config/loader.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import type { WorkspacePackage } from "../graph/types.js";
-import { BOLD, DIM, ORANGE, RESET } from "../output.js";
+import { loadConfig } from "@/config/loader";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import type { WorkspacePackage } from "@/graph/types";
+import { BOLD, DIM, ORANGE, RESET } from "@/output";
 
 export interface AffectedOptions {
   /** Git ref to diff against (default: HEAD~1) */

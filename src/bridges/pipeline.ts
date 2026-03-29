@@ -6,7 +6,7 @@ import type {
   ExecutablePipelineStep,
   PipelineResult,
   PipelineStepResult,
-} from "../plugins/types.js";
+} from "@/plugins/types";
 
 /**
  * Hash a file's contents. Returns empty string if the file doesn't exist.

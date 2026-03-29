@@ -1,4 +1,4 @@
-import type { CommitsConfig } from "../config/schema.js";
+import type { CommitsConfig } from "@/config/schema";
 
 export type IssueSeverity = "error" | "warning";
 

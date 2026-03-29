@@ -1,7 +1,7 @@
-import type { WorkspaceGraph } from "../graph/types.js";
-import type { CheckIssue, CheckResult } from "./types.js";
-import { getLockedRange } from "../lock.js";
-import type { MidoLock } from "../lock.js";
+import type { WorkspaceGraph } from "@/graph/types";
+import type { CheckIssue, CheckResult } from "@/checks/types";
+import { getLockedRange } from "@/lock";
+import type { MidoLock } from "@/lock";
 
 export interface DepOccurrence {
   readonly packagePath: string;

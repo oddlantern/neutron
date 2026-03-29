@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { checkStaleness } from "../../src/checks/staleness.js";
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from "../../src/graph/types.js";
+import { checkStaleness } from "@/checks/staleness";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 
 let tmpDir: string;
 

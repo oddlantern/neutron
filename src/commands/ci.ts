@@ -1,6 +1,6 @@
-import { DiagnosticCollector, formatDiagnostics } from "../diagnostic.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, FAIL, GREEN, PASS, RESET } from "../output.js";
+import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
+import type { ParserRegistry } from "@/graph/workspace";
+import { BOLD, DIM, FAIL, GREEN, PASS, RESET } from "@/output";
 
 export interface CiOptions {
   readonly verbose?: boolean | undefined;
@@ -36,35 +36,35 @@ export async function runCi(parsers: ParserRegistry, options: CiOptions = {}): P
     {
       name: "generate",
       run: async () => {
-        const { runGenerate } = await import("./generate.js");
+        const { runGenerate } = await import("@/commands/generate");
         return runGenerate(parsers, { quiet: true, verbose });
       },
     },
     {
       name: "build",
       run: async () => {
-        const { runBuild } = await import("./build.js");
+        const { runBuild } = await import("@/commands/build");
         return runBuild(parsers, { quiet: true });
       },
     },
     {
       name: "lint",
       run: async () => {
-        const { runLint } = await import("./lint.js");
+        const { runLint } = await import("@/commands/lint");
         return runLint(parsers, { quiet: true });
       },
     },
     {
       name: "test",
       run: async () => {
-        const { runTest } = await import("./test.js");
+        const { runTest } = await import("@/commands/test");
         return runTest(parsers, { quiet: true });
       },
     },
     {
       name: "check",
       run: async () => {
-        const { runCheck } = await import("./check.js");
+        const { runCheck } = await import("@/commands/check");
         return runCheck(parsers, { quiet: true });
       },
     },

@@ -1,17 +1,17 @@
 import { join } from "node:path";
 
-import { loadConfig } from "../config/loader.js";
-import { DiagnosticCollector, formatDiagnostics } from "../diagnostic.js";
-import { resolveFiles } from "../files/resolver.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, FAIL, PASS, RESET } from "../output.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
-import type { ExecutionContext } from "../plugins/types.js";
-import { detectPackageManager } from "../pm-detect.js";
-import type { FilterOptions } from "./group.js";
-import { groupByEcosystem } from "./group.js";
+import { loadConfig } from "@/config/loader";
+import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
+import { resolveFiles } from "@/files/resolver";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import { BOLD, DIM, FAIL, PASS, RESET } from "@/output";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
+import type { ExecutionContext } from "@/plugins/types";
+import { detectPackageManager } from "@/pm-detect";
+import type { FilterOptions } from "@/commands/group";
+import { groupByEcosystem } from "@/commands/group";
 
 /** File extensions per ecosystem for file resolution */
 const ECOSYSTEM_EXTENSIONS: Readonly<Record<string, readonly string[]>> = {

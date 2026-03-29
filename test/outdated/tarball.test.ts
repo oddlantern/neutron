@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { gzipSync } from "node:zlib";
 
-import { extractFromTarGz } from "../../src/outdated/tarball.js";
+import { extractFromTarGz } from "@/outdated/tarball";
 
 /**
  * Create a minimal tar archive in memory.

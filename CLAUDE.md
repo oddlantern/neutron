@@ -36,34 +36,43 @@ src/
     registry.ts          # Plugin registry, context factory, watch path suggestions
     loader.ts            # Load builtin (and future external) plugins
     builtin/
-      exec.ts            # Shared runCommand helper
-      typescript.ts      # Ecosystem plugin: TS lint/fmt/build/test/typecheck
-      typescript-codegen.ts  # OpenAPI TS + design token CSS/TS code generators
-      typescript/
-        token-codegen.ts # CSS custom properties + TS constants generators
-        lint-config.ts   # Oxlint plugin detection + oxlintrc/oxfmtrc generation
-      dart.ts            # Ecosystem plugin: Dart lint/fmt/build/test + design-tokens
-      dart/
-        token-codegen.ts # Flutter code generators (ColorScheme, extensions, constants)
-        token-theme.ts   # Flutter ThemeData + theme extensions generation
-        openapi-codegen.ts # Dart OpenAPI client generation (swagger_parser scaffold)
-      openapi/
-        plugin.ts        # Domain plugin: OpenAPI spec export, prepare, downstream delegation
-        exporter.ts      # Export engine: boot server, fetch spec, write to disk
-        server-boot.ts   # Server spawning, port detection, readiness polling, graceful shutdown
-        adapters/
-          types.ts       # FrameworkAdapter interface
-          index.ts       # Adapter registry + detectAdapter()
-          elysia.ts      # Elysia adapter (spec at /openapi/json)
-          hono.ts        # Hono adapter (spec at /openapi)
-          express.ts     # Express adapter (spec at /api-docs)
-          fastify.ts     # Fastify adapter (spec at /documentation/json)
-          koa.ts         # Koa adapter (spec at /swagger.json)
-          nestjs.ts      # NestJS adapter (spec at /api-docs-json)
-      design/
-        plugin.ts        # Domain plugin: design token validation + downstream delegation
-        token-schema.ts  # Zod schema for tokens.json + validation
-        types.ts         # ValidatedTokens, ResolvedExtension, type detection
+      shared/
+        exec.ts          # Shared runCommand, readPackageJson, hasDep helpers
+      ecosystem/
+        typescript/
+          plugin.ts      # Ecosystem plugin: TS lint/fmt/build/test/typecheck
+          openapi-codegen.ts  # OpenAPI TS + design token CSS/TS code generators
+          token-codegen.ts # CSS custom properties + TS constants generators
+          asset-codegen.ts # Asset path exports + inlined SVG generation
+          lint-config.ts # Oxlint plugin detection + oxlintrc/oxfmtrc generation
+        dart/
+          plugin.ts      # Ecosystem plugin: Dart lint/fmt/build/test + design-tokens
+          token-codegen.ts # Flutter code generators (ColorScheme, extensions, constants)
+          token-theme.ts # Flutter ThemeData + theme extensions generation
+          openapi-codegen.ts # Dart OpenAPI client generation (swagger_parser scaffold)
+          asset-codegen.ts # Flutter typed asset wrappers + pubspec declarations
+      domain/
+        design/
+          plugin.ts      # Domain plugin: design token validation + downstream delegation
+          token-schema.ts # Zod schema for tokens.json + validation
+          types.ts       # ValidatedTokens, ResolvedExtension, type detection
+        openapi/
+          plugin.ts      # Domain plugin: OpenAPI spec export, prepare, downstream delegation
+          exporter.ts    # Export engine: boot server, fetch spec, write to disk
+          server-boot.ts # Server spawning, port detection, readiness polling, graceful shutdown
+          adapters/
+            types.ts     # FrameworkAdapter interface
+            index.ts     # Adapter registry + detectAdapter()
+            elysia.ts    # Elysia adapter (spec at /openapi/json)
+            hono.ts      # Hono adapter (spec at /openapi)
+            express.ts   # Express adapter (spec at /api-docs)
+            fastify.ts   # Fastify adapter (spec at /documentation/json)
+            koa.ts       # Koa adapter (spec at /swagger.json)
+            nestjs.ts    # NestJS adapter (spec at /api-docs-json)
+        assets/
+          plugin.ts      # Domain plugin: asset directory scanning + downstream delegation
+          scanner.ts     # Filesystem scanner, category inference, theme variant detection
+          types.ts       # AssetManifest, AssetEntry, AssetCategory, ThemeVariant
   checks/
     types.ts             # CheckResult, CheckIssue, Severity
     versions.ts          # Cross-package version consistency
@@ -91,6 +100,7 @@ src/
     upgrade.ts           # Interactive dependency upgrade with lock/manifest sync
     pre-commit.ts        # Full pre-commit suite: fmt --check → lint → check --quiet
     reconcile.ts         # Reconciliation mode when mido.yml already exists
+    rename.ts            # Rename workspace — cascades to all manifests, warns about platform IDs
     test.ts              # Run tests across all packages per ecosystem
     why.ts               # Show which packages use a dependency
     utils/
@@ -158,6 +168,10 @@ src/
 - **Generated output convention: `<source>/generated/<ecosystem>/`.** Domain plugins (openapi, design) write generated code next to the source package, not into consumers. Consumers depend on the generated package via workspace links. The `generated/` directories are gitignored — they are derived output regenerated by `mido generate` (fresh clone, CI) or `mido dev` (watch mode). This is consistent across all domain plugins.
 - **First-run package scaffolding.** When a generated output directory doesn't exist, the ecosystem plugin creates it with a minimal manifest (`pubspec.yaml` for Dart, `package.json` for TS) and the generated output structure.
 - **`mido generate` runs all bridge pipelines.** Non-watch equivalent of what `mido dev` does on change. Used after fresh clone or in CI. Resolves all bridges, groups by artifact, executes each pipeline.
+- **mido-assets is a domain plugin.** Same tier as mido-design and mido-openapi. Scans directories for asset files (SVG, PNG, etc.), infers categories from filename prefixes (e.g., `achievement_*`, `genre_*`, `ui_*`), detects theme variants (light/dark subdirs), then delegates to ecosystem plugins. mido-dart generates typed Flutter widget classes (SvgPicture wrappers) + pubspec asset declarations. mido-typescript generates path exports and inlined SVG strings. Class name prefixes are derived from the workspace name in mido.yml.
+- **`mido rename` cascades workspace name.** Updates mido.yml, all package.json names (@scope), all pubspec.yaml names (prefix_), then reminds to run `mido generate` to propagate into generated code. Platform identifiers (iOS bundle ID, Android application ID, Firebase config) are detected and warned about but NOT renamed by default — they are deployment identities. `--include-platform-ids` overrides this for pre-release projects.
+- **Plugin directory structure: ecosystem/ + domain/.** Ecosystem plugins live in `builtin/ecosystem/{name}/plugin.ts`. Domain plugins live in `builtin/domain/{name}/plugin.ts`. This makes the two-tier architecture visible in the filesystem. Naming convention for future extraction: `mido-{name}-ecosystem` and `mido-{name}-domain`.
+- **No parent-relative imports.** All cross-directory imports use `@/` path aliases resolved via tsconfig `paths`. No `../` imports — use `@/` aliases instead. Same-directory imports (`./`) are allowed. Extensions are omitted (bundler resolution). This eliminates brittle path math when files move.
 
 ## Bridge Fields
 
@@ -191,9 +205,9 @@ This is a CLI tool — `console.log` and `console.error` are the output mechanis
 
 1. Node.js built-ins (`node:fs`, `node:path`, etc.)
 2. Third-party packages (`yaml`, `zod`)
-3. Internal imports (`../graph/types.js`, `./schema.js`)
+3. `@/` aliased imports (`@/graph/types`, `@/plugins/types`)
 
-Each group separated by a blank line. Always use `.js` extensions on internal imports (required for ESM resolution).
+Each group separated by a blank line. No `.js` extensions — bundler module resolution handles this. No parent-relative imports (`../`) — use `@/` aliases. Same-directory imports (`./`) are allowed.
 
 ## Naming
 
@@ -207,7 +221,7 @@ Each group separated by a blank line. Always use `.js` extensions on internal im
 Conventional commits enforced by `mido commit-msg` (via git hook).
 
 - Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `plugins`, `cli`, `ci`, `deps`, `init`, `hooks`, `commit`, `dev`
+- Scopes: `config`, `graph`, `check`, `fix`, `lock`, `parsers`, `plugins`, `cli`, `ci`, `deps`, `init`, `hooks`, `commit`, `dev`, `rename`, `assets`
 - Max header: 100 chars
 
 ## Build

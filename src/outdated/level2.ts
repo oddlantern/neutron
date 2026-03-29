@@ -1,17 +1,17 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join, extname } from "node:path";
 
-import { isRecord } from "../guards.js";
-import type { WorkspacePackage } from "../graph/types.js";
+import { isRecord } from "@/guards";
+import type { WorkspacePackage } from "@/graph/types";
 
 import {
   extractTypescriptExports,
   extractDartExports,
   diffExports,
   findUsedSymbols,
-} from "./api-diff.js";
-import { downloadTarball, extractFromTarGz } from "./tarball.js";
-import type { OutdatedDep, StaticAnalysisResult } from "./types.js";
+} from "@/outdated/api-diff";
+import { downloadTarball, extractFromTarGz } from "@/outdated/tarball";
+import type { OutdatedDep, StaticAnalysisResult } from "@/outdated/types";
 
 // ── TypeScript analysis ──────────────────────────────────────────────
 

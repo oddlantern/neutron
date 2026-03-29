@@ -1,8 +1,8 @@
-import type { ParserRegistry } from "../graph/workspace.js";
-import { FAIL, PASS } from "../output.js";
-import { runFmt } from "./fmt.js";
-import { runLint } from "./lint.js";
-import { runCheck } from "./check.js";
+import type { ParserRegistry } from "@/graph/workspace";
+import { FAIL, PASS } from "@/output";
+import { runFmt } from "@/commands/fmt";
+import { runLint } from "@/commands/lint";
+import { runCheck } from "@/commands/check";
 
 interface PreCommitStep {
   readonly name: string;

@@ -1,4 +1,4 @@
-import type { WorkspacePackage } from "../graph/types.js";
+import type { WorkspacePackage } from "@/graph/types";
 
 export interface FilterOptions {
   readonly package?: string | undefined;

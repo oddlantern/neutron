@@ -1,5 +1,5 @@
-import { parseNpmVersion, parsePubDevPackage } from "./schemas.js";
-import type { RegistryMetadata } from "./types.js";
+import { parseNpmVersion, parsePubDevPackage } from "@/outdated/schemas";
+import type { RegistryMetadata } from "@/outdated/types";
 
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const PUB_DEV_API = "https://pub.dev/api/packages";

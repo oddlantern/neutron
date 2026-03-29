@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkspacePackage } from '../../src/graph/types.js';
-import { openapiPlugin } from '../../src/plugins/builtin/openapi/plugin.js';
+import { openapiPlugin } from '../../src/plugins/builtin/domain/openapi/plugin.js';
 import { loadPlugins } from '../../src/plugins/loader.js';
 import { PluginRegistry } from '../../src/plugins/registry.js';
 

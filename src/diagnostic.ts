@@ -1,6 +1,6 @@
-import { BOLD, DIM, FAIL, GREEN, PASS, RED, RESET, WARN, YELLOW } from "./output.js";
+import { BOLD, DIM, FAIL, GREEN, PASS, RED, RESET, WARN, YELLOW } from "@/output";
 
-import { SEPARATOR_WIDTH } from "./output.js";
+import { SEPARATOR_WIDTH } from "@/output";
 
 /** A structured diagnostic finding from a command execution. */
 export interface Diagnostic {

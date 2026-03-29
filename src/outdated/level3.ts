@@ -2,12 +2,12 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { WorkspacePackage } from "../graph/types.js";
-import { detectPackageManager } from "../pm-detect.js";
-import { runCommand } from "../process.js";
+import type { WorkspacePackage } from "@/graph/types";
+import { detectPackageManager } from "@/pm-detect";
+import { runCommand } from "@/process";
 
-import { hasFlutterDeps } from "./collect.js";
-import type { OutdatedDep, ValidationResult } from "./types.js";
+import { hasFlutterDeps } from "@/outdated/collect";
+import type { OutdatedDep, ValidationResult } from "@/outdated/types";
 
 const MAX_SHORT_OUTPUT = 500;
 const MAX_LONG_OUTPUT = 1000;

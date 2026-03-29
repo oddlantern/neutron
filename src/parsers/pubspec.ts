@@ -4,9 +4,9 @@ import { dirname, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
-import { isRecord } from "../guards.js";
-import type { Dependency } from "../graph/types.js";
-import type { ManifestParser, ParsedManifest } from "./types.js";
+import { isRecord } from "@/guards";
+import type { Dependency } from "@/graph/types";
+import type { ManifestParser, ParsedManifest } from "@/parsers/types";
 
 type DepType = Dependency["type"];
 

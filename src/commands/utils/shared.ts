@@ -1,8 +1,8 @@
 import { cancel } from "@clack/prompts";
 
-import type { MidoConfig } from "../../config/schema.js";
-import type { DiscoveredPackage } from "../../discovery/scanner.js";
-import { BOLD, DIM, ORANGE, RESET } from "../../output.js";
+import type { MidoConfig } from "@/config/schema";
+import type { DiscoveredPackage } from "@/discovery/scanner";
+import { BOLD, DIM, ORANGE, RESET } from "@/output";
 
 export const CONFIG_FILENAME = "mido.yml";
 export const MIN_ENV_FILES_FOR_PARITY = 2;
@@ -53,8 +53,8 @@ export function handleCancel(): never {
  */
 export function buildPackageMap(
   packages: readonly DiscoveredPackage[],
-): ReadonlyMap<string, import("../../graph/types.js").WorkspacePackage> {
-  const map = new Map<string, import("../../graph/types.js").WorkspacePackage>();
+): ReadonlyMap<string, import("@/graph/types").WorkspacePackage> {
+  const map = new Map<string, import("@/graph/types").WorkspacePackage>();
 
   for (const pkg of packages) {
     map.set(pkg.path, {
@@ -156,10 +156,10 @@ export {
   promptWatchPaths,
   promptModifyBridge,
   promptAdditionalBridges,
-} from "./prompts.js";
+} from "@/commands/utils/prompts";
 
 export {
   runPostInitCheck,
   promptNextSteps,
   cleanupReplacedTooling,
-} from "./cleanup.js";
+} from "@/commands/utils/cleanup";

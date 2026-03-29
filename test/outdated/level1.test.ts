@@ -1,19 +1,19 @@
 import { describe, expect, mock, test } from "bun:test";
 
-import type { DepUsage, RegistryMetadata } from "../../src/outdated/types.js";
+import type { DepUsage, RegistryMetadata } from "@/outdated/types";
 
 const mockFetchMetadata = mock();
 
 // Mock the registry module before importing level1.
 // Re-export all original exports so other test files importing the real module are unaffected.
-const original = await import("../../src/outdated/registry.js");
+const original = await import("@/outdated/registry.js");
 mock.module("../../src/outdated/registry.js", () => ({
   ...original,
   fetchMetadata: (...args: readonly unknown[]) => mockFetchMetadata(...args),
 }));
 
 // Import after mock setup so the module picks up the mock
-const { runLevel1 } = await import("../../src/outdated/level1.js");
+const { runLevel1 } = await import("@/outdated/level1.js");
 
 function makeDep(overrides: Partial<DepUsage> = {}): DepUsage {
   return {

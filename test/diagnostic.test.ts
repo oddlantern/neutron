@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { DiagnosticCollector, formatDiagnostics } from "../src/diagnostic.js";
+import { DiagnosticCollector, formatDiagnostics } from "../src/diagnostic";
 
 describe("DiagnosticCollector", () => {
   test("starts empty", () => {

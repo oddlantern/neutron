@@ -6,13 +6,13 @@ import {
   formatLevel1Results,
   formatLevel2Results,
   formatLevel3Results,
-} from "../../src/outdated/display.js";
+} from "@/outdated/display";
 import type {
   OutdatedDep,
   RiskScore,
   StaticAnalysisResult,
   ValidationResult,
-} from "../../src/outdated/types.js";
+} from "@/outdated/types";
 
 function makeRisk(total: number): RiskScore {
   return { total, severity: 0, affectedCount: 0, deprecation: 0, peerConflicts: 0 };

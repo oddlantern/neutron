@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseNpmVersion, parsePubDevPackage } from "../../src/outdated/schemas.js";
+import { parseNpmVersion, parsePubDevPackage } from "@/outdated/schemas";
 
 describe("parseNpmVersion", () => {
   test("parses minimal valid response", () => {

@@ -11,7 +11,11 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",
-    "isolatedModules": true
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src"]
 }

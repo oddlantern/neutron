@@ -12,9 +12,9 @@ import {
   parseDocument,
 } from "yaml";
 
-import { YELLOW, BOLD, RESET, DIM } from "../output.js";
-import { VERSION } from "../version.js";
-import { configSchema, type MidoConfig } from "./schema.js";
+import { YELLOW, BOLD, RESET, DIM } from "@/output";
+import { VERSION } from "@/version";
+import { configSchema, type MidoConfig } from "@/config/schema";
 
 const CONFIG_FILENAMES = ["mido.yml", "mido.yaml"] as const;
 

@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
-import type { CheckResult, CheckIssue } from "./types.js";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
+import type { CheckResult, CheckIssue } from "@/checks/types";
 
 const CHECK_NAME = "staleness";
 

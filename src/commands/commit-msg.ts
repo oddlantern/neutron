@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 
-import { loadConfig } from "../config/loader.js";
-import { DEFAULT_COMMIT_TYPES } from "../config/schema.js";
-import type { CommitsConfig } from "../config/schema.js";
-import { validateCommitMessage } from "../commit/validator.js";
-import { BOLD, DIM, FAIL, RESET, WARN, YELLOW } from "../output.js";
+import { loadConfig } from "@/config/loader";
+import { DEFAULT_COMMIT_TYPES } from "@/config/schema";
+import type { CommitsConfig } from "@/config/schema";
+import { validateCommitMessage } from "@/commit/validator";
+import { BOLD, DIM, FAIL, RESET, WARN, YELLOW } from "@/output";
 
 /** Default config used when no mido.yml commits section exists */
 const FALLBACK_CONFIG: CommitsConfig = {

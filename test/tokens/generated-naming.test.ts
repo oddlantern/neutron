@@ -2,11 +2,11 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { validateTokens } from "../../src/plugins/builtin/design/token-schema.js";
-import type { ValidatedTokens } from "../../src/plugins/builtin/design/types.js";
-import { executeDesignTokenGeneration } from "../../src/plugins/builtin/typescript-codegen.js";
-import type { ExecutionContext } from "../../src/plugins/types.js";
-import type { WorkspaceGraph, WorkspacePackage } from "../../src/graph/types.js";
+import { validateTokens } from "@/plugins/builtin/domain/design/token-schema";
+import type { ValidatedTokens } from "@/plugins/builtin/domain/design/types";
+import { executeDesignTokenGeneration } from "@/plugins/builtin/ecosystem/typescript/openapi-codegen";
+import type { ExecutionContext } from "@/plugins/types";
+import type { WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 
 const FIXTURE_PATH = join(import.meta.dir, "..", "fixture-tokens", "tokens.json");
 
@@ -152,7 +152,7 @@ describe("generated package naming — TypeScript", () => {
 describe("generated package naming — Dart", () => {
   // Import dart plugin dynamically to avoid pulling in all dart deps at top level
   test("names package as workspace_source_name", async () => {
-    const { dartPlugin } = await import("../../src/plugins/builtin/dart.js");
+    const { dartPlugin } = await import("@/plugins/builtin/ecosystem/dart/plugin.js");
 
     const outputDir = join(tmpDir, "generated", "dart");
     mkdirSync(outputDir, { recursive: true });
@@ -183,7 +183,7 @@ describe("generated package naming — Dart", () => {
   });
 
   test("sanitizes scoped source names for dart", async () => {
-    const { dartPlugin } = await import("../../src/plugins/builtin/dart.js");
+    const { dartPlugin } = await import("@/plugins/builtin/ecosystem/dart/plugin.js");
 
     const outputDir = join(tmpDir, "generated", "dart");
     mkdirSync(outputDir, { recursive: true });
