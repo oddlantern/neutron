@@ -2192,14 +2192,15 @@ const IGNORED_DIRS = new Set([
 * the parent directory name is used as the category.
 */
 function inferCategoryAndKey(name, parentDir) {
-	const underscoreIdx = name.indexOf("_");
+	const normalized = name.replace(/-/g, "_");
+	const underscoreIdx = normalized.indexOf("_");
 	if (underscoreIdx > 0) return {
-		category: name.slice(0, underscoreIdx),
-		key: name.slice(underscoreIdx + 1)
+		category: normalized.slice(0, underscoreIdx),
+		key: normalized.slice(underscoreIdx + 1)
 	};
 	return {
 		category: parentDir || "misc",
-		key: name
+		key: normalized
 	};
 }
 /**
@@ -3823,4 +3824,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-DCOcR5jv.js.map
+//# sourceMappingURL=registry-Ddl2lw0X.js.map
