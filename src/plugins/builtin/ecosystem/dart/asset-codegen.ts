@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import { isRecord } from "@/plugins/builtin/shared/exec";
+import { isRecord, runCommand } from "@/plugins/builtin/shared/exec";
 import type { AssetCategory, AssetManifest, ThemeVariant } from "@/plugins/builtin/domain/assets/types";
 
 const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.";
@@ -373,6 +373,17 @@ export async function executeDartAssetGeneration(
   if (generatedFiles.length > 0) {
     const barrel = generateBarrel(generatedFiles);
     writeFileSync(join(libDir, `${packageName}.dart`), barrel, "utf-8");
+  }
+
+  // Resolve dependencies
+  const pubGetResult = await runCommand("dart", ["pub", "get"], outDir);
+  if (!pubGetResult.success) {
+    return {
+      success: false,
+      duration: Math.round(performance.now() - start),
+      summary: "dart pub get failed in generated icons package",
+      output: pubGetResult.output,
+    };
   }
 
   const duration = Math.round(performance.now() - start);

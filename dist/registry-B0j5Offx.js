@@ -1733,6 +1733,13 @@ async function executeDartAssetGeneration(_pkg, root, context) {
 		const barrel = generateBarrel(generatedFiles);
 		writeFileSync(join(libDir, `${packageName}.dart`), barrel, "utf-8");
 	}
+	const pubGetResult = await runCommand("dart", ["pub", "get"], outDir);
+	if (!pubGetResult.success) return {
+		success: false,
+		duration: Math.round(performance.now() - start),
+		summary: "dart pub get failed in generated icons package",
+		output: pubGetResult.output
+	};
 	return {
 		success: true,
 		duration: Math.round(performance.now() - start),
@@ -1938,6 +1945,13 @@ async function executeDesignTokenGeneration(pkg, root, context) {
 	mkdirSync(join(outRoot, "lib"), { recursive: true });
 	const packageBarrelContent = generatePackageBarrel(packageName);
 	writeFileSync(join(outRoot, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
+	const pubGetResult = await runCommand("dart", ["pub", "get"], outRoot);
+	if (!pubGetResult.success) return {
+		success: false,
+		duration: Math.round(performance.now() - start),
+		summary: `dart pub get failed in generated package`,
+		output: pubGetResult.output
+	};
 	return {
 		success: true,
 		duration: Math.round(performance.now() - start),
@@ -3743,4 +3757,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-DSWj5H6p.js.map
+//# sourceMappingURL=registry-B0j5Offx.js.map

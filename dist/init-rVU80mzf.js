@@ -3,7 +3,7 @@ import { r as isRecord } from "./version-M9xRTj7S.js";
 import { a as GREEN, r as DIM, s as ORANGE, t as BOLD, u as RESET } from "./output-MbJ98jNX.js";
 import { t as printBanner } from "./bin.js";
 import { t as loadConfig } from "./loader-FFG_yaOW.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-DSWj5H6p.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-B0j5Offx.js";
 import { n as runCheck } from "./check-BUBkRpbN.js";
 import { readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
@@ -689,7 +689,7 @@ async function promptNextSteps(parsers, summary) {
 	switch (next) {
 		case "dev": {
 			outro(`${ORANGE}Starting watcher...${RESET}`);
-			const { runDev } = await import("./dev-DUT2gU8A.js");
+			const { runDev } = await import("./dev-CINE5g2v.js");
 			return runDev(parsers, {});
 		}
 		case "check":
@@ -1140,7 +1140,7 @@ async function runReconciliation(root, configPath, parsers) {
 		const { unlink } = await import("node:fs/promises");
 		await unlink(configPath);
 		log.step(`Removed broken ${CONFIG_FILENAME}`);
-		const { runInit } = await import("./init-Bx0trndc.js");
+		const { runInit } = await import("./init-rVU80mzf.js");
 		return runInit(root, parsers);
 	}
 	s.stop("Scan complete");
@@ -1502,4 +1502,4 @@ async function runFirstTime(root, configPath, parsers) {
 //#endregion
 export { runInit };
 
-//# sourceMappingURL=init-Bx0trndc.js.map
+//# sourceMappingURL=init-rVU80mzf.js.map

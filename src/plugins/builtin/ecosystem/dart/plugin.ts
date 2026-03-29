@@ -175,6 +175,17 @@ async function executeDesignTokenGeneration(
   const packageBarrelContent = generatePackageBarrel(packageName);
   writeFileSync(join(outRoot, "lib", `${packageName}.dart`), packageBarrelContent, "utf-8");
 
+  // Resolve dependencies
+  const pubGetResult = await runCommand("dart", ["pub", "get"], outRoot);
+  if (!pubGetResult.success) {
+    return {
+      success: false,
+      duration: Math.round(performance.now() - start),
+      summary: `dart pub get failed in generated package`,
+      output: pubGetResult.output,
+    };
+  }
+
   const duration = Math.round(performance.now() - start);
   const fileCount = generatedFiles.length + 3; // + barrel + theme + package barrel
 
