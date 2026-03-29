@@ -14,7 +14,7 @@ const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.";
  */
 function toPascalCase(str: string): string {
   return str
-    .split(/[_\-]/)
+    .split(/[_\-/]/)
     .filter((part) => part.length > 0)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join("");
@@ -42,15 +42,33 @@ function toCamelCase(str: string): string {
 
 /**
  * Generate a prefixed class name from workspace name.
- * e.g., workspace "nextsaga" → prefix "Ns"
+ * Splits on delimiters or camelCase boundaries.
+ * e.g., "nextsaga" → "Ns", "my-app" → "Ma", "coolProject" → "Cp"
  */
 function derivePrefix(workspaceName: string): string {
-  const parts = workspaceName.split(/[_\-.\s]+/);
-  if (parts.length >= 2) {
-    return parts.map((p) => p.charAt(0).toUpperCase()).join("");
+  // Split on explicit delimiters first
+  const explicitParts = workspaceName.split(/[_\-.\s]+/);
+  if (explicitParts.length >= 2) {
+    return explicitParts.map((p) => p.charAt(0).toUpperCase()).join("");
   }
-  const name = workspaceName.charAt(0).toUpperCase() + workspaceName.slice(1, 3).toLowerCase();
-  return name;
+
+  // Try splitting on camelCase boundaries (e.g., "nextSaga" → ["next", "Saga"])
+  const camelParts = workspaceName.replace(/([a-z])([A-Z])/g, "$1 $2").split(" ");
+  if (camelParts.length >= 2) {
+    return camelParts.map((p) => p.charAt(0).toUpperCase()).join("");
+  }
+
+  // Try splitting long single words at common word boundaries
+  // Match known patterns: consonant clusters after vowel groups
+  const word = workspaceName.toLowerCase();
+  if (word.length >= 6) {
+    // Try midpoint split — first letter + letter at ~halfway
+    const mid = Math.floor(word.length / 2);
+    return word.charAt(0).toUpperCase() + word.charAt(mid).toUpperCase();
+  }
+
+  // Short single word — first 2 chars
+  return word.charAt(0).toUpperCase() + (word.charAt(1) ?? "").toUpperCase();
 }
 
 /**
