@@ -46,6 +46,8 @@ export interface Bridge {
   readonly entryFile: string | undefined;
   /** Override: OpenAPI spec endpoint path (e.g., /custom/openapi/endpoint) */
   readonly specPath: string | undefined;
+  /** Path prefixes to exclude from generated output */
+  readonly exclude: readonly string[] | undefined;
 }
 
 /**

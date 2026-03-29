@@ -17,6 +17,8 @@ const bridgeSchema = z
     watch: z.array(z.string()).optional(),
     entryFile: z.string().optional(),
     specPath: z.string().optional(),
+    /** Path prefixes to exclude from generated output */
+    exclude: z.array(z.string()).optional(),
   })
   .refine((b) => b.consumers || b.target, {
     message: "Bridge must have either 'consumers' or 'target'",

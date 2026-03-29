@@ -12,6 +12,7 @@ import type {
 import { getScripts, hasDep, readPackageJson, runCommand } from "@/plugins/builtin/shared/exec";
 import type { FrameworkAdapter } from "@/plugins/builtin/domain/openapi/adapters/types";
 import { assertWithinRoot, detectFrameworkAdapter, exportSpec } from "@/plugins/builtin/domain/openapi/exporter";
+import { normalizeSpec } from "@/plugins/builtin/domain/openapi/normalizer";
 
 const OPENAPI_FILENAMES: ReadonlySet<string> = new Set([
   "openapi.json",
@@ -31,53 +32,6 @@ const SERVER_FRAMEWORKS: ReadonlyMap<string, readonly string[]> = new Map([
   ["@nestjs/core", ["src/**/*.controller.ts", "src/**/*.ts"]],
 ]);
 
-/** Patterns in script values that indicate spec preparation */
-const PREPARE_SCRIPT_PATTERNS: readonly string[] = [
-  "spec",
-  "openapi",
-  "swagger",
-  "dart",
-  "prepare",
-];
-
-/**
- * Detect if the source package has a prepare script that post-processes
- * the OpenAPI spec. Checks for well-known script names and patterns.
- */
-async function detectPrepareScript(
-  source: WorkspacePackage,
-  root: string,
-): Promise<{ readonly scriptName: string } | null> {
-  try {
-    const manifest = await readPackageJson(source.path, root);
-    const scripts = getScripts(manifest);
-
-    // Check explicit prepare script names first
-    const explicitNames = ["openapi:prepare", "spec:prepare", "prepare-spec"];
-    for (const name of explicitNames) {
-      if (scripts[name]) {
-        return { scriptName: name };
-      }
-    }
-
-    // Check if `prepare` script references spec processing
-    const prepareScript = scripts["prepare"];
-    if (prepareScript) {
-      const lower = prepareScript.toLowerCase();
-      const matchesPattern = PREPARE_SCRIPT_PATTERNS.some((p) => lower.includes(p));
-      // Exclude the npm default `prepare` hook that just runs install/build
-      const isNpmDefault =
-        lower === "husky" || lower === "mido install" || lower.startsWith("npm ");
-      if (matchesPattern && !isNpmDefault) {
-        return { scriptName: "prepare" };
-      }
-    }
-  } catch {
-    // manifest unreadable
-  }
-
-  return null;
-}
 
 /**
  * Find which package in the workspace has the server framework that
@@ -327,24 +281,44 @@ export const openapiPlugin: DomainPlugin = {
       });
     }
 
-    // Step 2: Prepare spec (if detected)
-    const prepareInfo = await detectPrepareScript(source, root);
-    if (prepareInfo) {
-      const cwd = join(root, source.path);
-      const preparedArtifact = `${base}.prepared${ext}`;
+    // Step 2: Normalize spec — extract inline schemas, fix tuples, remove excluded paths
+    const preparedArtifact = `${base}.prepared${ext}`;
+    const bridge = context.graph.bridges.find(
+      (b) => b.source === source.path && b.artifact === artifact,
+    );
 
-      steps.push({
-        name: "prepare-spec",
-        plugin: "openapi",
-        description: "preparing spec...",
-        outputPaths: [preparedArtifact, artifact],
-        execute: () => runCommand(context.packageManager, ["run", prepareInfo.scriptName], cwd),
-      });
-    }
+    steps.push({
+      name: "prepare-spec",
+      plugin: "openapi",
+      description: "normalizing spec...",
+      outputPaths: [preparedArtifact],
+      execute: async (): Promise<ExecuteResult> => {
+        const start = performance.now();
+        try {
+          const inputPath = join(root, artifact);
+          const outputPath = join(root, preparedArtifact);
+          const { schemaCount, removedCount } = normalizeSpec(inputPath, outputPath, {
+            excludePrefixes: bridge?.exclude,
+          });
+          return {
+            success: true,
+            duration: Math.round(performance.now() - start),
+            summary: `${schemaCount} schemas, ${removedCount} paths removed`,
+          };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return {
+            success: false,
+            duration: Math.round(performance.now() - start),
+            summary: `Normalization failed: ${msg}`,
+          };
+        }
+      },
+    });
 
     // Step 3+: Generate for each consumer ecosystem
     // Deduplicate by ecosystem — one generation step per ecosystem, not per consumer
-    const downstreamArtifact = prepareInfo ? `${base}.prepared${ext}` : artifact;
+    const downstreamArtifact = preparedArtifact;
     const handlers = await context.findEcosystemHandlers("openapi", downstreamArtifact);
     const targetPaths = new Set(targets.map((t) => t.path));
     const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));

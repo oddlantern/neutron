@@ -99,6 +99,7 @@ export async function buildWorkspaceGraph(
     watch: b.watch,
     entryFile: b.entryFile,
     specPath: b.specPath,
+    exclude: b.exclude,
   }));
 
   return {
