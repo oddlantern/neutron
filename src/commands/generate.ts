@@ -104,7 +104,7 @@ export async function runGenerate(
     }
 
     try {
-      await executeBridgeGroup(group, registry, graph, root, pm, verbose, dryRun);
+      await executeBridgeGroup(group, registry, graph, root, pm, verbose, dryRun, force);
       // Only cache if all expected output dirs were actually created
       const allOutputsExist = group.every((r) =>
         r.targets.every((t) => existsSync(join(root, r.bridge.source, "generated", t.ecosystem))),

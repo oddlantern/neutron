@@ -3662,7 +3662,7 @@ const openapiPlugin = {
 		const steps = [];
 		const ext = artifact.includes(".") ? artifact.slice(artifact.lastIndexOf(".")) : "";
 		const base = artifact.slice(0, artifact.length - ext.length);
-		if (!existsSync(join(root, artifact))) steps.push({
+		if (!existsSync(join(root, artifact)) || context.force) steps.push({
 			name: "export-spec",
 			plugin: "openapi",
 			description: "exporting spec...",
@@ -3808,6 +3808,7 @@ var PluginRegistry = class {
 			packageManager,
 			verbose: options?.verbose,
 			dryRun: options?.dryRun,
+			force: options?.force,
 			lintTypescript: options?.lintConfig?.typescript,
 			lintDart: options?.lintConfig?.dart,
 			formatTypescript: options?.formatConfig?.typescript,
@@ -3824,4 +3825,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-COmTZSRS.js.map
+//# sourceMappingURL=registry-BQXw86Mn.js.map

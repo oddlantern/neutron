@@ -4,7 +4,7 @@ import { t as loadConfig } from "./loader-FFG_yaOW.js";
 import { t as buildWorkspaceGraph } from "./workspace-D1ScM76h.js";
 import { n as formatDiagnostics, t as DiagnosticCollector } from "./diagnostic-ua3edMsw.js";
 import { t as groupByEcosystem } from "./group-DMsvuP93.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-COmTZSRS.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BQXw86Mn.js";
 import { t as detectPackageManager } from "./pm-detect-BtRYHQXQ.js";
 import { join, relative } from "node:path";
 import { readdirSync, statSync } from "node:fs";
@@ -183,4 +183,4 @@ async function runEcosystemCommand(parsers, options, runnerConfig) {
 //#endregion
 export { runEcosystemCommand as t };
 
-//# sourceMappingURL=ecosystem-runner-CK96gNxo.js.map
+//# sourceMappingURL=ecosystem-runner-CLgIUca-.js.map

@@ -208,9 +208,10 @@ async function executeBridge(
   pm: string,
   verbose: boolean,
   dryRun: boolean = false,
+  force: boolean = false,
 ): Promise<void> {
   const bridge = resolved.bridge;
-  const context = registry.createContext(graph, root, pm, { verbose, dryRun });
+  const context = registry.createContext(graph, root, pm, { verbose, dryRun, force });
 
   // Escape hatch: explicit run script
   if (bridge.run && resolved.sourcePlugin) {
@@ -360,6 +361,7 @@ export async function executeBridgeGroup(
   pm: string,
   verbose: boolean,
   dryRun: boolean = false,
+  force: boolean = false,
 ): Promise<void> {
   const first = group[0];
   if (!first) {
@@ -368,7 +370,7 @@ export async function executeBridgeGroup(
 
   // Single bridge — no grouping needed
   if (group.length === 1) {
-    await executeBridge(first, registry, graph, root, pm, verbose, dryRun);
+    await executeBridge(first, registry, graph, root, pm, verbose, dryRun, force);
     return;
   }
 
@@ -378,7 +380,7 @@ export async function executeBridgeGroup(
   if (!domain?.buildPipeline) {
     // Shouldn't happen (groupBridgesByArtifact only groups these), but handle gracefully
     for (const bridge of group) {
-      await executeBridge(bridge, registry, graph, root, pm, verbose);
+      await executeBridge(bridge, registry, graph, root, pm, verbose, dryRun, force);
     }
     return;
   }
@@ -388,7 +390,7 @@ export async function executeBridgeGroup(
     mergedTargets.push(...bridge.targets);
   }
 
-  const context = registry.createContext(graph, root, pm, { verbose, dryRun });
+  const context = registry.createContext(graph, root, pm, { verbose, dryRun, force });
 
   if (verbose) {
     const targetNames = mergedTargets.map((t) => t.path).join(", ");
@@ -421,7 +423,7 @@ export async function executeBridgeGroup(
 
   // Fallback if buildPipeline returned no steps
   for (const bridge of group) {
-    await executeBridge(bridge, registry, graph, root, pm, verbose);
+    await executeBridge(bridge, registry, graph, root, pm, verbose, dryRun, force);
   }
 }
 

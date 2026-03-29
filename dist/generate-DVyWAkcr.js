@@ -4,9 +4,9 @@ import { c as PASS, r as DIM, t as BOLD, u as RESET } from "./output-MbJ98jNX.js
 import { t as loadConfig } from "./loader-FFG_yaOW.js";
 import { t as buildWorkspaceGraph } from "./workspace-D1ScM76h.js";
 import { n as formatDiagnostics, t as DiagnosticCollector } from "./diagnostic-ua3edMsw.js";
-import { n as loadPlugins, t as PluginRegistry } from "./registry-COmTZSRS.js";
+import { n as loadPlugins, t as PluginRegistry } from "./registry-BQXw86Mn.js";
 import { t as detectPackageManager } from "./pm-detect-BtRYHQXQ.js";
-import { d as logStep, n as groupBridgesByArtifact, o as resolveBridges, s as formatMs, t as executeBridgeGroup } from "./runner-BQvvMff9.js";
+import { d as logStep, n as groupBridgesByArtifact, o as resolveBridges, s as formatMs, t as executeBridgeGroup } from "./runner-F59E9E9a.js";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -158,7 +158,7 @@ async function runGenerate(parsers, options = {}) {
 			}
 		}
 		try {
-			await executeBridgeGroup(group, registry, graph, root, pm, verbose, dryRun);
+			await executeBridgeGroup(group, registry, graph, root, pm, verbose, dryRun, force);
 			if (group.every((r) => r.targets.every((t) => existsSync(join(root, r.bridge.source, "generated", t.ecosystem))))) await updateCache(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
@@ -179,4 +179,4 @@ async function runGenerate(parsers, options = {}) {
 //#endregion
 export { runGenerate };
 
-//# sourceMappingURL=generate-CADLzpzr.js.map
+//# sourceMappingURL=generate-DVyWAkcr.js.map

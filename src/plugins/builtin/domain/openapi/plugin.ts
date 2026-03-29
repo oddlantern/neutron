@@ -269,9 +269,11 @@ export const openapiPlugin: DomainPlugin = {
     const ext = artifact.includes(".") ? artifact.slice(artifact.lastIndexOf(".")) : "";
     const base = artifact.slice(0, artifact.length - ext.length);
 
-    // Step 1: Export spec from framework (skip if artifact already exists on disk)
+    // Step 1: Export spec from framework
+    // Skip if artifact already exists on disk — unless force mode is active,
+    // in which case always re-export to pick up route schema changes.
     const artifactExists = existsSync(join(root, artifact));
-    if (!artifactExists) {
+    if (!artifactExists || context.force) {
       steps.push({
         name: "export-spec",
         plugin: "openapi",

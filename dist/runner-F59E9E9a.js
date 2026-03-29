@@ -219,11 +219,12 @@ async function runPipelineWithProgress(steps, root) {
 /**
 * Execute a single bridge (no artifact grouping).
 */
-async function executeBridge(resolved, registry, graph, root, pm, verbose, dryRun = false) {
+async function executeBridge(resolved, registry, graph, root, pm, verbose, dryRun = false, force = false) {
 	const bridge = resolved.bridge;
 	const context = registry.createContext(graph, root, pm, {
 		verbose,
-		dryRun
+		dryRun,
+		force
 	});
 	if (bridge.run && resolved.sourcePlugin) {
 		logStep(`running "${bridge.run}" on ${resolved.source.name}...`);
@@ -305,23 +306,24 @@ function groupBridgesByArtifact(bridges) {
 * Execute a group of bridges that share the same artifact.
 * Merges targets from all bridges and runs a single pipeline.
 */
-async function executeBridgeGroup(group, registry, graph, root, pm, verbose, dryRun = false) {
+async function executeBridgeGroup(group, registry, graph, root, pm, verbose, dryRun = false, force = false) {
 	const first = group[0];
 	if (!first) return;
 	if (group.length === 1) {
-		await executeBridge(first, registry, graph, root, pm, verbose, dryRun);
+		await executeBridge(first, registry, graph, root, pm, verbose, dryRun, force);
 		return;
 	}
 	const domain = first.domain;
 	if (!domain?.buildPipeline) {
-		for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose);
+		for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose, dryRun, force);
 		return;
 	}
 	const mergedTargets = [];
 	for (const bridge of group) mergedTargets.push(...bridge.targets);
 	const context = registry.createContext(graph, root, pm, {
 		verbose,
-		dryRun
+		dryRun,
+		force
 	});
 	if (verbose) {
 		const targetNames = mergedTargets.map((t) => t.path).join(", ");
@@ -336,7 +338,7 @@ async function executeBridgeGroup(group, registry, graph, root, pm, verbose, dry
 		} else logWaiting();
 		return;
 	}
-	for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose);
+	for (const bridge of group) await executeBridge(bridge, registry, graph, root, pm, verbose, dryRun, force);
 }
 function matchesBridge(relPath, bridge) {
 	for (const pattern of bridge.watchPatterns) {
@@ -348,4 +350,4 @@ function matchesBridge(relPath, bridge) {
 //#endregion
 export { printStartup as a, logChange as c, logStep as d, logWaiting as f, printBridgeSummary as i, logDebug as l, groupBridgesByArtifact as n, resolveBridges as o, matchesBridge as r, formatMs as s, executeBridgeGroup as t, logFail as u };
 
-//# sourceMappingURL=runner-BQvvMff9.js.map
+//# sourceMappingURL=runner-F59E9E9a.js.map

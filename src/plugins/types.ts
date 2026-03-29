@@ -259,6 +259,8 @@ export interface ExecutionContext {
    * instead of direct fs calls for any write/delete operations.
    */
   readonly dryRun?: boolean | undefined;
+  /** Force mode — re-run all steps regardless of cache/existence checks */
+  readonly force?: boolean | undefined;
 }
 
 export interface EcosystemHandler {
