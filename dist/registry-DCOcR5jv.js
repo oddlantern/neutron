@@ -126,10 +126,15 @@ async function executeTypescriptAssetGeneration(_pkg, root, context) {
 	mkdirSync(outDir, { recursive: true });
 	const sourcePath = context.artifactPath;
 	const sourceDir = sourcePath ? join(root, sourcePath) : null;
+	const themedEntryPaths = /* @__PURE__ */ new Set();
+	for (const variant of manifest.themeVariants) for (const [, entries] of variant.variants) for (const entry of entries) themedEntryPaths.add(entry.relativePath);
+	const regularCategories = manifest.categories.map((cat) => ({
+		...cat,
+		entries: cat.entries.filter((e) => !themedEntryPaths.has(e.relativePath))
+	})).filter((cat) => cat.entries.length > 0);
 	const pathLines = [HEADER$4, ""];
 	let hasPathContent = false;
-	for (const category of manifest.categories) {
-		if (category.entries.length === 0) continue;
+	for (const category of regularCategories) {
 		hasPathContent = true;
 		const constName = `${toPascalCase$3(category.name)}Paths`;
 		pathLines.push(`export const ${constName} = {`);
@@ -142,16 +147,27 @@ async function executeTypescriptAssetGeneration(_pkg, root, context) {
 		pathLines.push(`export type ${toPascalCase$3(category.name)}Key = keyof typeof ${constName};`);
 		pathLines.push("");
 	}
+	for (const variant of manifest.themeVariants) for (const [variantName, entries] of variant.variants) {
+		const constName = `${toPascalCase$3(variant.category)}${toPascalCase$3(variantName)}Paths`;
+		pathLines.push(`export const ${constName} = {`);
+		hasPathContent = true;
+		for (const entry of entries) {
+			const key = toCamelCase$2(entry.key);
+			pathLines.push(`  ${key}: '${escapeSingleQuoted(entry.relativePath)}',`);
+		}
+		pathLines.push("} as const;");
+		pathLines.push("");
+	}
 	if (hasPathContent) writeFileSync(join(outDir, "paths.ts"), pathLines.join("\n"), "utf-8");
 	const svgEntries = manifest.allEntries.filter((e) => e.ext === "svg");
 	let inlinedCount = 0;
 	let skippedCount = 0;
 	if (svgEntries.length > 0 && sourceDir) {
 		const inlineLines = [HEADER$4, ""];
-		for (const category of manifest.categories) {
+		for (const category of regularCategories) {
 			const svgInCategory = category.entries.filter((e) => e.ext === "svg");
 			if (svgInCategory.length === 0) continue;
-			const constName = `${toPascalCase$3(category.name)}Svg`;
+			const constName = `${toPascalCase$3(category.name)}Inline`;
 			const entries = [];
 			for (const entry of svgInCategory) {
 				const absPath = join(sourceDir, entry.relativePath);
@@ -1551,9 +1567,11 @@ function generateCategoryClass(category, prefix, packageName) {
 		lines.push("");
 	}
 	const firstEntry = svgEntries[0];
-	if (firstEntry) {
+	if (firstEntry && svgEntries.length > 1) {
 		const dir = firstEntry.relativePath.split("/").slice(0, -1).join("/");
-		if (svgEntries.every((e) => e.relativePath.startsWith(dir + "/"))) {
+		const hasCommonDir = svgEntries.every((e) => e.relativePath.startsWith(dir + "/"));
+		const usesPrefix = svgEntries.every((e) => e.name.startsWith(`${category.name}_`));
+		if (hasCommonDir && usesPrefix) {
 			lines.push(`  /// Dynamic accessor — loads by key from the ${category.name} directory.`);
 			lines.push("  static Widget byKey(String key, {double? size, Color? color}) =>");
 			lines.push("    SvgPicture.asset(");
@@ -1566,6 +1584,39 @@ function generateCategoryClass(category, prefix, packageName) {
 			lines.push("        : null,");
 			lines.push("    );");
 		}
+	}
+	lines.push("}");
+	return lines.join("\n");
+}
+/** Raster image extensions */
+const IMAGE_EXTENSIONS = new Set([
+	"png",
+	"jpg",
+	"jpeg",
+	"webp",
+	"gif"
+]);
+/**
+* Generate a typed Dart class for a category of raster images.
+* Returns Image.asset widgets instead of SvgPicture.
+*/
+function generateImageClass(category, prefix, packageName) {
+	const imageEntries = category.entries.filter((e) => IMAGE_EXTENSIONS.has(e.ext));
+	if (imageEntries.length === 0) return null;
+	const className = `${prefix}${toPascalCase$2(category.name)}Image`;
+	const lines = [];
+	lines.push(`abstract final class ${className} {`);
+	for (const entry of imageEntries) {
+		const methodName = toCamelCase$1(entry.key);
+		lines.push(`  static Widget ${methodName}({double? width, double? height, BoxFit? fit}) =>`);
+		lines.push("    Image.asset(");
+		lines.push(`      'assets/${entry.relativePath}',`);
+		lines.push(`      package: '${packageName}',`);
+		lines.push("      width: width,");
+		lines.push("      height: height,");
+		lines.push("      fit: fit ?? BoxFit.contain,");
+		lines.push("    );");
+		lines.push("");
 	}
 	lines.push("}");
 	return lines.join("\n");
@@ -1711,6 +1762,21 @@ async function executeDartAssetGeneration(_pkg, root, context) {
 		classLines.push(regularClasses.join("\n\n"));
 		classLines.push("");
 		const fileName = "icons.generated.dart";
+		writeFileSync(join(libDir, fileName), classLines.join("\n"), "utf-8");
+		generatedFiles.push(fileName);
+	}
+	const imageClasses = [];
+	for (const category of regularCategories) {
+		const classCode = generateImageClass(category, prefix, packageName);
+		if (classCode) imageClasses.push(classCode);
+	}
+	if (imageClasses.length > 0) {
+		const classLines = [HEADER, ""];
+		classLines.push("import 'package:flutter/material.dart';");
+		classLines.push("");
+		classLines.push(imageClasses.join("\n\n"));
+		classLines.push("");
+		const fileName = "images.generated.dart";
 		writeFileSync(join(libDir, fileName), classLines.join("\n"), "utf-8");
 		generatedFiles.push(fileName);
 	}
@@ -3757,4 +3823,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-Db0pIOLj.js.map
+//# sourceMappingURL=registry-DCOcR5jv.js.map

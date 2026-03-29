@@ -106,14 +106,28 @@ export async function executeTypescriptAssetGeneration(
   const sourcePath = context.artifactPath;
   const sourceDir = sourcePath ? join(root, sourcePath) : null;
 
+  // ─── Filter out themed entries ──────────────────────────────────────────────
+  const themedEntryPaths = new Set<string>();
+  for (const variant of manifest.themeVariants) {
+    for (const [, entries] of variant.variants) {
+      for (const entry of entries) {
+        themedEntryPaths.add(entry.relativePath);
+      }
+    }
+  }
+
+  const regularCategories = manifest.categories
+    .map((cat) => ({
+      ...cat,
+      entries: cat.entries.filter((e) => !themedEntryPaths.has(e.relativePath)),
+    }))
+    .filter((cat) => cat.entries.length > 0);
+
   // ─── Generate path constants ──────────────────────────────────────────────
   const pathLines: string[] = [HEADER, ""];
   let hasPathContent = false;
 
-  for (const category of manifest.categories) {
-    if (category.entries.length === 0) {
-      continue;
-    }
+  for (const category of regularCategories) {
     hasPathContent = true;
 
     const constName = `${toPascalCase(category.name)}Paths`;
@@ -130,6 +144,23 @@ export async function executeTypescriptAssetGeneration(
     pathLines.push("");
   }
 
+  // Generate themed variant paths (separate light/dark objects)
+  for (const variant of manifest.themeVariants) {
+    for (const [variantName, entries] of variant.variants) {
+      const constName = `${toPascalCase(variant.category)}${toPascalCase(variantName)}Paths`;
+      pathLines.push(`export const ${constName} = {`);
+      hasPathContent = true;
+
+      for (const entry of entries) {
+        const key = toCamelCase(entry.key);
+        pathLines.push(`  ${key}: '${escapeSingleQuoted(entry.relativePath)}',`);
+      }
+
+      pathLines.push("} as const;");
+      pathLines.push("");
+    }
+  }
+
   if (hasPathContent) {
     writeFileSync(join(outDir, "paths.ts"), pathLines.join("\n"), "utf-8");
   }
@@ -142,13 +173,13 @@ export async function executeTypescriptAssetGeneration(
   if (svgEntries.length > 0 && sourceDir) {
     const inlineLines: string[] = [HEADER, ""];
 
-    for (const category of manifest.categories) {
+    for (const category of regularCategories) {
       const svgInCategory = category.entries.filter((e) => e.ext === "svg");
       if (svgInCategory.length === 0) {
         continue;
       }
 
-      const constName = `${toPascalCase(category.name)}Svg`;
+      const constName = `${toPascalCase(category.name)}Inline`;
       const entries: string[] = [];
 
       for (const entry of svgInCategory) {
