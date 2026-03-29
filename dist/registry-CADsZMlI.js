@@ -80,7 +80,7 @@ function toCamelCase$2(str) {
 * Convert a category name to PascalCase.
 */
 function toPascalCase$3(str) {
-	return str.split(/[_\-]/).filter((part) => part.length > 0).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
+	return str.split(/[_\-/]/).filter((part) => part.length > 0).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
 }
 /**
 * Escape a string for safe embedding in a single-quoted JS string.
@@ -1496,7 +1496,7 @@ const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.";
 * e.g., "map_pins" → "MapPins", "ui" → "Ui"
 */
 function toPascalCase$2(str) {
-	return str.split(/[_\-]/).filter((part) => part.length > 0).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
+	return str.split(/[_\-/]/).filter((part) => part.length > 0).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
 }
 /**
 * Convert a key to a valid Dart identifier (camelCase).
@@ -1512,12 +1512,20 @@ function toCamelCase$1(str) {
 }
 /**
 * Generate a prefixed class name from workspace name.
-* e.g., workspace "nextsaga" → prefix "Ns"
+* Splits on delimiters or camelCase boundaries.
+* e.g., "nextsaga" → "Ns", "my-app" → "Ma", "coolProject" → "Cp"
 */
 function derivePrefix(workspaceName) {
-	const parts = workspaceName.split(/[_\-.\s]+/);
-	if (parts.length >= 2) return parts.map((p) => p.charAt(0).toUpperCase()).join("");
-	return workspaceName.charAt(0).toUpperCase() + workspaceName.slice(1, 3).toLowerCase();
+	const explicitParts = workspaceName.split(/[_\-.\s]+/);
+	if (explicitParts.length >= 2) return explicitParts.map((p) => p.charAt(0).toUpperCase()).join("");
+	const camelParts = workspaceName.replace(/([a-z])([A-Z])/g, "$1 $2").split(" ");
+	if (camelParts.length >= 2) return camelParts.map((p) => p.charAt(0).toUpperCase()).join("");
+	const word = workspaceName.toLowerCase();
+	if (word.length >= 6) {
+		const mid = Math.floor(word.length / 2);
+		return word.charAt(0).toUpperCase() + word.charAt(mid).toUpperCase();
+	}
+	return word.charAt(0).toUpperCase() + (word.charAt(1) ?? "").toUpperCase();
 }
 /**
 * Generate a typed Dart widget class for a category of SVG icons.
@@ -3731,4 +3739,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-1jUR3GeP.js.map
+//# sourceMappingURL=registry-CADsZMlI.js.map

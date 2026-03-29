@@ -34,7 +34,7 @@ function toCamelCase(str: string): string {
  */
 function toPascalCase(str: string): string {
   return str
-    .split(/[_\-]/)
+    .split(/[_\-/]/)
     .filter((part) => part.length > 0)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join("");
