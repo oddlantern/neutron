@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { r as STANDARD_ACTIONS } from "./registry-Db0pIOLj.js";
-import { t as runEcosystemCommand } from "./ecosystem-runner-Bc6pYVaw.js";
+import { r as STANDARD_ACTIONS } from "./registry-DCOcR5jv.js";
+import { t as runEcosystemCommand } from "./ecosystem-runner-Dvpes_VR.js";
 //#region src/commands/fmt.ts
 /**
 * Run formatting across all packages in the workspace.
@@ -17,4 +17,4 @@ async function runFmt(parsers, options = {}) {
 //#endregion
 export { runFmt };
 
-//# sourceMappingURL=fmt-CKcpJeB_.js.map
+//# sourceMappingURL=fmt-CAxca_3N.js.map
