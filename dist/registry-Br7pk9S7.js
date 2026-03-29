@@ -1901,7 +1901,7 @@ async function executeDesignTokenGeneration(pkg, root, context) {
 	const workspace = context.graph.name.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
 	const source = (context.sourceName ?? "generated").replace(/^@[^/]+\//, "").replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
 	const packageName = workspace ? `${workspace}_${source}` : source;
-	if (!existsSync(join(outRoot, "pubspec.yaml"))) scaffoldDartPackage(outRoot, packageName, tokens);
+	scaffoldDartPackage(outRoot, packageName, tokens);
 	const themeDir = join(outRoot, "lib", "core", "theme");
 	const generatedDir = join(themeDir, "generated");
 	mkdirSync(generatedDir, { recursive: true });
@@ -3724,4 +3724,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-BMANyP0-.js.map
+//# sourceMappingURL=registry-Br7pk9S7.js.map
