@@ -102,7 +102,7 @@ function scaffoldDartPackage(pkgDir: string, packageName: string, tokens: Valida
   ];
 
   if (needsGoogleFonts) {
-    pubspec.push("  google_fonts: ^6.0.0");
+    pubspec.push("  google_fonts: '>=6.0.0'");
   }
 
   pubspec.push("");

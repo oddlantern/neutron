@@ -1962,7 +1962,7 @@ function scaffoldDartPackage(pkgDir, packageName, tokens) {
 		"  flutter:",
 		"    sdk: flutter"
 	];
-	if (needsGoogleFonts) pubspec.push("  google_fonts: ^6.0.0");
+	if (needsGoogleFonts) pubspec.push("  google_fonts: '>=6.0.0'");
 	pubspec.push("");
 	writeFileSync(join(pkgDir, "pubspec.yaml"), pubspec.join("\n"), "utf-8");
 }
@@ -3824,4 +3824,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-Ddl2lw0X.js.map
+//# sourceMappingURL=registry-COmTZSRS.js.map
