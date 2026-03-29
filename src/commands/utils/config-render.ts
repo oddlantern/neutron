@@ -5,10 +5,10 @@ import {
   DEFAULT_IGNORE,
   LINT_CATEGORY_DEFAULTS,
   OXFMT_DEFAULTS,
-} from "../../config/defaults.js";
-import type { MidoConfig } from "../../config/schema.js";
-import type { BridgeWithWatch, EcosystemGroup } from "./shared.js";
-import { MIN_ENV_FILES_FOR_PARITY } from "./shared.js";
+} from "@/config/defaults";
+import type { MidoConfig } from "@/config/schema";
+import type { BridgeWithWatch, EcosystemGroup } from "@/commands/utils/shared";
+import { MIN_ENV_FILES_FOR_PARITY } from "@/commands/utils/shared";
 
 export function configToObject(config: MidoConfig): Record<string, unknown> {
   const obj: Record<string, unknown> = {

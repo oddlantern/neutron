@@ -1,14 +1,14 @@
-import { loadConfig } from "../config/loader.js";
-import { DiagnosticCollector, formatDiagnostics } from "../diagnostic.js";
-import { groupByEcosystem } from "./group.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import type { WorkspacePackage } from "../graph/types.js";
-import { BOLD, DIM, FAIL, PASS, RESET } from "../output.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
-import { STANDARD_ACTIONS } from "../plugins/types.js";
-import { detectPackageManager } from "../pm-detect.js";
+import { loadConfig } from "@/config/loader";
+import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
+import { groupByEcosystem } from "@/commands/group";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import type { WorkspacePackage } from "@/graph/types";
+import { BOLD, DIM, FAIL, PASS, RESET } from "@/output";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
+import { STANDARD_ACTIONS } from "@/plugins/types";
+import { detectPackageManager } from "@/pm-detect";
 
 const SKIP = `${DIM}·${RESET}`;
 const MS_PER_SECOND = 1000;

@@ -11,11 +11,11 @@ import {
   text,
 } from "@clack/prompts";
 
-import type { MidoConfig } from "../../config/schema.js";
-import { BOLD, DIM, ORANGE, RESET } from "../../output.js";
-import type { PluginRegistry } from "../../plugins/registry.js";
-import type { WatchPathSuggestion } from "../../plugins/types.js";
-import { type BridgeWithWatch, getAllPackagePaths, handleCancel } from "./shared.js";
+import type { MidoConfig } from "@/config/schema";
+import { BOLD, DIM, ORANGE, RESET } from "@/output";
+import type { PluginRegistry } from "@/plugins/registry";
+import type { WatchPathSuggestion } from "@/plugins/types";
+import { type BridgeWithWatch, getAllPackagePaths, handleCancel } from "@/commands/utils/shared";
 
 // ─── Watch path prompts ──────────────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ export async function promptModifyBridge(
     readonly watch?: readonly string[] | undefined;
   },
   pluginRegistry?: PluginRegistry,
-  packageMap?: ReadonlyMap<string, import("../../graph/types.js").WorkspacePackage>,
+  packageMap?: ReadonlyMap<string, import("@/graph/types").WorkspacePackage>,
 ): Promise<BridgeWithWatch | null> {
   const allPaths = getAllPackagePaths(config);
 

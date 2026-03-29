@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { isRecord } from "../src/guards.js";
+import { isRecord } from "../src/guards";
 
 describe("isRecord", () => {
   test("returns true for plain objects", () => {

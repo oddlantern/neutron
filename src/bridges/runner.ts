@@ -1,8 +1,8 @@
 import { join } from "node:path";
 
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from "../graph/types.js";
-import { BOLD, CYAN, DIM, RESET, YELLOW } from "../output.js";
-import type { PluginRegistry } from "../plugins/registry.js";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
+import { BOLD, CYAN, DIM, RESET, YELLOW } from "@/output";
+import type { PluginRegistry } from "@/plugins/registry";
 import type {
   DomainPlugin,
   EcosystemPlugin,
@@ -10,8 +10,8 @@ import type {
   ExecuteResult,
   PipelineResult,
   PipelineStepResult,
-} from "../plugins/types.js";
-import { runPipeline } from "./pipeline.js";
+} from "@/plugins/types";
+import { runPipeline } from "@/bridges/pipeline";
 import {
   formatMs,
   logDebug,
@@ -21,7 +21,7 @@ import {
   logSuccess,
   logUnchanged,
   logWaiting,
-} from "./logger.js";
+} from "@/bridges/logger";
 
 export {
   formatMs,
@@ -31,7 +31,7 @@ export {
   logStep,
   logSuccess,
   logWaiting,
-} from "./logger.js";
+} from "@/bridges/logger";
 
 export interface ResolvedBridge {
   readonly bridge: Bridge;

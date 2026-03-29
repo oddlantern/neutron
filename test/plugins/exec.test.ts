@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 
-import { runCommand } from "../../src/plugins/builtin/exec.js";
+import { runCommand } from "@/plugins/builtin/shared/exec";
 
 describe("runCommand", () => {
   test("successful command", async () => {

@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
-import type { MidoConfig } from "../config/schema.js";
-import type { ManifestParser } from "../parsers/types.js";
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from "./types.js";
+import type { MidoConfig } from "@/config/schema";
+import type { ManifestParser } from "@/parsers/types";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 
 /** Registry of parsers keyed by manifest filename */
 export type ParserRegistry = ReadonlyMap<string, ManifestParser>;

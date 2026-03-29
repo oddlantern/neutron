@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { typescriptPlugin } from "../../src/plugins/builtin/typescript.js";
-import { dartPlugin } from "../../src/plugins/builtin/dart.js";
-import { STANDARD_ACTIONS } from "../../src/plugins/types.js";
-import type { WorkspacePackage } from "../../src/graph/types.js";
+import { typescriptPlugin } from "@/plugins/builtin/ecosystem/typescript/plugin";
+import { dartPlugin } from "@/plugins/builtin/ecosystem/dart/plugin";
+import { STANDARD_ACTIONS } from "@/plugins/types";
+import type { WorkspacePackage } from "@/graph/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

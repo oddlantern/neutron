@@ -2,11 +2,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { loadConfig } from "../config/loader.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, FAIL, GREEN, PASS, RED, RESET, YELLOW } from "../output.js";
-import { VERSION } from "../version.js";
+import { loadConfig } from "@/config/loader";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import { BOLD, DIM, FAIL, GREEN, PASS, RED, RESET, YELLOW } from "@/output";
+import { VERSION } from "@/version";
 
 const WARN = `${YELLOW}!${RESET}`;
 

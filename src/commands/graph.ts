@@ -1,11 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { loadConfig } from "../config/loader.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import type { Bridge, WorkspacePackage } from "../graph/types.js";
-import { BOLD, DIM, RESET } from "../output.js";
+import { loadConfig } from "@/config/loader";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import type { Bridge, WorkspacePackage } from "@/graph/types";
+import { BOLD, DIM, RESET } from "@/output";
 
 export interface GraphOptions {
   readonly format?: "html" | "dot" | "ascii" | undefined;

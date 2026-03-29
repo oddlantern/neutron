@@ -1,8 +1,9 @@
-import { typescriptPlugin } from "./builtin/typescript.js";
-import { dartPlugin } from "./builtin/dart.js";
-import { designPlugin } from "./builtin/design/plugin.js";
-import { openapiPlugin } from "./builtin/openapi/plugin.js";
-import type { DomainPlugin, EcosystemPlugin } from "./types.js";
+import { typescriptPlugin } from "@/plugins/builtin/ecosystem/typescript/plugin";
+import { dartPlugin } from "@/plugins/builtin/ecosystem/dart/plugin";
+import { assetsPlugin } from "@/plugins/builtin/domain/assets/plugin";
+import { designPlugin } from "@/plugins/builtin/domain/design/plugin";
+import { openapiPlugin } from "@/plugins/builtin/domain/openapi/plugin";
+import type { DomainPlugin, EcosystemPlugin } from "@/plugins/types";
 
 export interface LoadedPlugins {
   readonly ecosystem: readonly EcosystemPlugin[];
@@ -18,6 +19,6 @@ export interface LoadedPlugins {
 export function loadPlugins(): LoadedPlugins {
   return {
     ecosystem: [typescriptPlugin, dartPlugin],
-    domain: [designPlugin, openapiPlugin],
+    domain: [designPlugin, openapiPlugin, assetsPlugin],
   };
 }

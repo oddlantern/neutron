@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { computeRisk } from "../../src/outdated/risk.js";
+import { computeRisk } from "@/outdated/risk";
 
 describe("computeRisk", () => {
   test("major update with 1 package scores 45", () => {

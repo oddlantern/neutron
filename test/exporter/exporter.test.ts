@@ -4,9 +4,9 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { exportSpec } from '../../src/plugins/builtin/openapi/exporter.js';
-import { elysiaAdapter } from '../../src/plugins/builtin/openapi/adapters/elysia.js';
-import { assertWithinRoot } from '../../src/plugins/builtin/openapi/exporter.js';
+import { exportSpec } from '../../src/plugins/builtin/domain/openapi/exporter.js';
+import { elysiaAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/elysia.js';
+import { assertWithinRoot } from '../../src/plugins/builtin/domain/openapi/exporter.js';
 
 const FIXTURE_DIR = resolve(import.meta.dir, '../fixture-server');
 

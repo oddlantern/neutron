@@ -1,4 +1,4 @@
-import type { RiskScore } from "./types.js";
+import type { RiskScore } from "@/outdated/types";
 
 const SEVERITY_WEIGHTS: Readonly<Record<string, number>> = {
   major: 40,

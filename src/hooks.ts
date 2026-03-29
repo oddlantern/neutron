@@ -2,9 +2,9 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { MidoConfig } from "./config/schema.js";
-import { HOOK_NAMES } from "./config/schema.js";
-import { confirmAction } from "./prompt.js";
+import type { MidoConfig } from "@/config/schema";
+import { HOOK_NAMES } from "@/config/schema";
+import { confirmAction } from "@/prompt";
 
 const HOOKS_DIR = ".git/hooks";
 const MIDO_MARKER = "mido";

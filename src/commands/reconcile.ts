@@ -10,17 +10,17 @@ import {
   spinner,
 } from "@clack/prompts";
 
-import type { MidoConfig } from "../config/schema.js";
-import { loadConfig } from "../config/loader.js";
-import { scanRepo, type DiscoveredPackage } from "../discovery/scanner.js";
-import { printBanner } from "../banner.js";
-import { DIM, GREEN, ORANGE, RESET } from "../output.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
-import type { WatchPathSuggestion } from "../plugins/types.js";
-import { mergeMigratedConfig, migrateLintFormatConfig } from "./migrate.js";
-import { configToObject, renderYaml } from "./utils/config-render.js";
+import type { MidoConfig } from "@/config/schema";
+import { loadConfig } from "@/config/loader";
+import { scanRepo, type DiscoveredPackage } from "@/discovery/scanner";
+import { printBanner } from "@/banner";
+import { DIM, GREEN, ORANGE, RESET } from "@/output";
+import type { ParserRegistry } from "@/graph/workspace";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
+import type { WatchPathSuggestion } from "@/plugins/types";
+import { mergeMigratedConfig, migrateLintFormatConfig } from "@/commands/migrate";
+import { configToObject, renderYaml } from "@/commands/utils/config-render";
 import {
   type BridgeWithWatch,
   CONFIG_FILENAME,
@@ -35,7 +35,7 @@ import {
   promptWatchPaths,
   removePackageFromConfig,
   runPostInitCheck,
-} from "./utils/shared.js";
+} from "@/commands/utils/shared";
 
 export async function runReconciliation(
   root: string,
@@ -74,7 +74,7 @@ export async function runReconciliation(
     log.step(`Removed broken ${CONFIG_FILENAME}`);
 
     // Re-import to avoid circular — runInit delegates to runFirstTime
-    const { runInit } = await import("./init.js");
+    const { runInit } = await import("@/commands/init");
     return runInit(root, parsers);
   }
 
@@ -334,7 +334,7 @@ export async function runReconciliation(
 
   let hooksInstalled = false;
   if (installHooks) {
-    const { runInstall } = await import("./install.js");
+    const { runInstall } = await import("@/commands/install");
     const installResult = await runInstall(root, existing);
     if (installResult !== 0) {
       return installResult;

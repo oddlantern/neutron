@@ -1,20 +1,20 @@
-import { loadConfig } from "../config/loader.js";
-import { DiagnosticCollector, formatDiagnostics } from "../diagnostic.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { BOLD, DIM, RESET } from "../output.js";
-import { collectDeps, buildWorkspaceDepsMap } from "../outdated/collect.js";
+import { loadConfig } from "@/config/loader";
+import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import { BOLD, DIM, RESET } from "@/output";
+import { collectDeps, buildWorkspaceDepsMap } from "@/outdated/collect";
 import {
   formatLevel1Results,
   formatLevel2Results,
   formatLevel3Results,
   formatJsonOutput,
-} from "../outdated/display.js";
-import { runLevel1 } from "../outdated/level1.js";
-import { runLevel2 } from "../outdated/level2.js";
-import { runLevel3 } from "../outdated/level3.js";
-import type { OutdatedOptions } from "../outdated/types.js";
-import { confirmAction } from "../prompt.js";
+} from "@/outdated/display";
+import { runLevel1 } from "@/outdated/level1";
+import { runLevel2 } from "@/outdated/level2";
+import { runLevel3 } from "@/outdated/level3";
+import type { OutdatedOptions } from "@/outdated/types";
+import { confirmAction } from "@/prompt";
 
 export type { OutdatedOptions };
 

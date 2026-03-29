@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
-import type { DiscoveredPackage } from "./scanner.js";
+import type { DiscoveredPackage } from "@/discovery/scanner";
 
 export interface BridgeCandidate {
   readonly source: string;

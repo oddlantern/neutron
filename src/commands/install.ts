@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import type { MidoConfig } from "../config/schema.js";
-import { writeHooks } from "../hooks.js";
+import type { MidoConfig } from "@/config/schema";
+import { writeHooks } from "@/hooks";
 
-export type { WriteHooksResult } from "../hooks.js";
-export { writeHooks } from "../hooks.js";
+export type { WriteHooksResult } from "@/hooks";
+export { writeHooks } from "@/hooks";
 
 // ─── CLI entry point ────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ export async function runInstall(root: string, config?: MidoConfig): Promise<num
   let resolvedConfig = config;
   if (!resolvedConfig) {
     try {
-      const { loadConfig } = await import("../config/loader.js");
+      const { loadConfig } = await import("@/config/loader");
       const loaded = await loadConfig();
       resolvedConfig = loaded.config;
     } catch {

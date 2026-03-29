@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
-import { fetchNpmMetadata, fetchPubMetadata } from "../../src/outdated/registry.js";
+import { fetchNpmMetadata, fetchPubMetadata } from "@/outdated/registry";
 
 let fetchSpy: ReturnType<typeof spyOn>;
 

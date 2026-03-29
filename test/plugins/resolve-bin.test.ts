@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { resolveBin } from '../../src/plugins/builtin/typescript.js';
+import { resolveBin } from '../../src/plugins/builtin/ecosystem/typescript/plugin.js';
 import { MIDO_ROOT } from '../../src/version.js';
 
 /**

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from "../../src/graph/types.js";
-import { loadPlugins } from "../../src/plugins/loader.js";
-import { PluginRegistry } from "../../src/plugins/registry.js";
+import type { Bridge, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
 
 describe("shared-artifact grouping", () => {
   const dartTarget: WorkspacePackage = {

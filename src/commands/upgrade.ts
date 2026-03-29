@@ -1,19 +1,19 @@
-import { loadConfig } from "../config/loader.js";
-import { DiagnosticCollector, formatDiagnostics } from "../diagnostic.js";
-import type { WorkspacePackage } from "../graph/types.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { loadLock, mergeLock, writeLock } from "../lock.js";
-import type { LockUpdate } from "../lock.js";
-import { applyManifestUpdate } from "../manifest-writer.js";
-import { BOLD, DIM, GREEN, RED, RESET } from "../output.js";
-import { collectDeps, stripRange, buildWorkspaceDepsMap, hasFlutterDeps } from "../outdated/collect.js";
-import { SEVERITY_COLOR, formatRiskBadge } from "../outdated/display.js";
-import { runLevel1 } from "../outdated/level1.js";
-import type { OutdatedDep, UpgradeOptions } from "../outdated/types.js";
-import { detectPackageManager } from "../pm-detect.js";
-import { runCommand } from "../process.js";
-import { confirmAction, promptMultiSelect } from "../prompt.js";
+import { loadConfig } from "@/config/loader";
+import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
+import type { WorkspacePackage } from "@/graph/types";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import { loadLock, mergeLock, writeLock } from "@/lock";
+import type { LockUpdate } from "@/lock";
+import { applyManifestUpdate } from "@/manifest-writer";
+import { BOLD, DIM, GREEN, RED, RESET } from "@/output";
+import { collectDeps, stripRange, buildWorkspaceDepsMap, hasFlutterDeps } from "@/outdated/collect";
+import { SEVERITY_COLOR, formatRiskBadge } from "@/outdated/display";
+import { runLevel1 } from "@/outdated/level1";
+import type { OutdatedDep, UpgradeOptions } from "@/outdated/types";
+import { detectPackageManager } from "@/pm-detect";
+import { runCommand } from "@/process";
+import { confirmAction, promptMultiSelect } from "@/prompt";
 
 export type { UpgradeOptions };
 
@@ -223,7 +223,7 @@ export async function runUpgrade(
   // ── Consistency check ───────────────────────────────────────────────
   console.log(`\n${DIM}Verifying version consistency...${RESET}\n`);
 
-  const { runCheck } = await import("./check.js");
+  const { runCheck } = await import("@/commands/check");
   const checkExitCode = await runCheck(parsers, { fix: false, quiet: true });
 
   if (checkExitCode === 0) {

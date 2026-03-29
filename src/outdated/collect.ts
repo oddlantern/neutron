@@ -1,6 +1,6 @@
-import type { WorkspacePackage } from "../graph/types.js";
+import type { WorkspacePackage } from "@/graph/types";
 
-import type { DepUsage } from "./types.js";
+import type { DepUsage } from "@/outdated/types";
 
 /**
  * Group workspace dependencies by name + ecosystem.

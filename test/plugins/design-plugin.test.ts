@@ -3,9 +3,9 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, test } from "bun:test";
 
-import { designPlugin } from "../../src/plugins/builtin/design/plugin.js";
-import type { WorkspacePackage } from "../../src/graph/types.js";
-import type { ExecutionContext } from "../../src/plugins/types.js";
+import { designPlugin } from "@/plugins/builtin/domain/design/plugin";
+import type { WorkspacePackage } from "@/graph/types";
+import type { ExecutionContext } from "@/plugins/types";
 
 const PROJECT_ROOT = join(import.meta.dir, "..", "..");
 

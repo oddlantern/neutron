@@ -7,7 +7,7 @@ import {
   computeInputHash,
   isCacheHit,
   updateCache,
-} from "../../src/bridges/cache.js";
+} from "@/bridges/cache";
 
 let tmpDir: string;
 

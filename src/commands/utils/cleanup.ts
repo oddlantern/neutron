@@ -5,12 +5,12 @@ import { join } from "node:path";
 
 import { confirm, isCancel, log, note, outro, select } from "@clack/prompts";
 
-import { loadConfig } from "../../config/loader.js";
-import { BOLD, DIM, GREEN, ORANGE, RESET } from "../../output.js";
-import { runCheck } from "../check.js";
-import type { ParserRegistry } from "../../graph/workspace.js";
-import { isRecord } from "../../guards.js";
-import { type InitSummary, CONFIG_FILENAME, handleCancel } from "./shared.js";
+import { loadConfig } from "@/config/loader";
+import { BOLD, DIM, GREEN, ORANGE, RESET } from "@/output";
+import { runCheck } from "@/commands/check";
+import type { ParserRegistry } from "@/graph/workspace";
+import { isRecord } from "@/guards";
+import { type InitSummary, CONFIG_FILENAME, handleCancel } from "@/commands/utils/shared";
 
 // ─── Post-init health check ─────────────────────────────────────────────────
 
@@ -23,9 +23,9 @@ export async function runPostInitCheck(parsers: ParserRegistry): Promise<boolean
   }
 
   const { config, root } = await loadConfig();
-  const { buildWorkspaceGraph } = await import("../../graph/workspace.js");
-  const { findVersionMismatches } = await import("../../checks/versions.js");
-  const { loadLock } = await import("../../lock.js");
+  const { buildWorkspaceGraph } = await import("@/graph/workspace");
+  const { findVersionMismatches } = await import("@/checks/versions");
+  const { loadLock } = await import("@/lock");
 
   const graph = await buildWorkspaceGraph(config, root, parsers);
   const lock = await loadLock(root);
@@ -102,7 +102,7 @@ export async function promptNextSteps(
   switch (next) {
     case "dev": {
       outro(`${ORANGE}Starting watcher...${RESET}`);
-      const { runDev } = await import("../../watcher/dev.js");
+      const { runDev } = await import("@/watcher/dev");
       return runDev(parsers, {});
     }
     case "check": {

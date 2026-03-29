@@ -1,8 +1,8 @@
-import type { ParserRegistry } from "../graph/workspace.js";
-import { STANDARD_ACTIONS } from "../plugins/types.js";
+import type { ParserRegistry } from "@/graph/workspace";
+import { STANDARD_ACTIONS } from "@/plugins/types";
 
-import type { EcosystemRunnerOptions } from "./ecosystem-runner.js";
-import { runEcosystemCommand } from "./ecosystem-runner.js";
+import type { EcosystemRunnerOptions } from "@/commands/ecosystem-runner";
+import { runEcosystemCommand } from "@/commands/ecosystem-runner";
 
 export type TestOptions = EcosystemRunnerOptions;
 

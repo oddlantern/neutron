@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-import { validateTokens } from "../../src/plugins/builtin/design/token-schema.js";
-import type { ValidatedTokens } from "../../src/plugins/builtin/design/types.js";
+import { validateTokens } from "@/plugins/builtin/domain/design/token-schema";
+import type { ValidatedTokens } from "@/plugins/builtin/domain/design/types";
 import {
   generateBarrel,
   generateColorScheme,
@@ -11,7 +11,7 @@ import {
   generatePackageBarrel,
   generateTheme,
   generateThemeExtensions,
-} from "../../src/plugins/builtin/dart/token-codegen.js";
+} from "@/plugins/builtin/ecosystem/dart/token-codegen";
 
 const FIXTURE_PATH = join(import.meta.dir, "..", "fixture-tokens", "tokens.json");
 

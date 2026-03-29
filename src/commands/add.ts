@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { confirm, intro, isCancel, log, outro, select, text } from "@clack/prompts";
 import { Document, isMap, isSeq, parseDocument } from "yaml";
 
-import { loadConfig } from "../config/loader.js";
-import { BOLD, DIM, GREEN, ORANGE, RESET } from "../output.js";
+import { loadConfig } from "@/config/loader";
+import { BOLD, DIM, GREEN, ORANGE, RESET } from "@/output";
 
 const CONFIG_FILENAME = "mido.yml";
 

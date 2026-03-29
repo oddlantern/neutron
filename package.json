@@ -1,6 +1,6 @@
 {
   "name": "@oddlantern/mido",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cross-ecosystem monorepo workspace tool",
   "type": "module",
   "bin": {

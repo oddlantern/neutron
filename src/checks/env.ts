@@ -2,8 +2,8 @@ import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import type { EnvConfig } from "../config/schema.js";
-import type { CheckIssue, CheckResult } from "./types.js";
+import type { EnvConfig } from "@/config/schema";
+import type { CheckIssue, CheckResult } from "@/checks/types";
 
 /**
  * Parse a .env or .env.example file into a set of key names.

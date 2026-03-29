@@ -4,15 +4,15 @@ import { join } from "node:path";
 
 import { confirm, intro, isCancel, log, multiselect, select, spinner, text } from "@clack/prompts";
 
-import { scanRepo } from "../discovery/scanner.js";
-import { detectBridges, detectEnvFiles } from "../discovery/heuristics.js";
-import { printBanner } from "../banner.js";
-import { BOLD, DIM, GREEN, ORANGE, RESET } from "../output.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
-import { mergeMigratedConfig, migrateLintFormatConfig } from "./migrate.js";
-import { buildConfigObject, renderYaml } from "./utils/config-render.js";
+import { scanRepo } from "@/discovery/scanner";
+import { detectBridges, detectEnvFiles } from "@/discovery/heuristics";
+import { printBanner } from "@/banner";
+import { BOLD, DIM, GREEN, ORANGE, RESET } from "@/output";
+import type { ParserRegistry } from "@/graph/workspace";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
+import { mergeMigratedConfig, migrateLintFormatConfig } from "@/commands/migrate";
+import { buildConfigObject, renderYaml } from "@/commands/utils/config-render";
 import {
   type BridgeWithWatch,
   CONFIG_FILENAME,
@@ -26,9 +26,9 @@ import {
   promptNextSteps,
   promptWatchPaths,
   runPostInitCheck,
-} from "./utils/shared.js";
-import { runReconciliation } from "./reconcile.js";
-import { isRecord } from "../guards.js";
+} from "@/commands/utils/shared";
+import { runReconciliation } from "@/commands/reconcile";
+import { isRecord } from "@/guards";
 
 // ─── Prepare / gitignore wiring ──────────────────────────────────────────────
 
@@ -273,7 +273,7 @@ async function runFirstTime(
 
   let hooksInstalled = false;
   if (installHooks) {
-    const { runInstall } = await import("./install.js");
+    const { runInstall } = await import("@/commands/install");
     const installResult = await runInstall(root);
     if (installResult !== 0) {
       return installResult;

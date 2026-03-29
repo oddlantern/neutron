@@ -1,7 +1,7 @@
-import { classifyUpdate, stripRange } from "./collect.js";
-import { fetchMetadata } from "./registry.js";
-import { computeRisk } from "./risk.js";
-import type { DepUsage, OutdatedDep, PeerConflict } from "./types.js";
+import { classifyUpdate, stripRange } from "@/outdated/collect";
+import { fetchMetadata } from "@/outdated/registry";
+import { computeRisk } from "@/outdated/risk";
+import type { DepUsage, OutdatedDep, PeerConflict } from "@/outdated/types";
 
 const CONCURRENCY = 10;
 

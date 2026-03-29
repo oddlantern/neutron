@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { confirm, isCancel, log } from "@clack/prompts";
 
-import { isRecord } from "../guards.js";
+import { isRecord } from "@/guards";
 
 export interface MigratedToolConfig {
   readonly lint?: Record<string, unknown>;

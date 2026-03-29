@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-import { MIDO_ROOT, VERSION } from "../src/version.js";
+import { MIDO_ROOT, VERSION } from "../src/version";
 
 describe("VERSION", () => {
   test("is a non-empty string", () => {

@@ -3,15 +3,15 @@ import { join, relative } from "node:path";
 import chokidar from "chokidar";
 import type { FSWatcher } from "chokidar";
 
-import { writeHooks } from "../hooks.js";
-import { loadConfig } from "../config/loader.js";
-import { buildWorkspaceGraph } from "../graph/workspace.js";
-import type { ParserRegistry } from "../graph/workspace.js";
-import type { WorkspaceGraph } from "../graph/types.js";
-import { DIM, RED, RESET, YELLOW } from "../output.js";
-import { loadPlugins } from "../plugins/loader.js";
-import { PluginRegistry } from "../plugins/registry.js";
-import { detectPackageManager } from "../pm-detect.js";
+import { writeHooks } from "@/hooks";
+import { loadConfig } from "@/config/loader";
+import { buildWorkspaceGraph } from "@/graph/workspace";
+import type { ParserRegistry } from "@/graph/workspace";
+import type { WorkspaceGraph } from "@/graph/types";
+import { DIM, RED, RESET, YELLOW } from "@/output";
+import { loadPlugins } from "@/plugins/loader";
+import { PluginRegistry } from "@/plugins/registry";
+import { detectPackageManager } from "@/pm-detect";
 import {
   executeBridgeGroup,
   groupBridgesByArtifact,
@@ -24,10 +24,10 @@ import {
   printBridgeSummary,
   printStartup,
   resolveBridges,
-} from "../bridges/runner.js";
-import type { ResolvedBridge } from "../bridges/runner.js";
-import { createDebouncer } from "./debouncer.js";
-import type { Debouncer } from "./debouncer.js";
+} from "@/bridges/runner";
+import type { ResolvedBridge } from "@/bridges/runner";
+import { createDebouncer } from "@/watcher/debouncer";
+import type { Debouncer } from "@/watcher/debouncer";
 
 const CONFIG_FILENAME = "mido.yml";
 const CONFIG_RELOAD_DEBOUNCE_MS = 500;
@@ -307,7 +307,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
 
   // Background outdated check — delayed to not interfere with startup
   setTimeout(() => {
-    import("../commands/outdated.js")
+    import("@/commands/outdated")
       .then(({ quickOutdatedCheck }) => quickOutdatedCheck(parsers))
       .then((msg) => {
         if (msg) {
