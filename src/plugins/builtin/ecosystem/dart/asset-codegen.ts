@@ -115,7 +115,7 @@ function generateCategoryClass(
       lines.push(`  /// Dynamic accessor — loads by key from the ${category.name} directory.`);
       lines.push("  static Widget byKey(String key, {double? size, Color? color}) =>");
       lines.push("    SvgPicture.asset(");
-      lines.push(`      'assets/$dir/${category.name}_\$key.svg',`);
+      lines.push(`      'assets/${dir}/${category.name}_\$key.svg',`);
       lines.push(`      package: '${packageName}',`);
       lines.push("      width: size,");
       lines.push("      height: size,");
@@ -309,10 +309,23 @@ export async function executeDartAssetGeneration(
   const generatedFiles: string[] = [];
 
   // Generate category classes (non-themed)
-  const themedCategories = new Set(manifest.themeVariants.map((v) => v.category));
-  const regularCategories = manifest.categories.filter(
-    (cat) => !themedCategories.has(cat.name),
-  );
+  // Collect all entry paths that belong to theme variants so we can exclude them
+  const themedEntryPaths = new Set<string>();
+  for (const variant of manifest.themeVariants) {
+    for (const [, entries] of variant.variants) {
+      for (const entry of entries) {
+        themedEntryPaths.add(entry.relativePath);
+      }
+    }
+  }
+
+  // Filter out themed entries from regular categories
+  const regularCategories = manifest.categories
+    .map((cat) => ({
+      ...cat,
+      entries: cat.entries.filter((e) => !themedEntryPaths.has(e.relativePath)),
+    }))
+    .filter((cat) => cat.entries.length > 0);
 
   const regularClasses: string[] = [];
   for (const category of regularCategories) {

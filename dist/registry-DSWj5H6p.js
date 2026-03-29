@@ -1557,7 +1557,7 @@ function generateCategoryClass(category, prefix, packageName) {
 			lines.push(`  /// Dynamic accessor — loads by key from the ${category.name} directory.`);
 			lines.push("  static Widget byKey(String key, {double? size, Color? color}) =>");
 			lines.push("    SvgPicture.asset(");
-			lines.push(`      'assets/$dir/${category.name}_\$key.svg',`);
+			lines.push(`      'assets/${dir}/${category.name}_\$key.svg',`);
 			lines.push(`      package: '${packageName}',`);
 			lines.push("      width: size,");
 			lines.push("      height: size,");
@@ -1692,8 +1692,12 @@ async function executeDartAssetGeneration(_pkg, root, context) {
 		}
 	}
 	const generatedFiles = [];
-	const themedCategories = new Set(manifest.themeVariants.map((v) => v.category));
-	const regularCategories = manifest.categories.filter((cat) => !themedCategories.has(cat.name));
+	const themedEntryPaths = /* @__PURE__ */ new Set();
+	for (const variant of manifest.themeVariants) for (const [, entries] of variant.variants) for (const entry of entries) themedEntryPaths.add(entry.relativePath);
+	const regularCategories = manifest.categories.map((cat) => ({
+		...cat,
+		entries: cat.entries.filter((e) => !themedEntryPaths.has(e.relativePath))
+	})).filter((cat) => cat.entries.length > 0);
 	const regularClasses = [];
 	for (const category of regularCategories) {
 		const classCode = generateCategoryClass(category, prefix, packageName);
@@ -3739,4 +3743,4 @@ var PluginRegistry = class {
 //#endregion
 export { loadPlugins as n, STANDARD_ACTIONS as r, PluginRegistry as t };
 
-//# sourceMappingURL=registry-CADsZMlI.js.map
+//# sourceMappingURL=registry-DSWj5H6p.js.map
