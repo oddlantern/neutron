@@ -141,10 +141,8 @@ async function executeDesignTokenGeneration(
   const source = rawSource.replace(/-/g, "_").replace(/@/g, "").replace(/\//g, "_");
   const packageName = workspace ? `${workspace}_${source}` : source;
 
-  // Scaffold if first run
-  if (!existsSync(join(outRoot, "pubspec.yaml"))) {
-    scaffoldDartPackage(outRoot, packageName, tokens);
-  }
+  // Always regenerate pubspec — dependencies may change (e.g., google_fonts toggle)
+  scaffoldDartPackage(outRoot, packageName, tokens);
 
   const themeDir = join(outRoot, "lib", "core", "theme");
   const generatedDir = join(themeDir, "generated");
