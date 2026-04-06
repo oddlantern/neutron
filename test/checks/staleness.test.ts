@@ -41,12 +41,13 @@ describe("checkStaleness", () => {
   test("warns when generated dir is missing", async () => {
     const bridge: Bridge = {
       source: "packages/design",
-      consumers: ["apps/flutter"],
+      consumers: [{ path: "apps/flutter" }],
       artifact: "tokens.json",
       run: undefined,
       watch: undefined,
       entryFile: undefined,
       specPath: undefined,
+      exclude: undefined,
     };
     const graph = makeGraph([bridge], [
       makePkg("design", "packages/design", "typescript"),
@@ -64,12 +65,13 @@ describe("checkStaleness", () => {
 
     const bridge: Bridge = {
       source: "packages/design",
-      consumers: ["apps/flutter"],
+      consumers: [{ path: "apps/flutter" }],
       artifact: "tokens.json",
       run: undefined,
       watch: undefined,
       entryFile: undefined,
       specPath: undefined,
+      exclude: undefined,
     };
     const graph = makeGraph([bridge], [
       makePkg("design", "packages/design", "typescript"),
@@ -87,12 +89,13 @@ describe("checkStaleness", () => {
 
     const bridge: Bridge = {
       source: "packages/design",
-      consumers: ["apps/flutter", "apps/web"],
+      consumers: [{ path: "apps/flutter" }, { path: "apps/web" }],
       artifact: "tokens.json",
       run: undefined,
       watch: undefined,
       entryFile: undefined,
       specPath: undefined,
+      exclude: undefined,
     };
     const graph = makeGraph([bridge], [
       makePkg("design", "packages/design", "typescript"),

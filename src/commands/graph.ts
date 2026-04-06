@@ -49,7 +49,7 @@ function buildGraphData(
   for (const bridge of bridges) {
     for (const consumer of bridge.consumers) {
       // Add generated nodes for each ecosystem consumer
-      const consumerPkg = packages.get(consumer);
+      const consumerPkg = packages.get(consumer.path);
       if (consumerPkg) {
         const generatedId = `${bridge.source}/generated/${consumerPkg.ecosystem}`;
         if (!nodeIds.has(generatedId)) {
@@ -69,7 +69,7 @@ function buildGraphData(
           });
         }
         // Generated → consumer
-        edges.push({ source: generatedId, target: consumer, type: "generated" });
+        edges.push({ source: generatedId, target: consumer.path, type: "generated" });
       }
     }
   }

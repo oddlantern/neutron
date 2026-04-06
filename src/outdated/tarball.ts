@@ -13,6 +13,12 @@ const MAX_DECOMPRESSED_BYTES = 200 * 1024 * 1024;
 const ALLOWED_ORIGINS: readonly string[] = [
   "https://registry.npmjs.org",
   "https://pub.dev",
+  "https://files.pythonhosted.org",
+  "https://crates.io",
+  "https://static.crates.io",
+  "https://proxy.golang.org",
+  "https://api.github.com",
+  "https://repo.packagist.org",
 ];
 
 /** Tar header field layout (POSIX ustar) */

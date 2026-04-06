@@ -65,7 +65,7 @@ describe("affected — graph walking", () => {
   ]);
 
   const bridges: readonly Bridge[] = [
-    { source: "packages/api", artifact: "openapi.json", consumers: ["apps/flutter"], run: undefined, watch: undefined, entryFile: undefined, specPath: undefined },
+    { source: "packages/api", artifact: "openapi.json", consumers: [{ path: "apps/flutter" }], run: undefined, watch: undefined, entryFile: undefined, specPath: undefined, exclude: undefined },
   ];
 
   test("follows dependency edges (shared → server)", () => {

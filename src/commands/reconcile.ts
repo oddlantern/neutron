@@ -165,10 +165,12 @@ export async function runReconciliation(
     }
   }
 
-  // Handle existing bridges
+  // Handle existing bridges — normalize consumers to string[] for BridgeWithWatch
   const existingBridges = (existing.bridges ?? []).map((b) => ({
     ...b,
-    consumers: b.consumers ?? (b.target ? [b.target] : []),
+    consumers: (b.consumers ?? (b.target ? [b.target] : [])).map((c) =>
+      typeof c === "string" ? c : c.path,
+    ),
   }));
   const updatedBridges: BridgeWithWatch[] = [];
 
@@ -335,7 +337,7 @@ export async function runReconciliation(
   let hooksInstalled = false;
   if (installHooks) {
     const { runInstall } = await import("@/commands/install");
-    const installResult = await runInstall(root, existing);
+    const installResult = await runInstall(root, undefined, existing);
     if (installResult !== 0) {
       return installResult;
     }

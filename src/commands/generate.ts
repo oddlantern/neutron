@@ -53,7 +53,7 @@ export async function runGenerate(
     return 0;
   }
 
-  const resolved = await resolveBridges(bridges, graph.packages, registry, root);
+  const resolved = await resolveBridges(graph.bridges, graph.packages, registry, root);
   if (resolved.length === 0) {
     if (!quiet) {
       console.log(`${DIM}No resolvable bridges found.${RESET}`);

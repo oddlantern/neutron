@@ -112,7 +112,7 @@ describe('scanRepo', () => {
     expect(packages).toHaveLength(0);
   });
 
-  test('marks unsupported ecosystems (e.g. rust) with supported=false', async () => {
+  test('marks rust ecosystem as supported', async () => {
     mkdir('apps/rust-service');
     touch('apps/rust-service/Cargo.toml', '[package]\nname = "rust-service"\n');
 
@@ -120,7 +120,7 @@ describe('scanRepo', () => {
     const rustPkg = packages.find((p) => p.path === 'apps/rust-service');
     expect(rustPkg).toBeDefined();
     expect(rustPkg?.ecosystem).toBe('rust');
-    expect(rustPkg?.supported).toBe(false);
+    expect(rustPkg?.supported).toBe(true);
   });
 
   test('respects .gitignore directory entries', async () => {

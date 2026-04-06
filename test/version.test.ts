@@ -35,6 +35,6 @@ describe("MIDO_ROOT", () => {
   test("package.json at MIDO_ROOT has the mido package name", () => {
     const pkgPath = join(MIDO_ROOT, "package.json");
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.name).toBe("@oddlantern/mido");
+    expect(pkg.name).toBe("@oddlantern/mido-cli");
   });
 });

@@ -6,14 +6,16 @@
       "name": "@oddlantern/mido",
       "dependencies": {
         "@clack/prompts": "^1.1.0",
+        "chokidar": "^4.0.3",
+        "oxfmt": "^0.42.0",
+        "oxlint": "^1.57.0",
+        "smol-toml": "^1.6.1",
         "yaml": "^2.7.1",
         "zod": "^3.25.67",
       },
       "devDependencies": {
         "@elysiajs/openapi": "^1.4.14",
         "elysia": "^1.4.28",
-        "oxfmt": "^0.42.0",
-        "oxlint": "^1.57.0",
         "tsdown": "^0.14.1",
         "tsx": "^4.21.0",
         "typescript": "^5.8.3",
@@ -300,6 +302,8 @@
     "semver": ["semver@7.7.4", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA=="],
 
     "sisteransi": ["sisteransi@1.0.5", "", {}, "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg=="],
+
+    "smol-toml": ["smol-toml@1.6.1", "", {}, "sha512-dWUG8F5sIIARXih1DTaQAX4SsiTXhInKf1buxdY9DIg4ZYPZK5nGM1VRIYmEbDbsHt7USo99xSLFu5Q1IqTmsg=="],
 
     "strtok3": ["strtok3@10.3.5", "", { "dependencies": { "@tokenizer/token": "^0.3.0" } }, "sha512-ki4hZQfh5rX0QDLLkOCj+h+CVNkqmp/CMf8v8kZpkNVK6jGQooMytqzLZYUVYIZcFZ6yDB70EfD8POcFXiF5oA=="],
 

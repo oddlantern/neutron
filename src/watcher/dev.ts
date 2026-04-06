@@ -150,7 +150,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       const debouncer = createDebouncer(() => {
         if (verbose) {
           logDebug(
-            `debouncer fired for bridge: ${r.bridge.source} \u2192 [${r.bridge.consumers.join(", ")}]`,
+            `debouncer fired for bridge: ${r.bridge.source} \u2192 [${r.bridge.consumers.map((c) => c.path).join(", ")}]`,
           );
         }
         pending.add(r);
@@ -262,7 +262,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
           matched = true;
           if (verbose) {
             logDebug(
-              `  matched bridge: ${r.bridge.source} \u2192 [${r.bridge.consumers.join(", ")}] (triggering debouncer)`,
+              `  matched bridge: ${r.bridge.source} \u2192 [${r.bridge.consumers.map((c) => c.path).join(", ")}] (triggering debouncer)`,
             );
           }
           const debouncer = bridgeDebouncers.get(r);
@@ -325,7 +325,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       console.log(`\n  ${DIM}Shutting down...${RESET}`);
       if (session) {
         teardownSession(session);
-        session = null;
+        session = undefined;
       }
       resolve(0);
       // Exception to the bin.ts-only process.exit rule:

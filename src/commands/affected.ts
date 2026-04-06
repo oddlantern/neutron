@@ -89,13 +89,13 @@ export function buildReverseDeps(
  * Build a reverse bridge map: for each source, which packages consume its artifacts.
  */
 export function buildReverseBridges(
-  bridges: readonly { readonly source: string; readonly consumers: readonly string[] }[],
+  bridges: readonly { readonly source: string; readonly consumers: readonly { readonly path: string }[] }[],
 ): ReadonlyMap<string, readonly string[]> {
   const reverse = new Map<string, string[]>();
 
   for (const bridge of bridges) {
     const existing = reverse.get(bridge.source);
-    const consumers = [...bridge.consumers];
+    const consumers = bridge.consumers.map((c) => c.path);
     if (existing) {
       for (const c of consumers) {
         if (!existing.includes(c)) {

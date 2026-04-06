@@ -25,6 +25,7 @@ import {
 import { hasDep, hasResolvedFiles, isRecord, runCommand } from "@/plugins/builtin/shared/exec";
 import { executeDartAssetGeneration } from "@/plugins/builtin/ecosystem/dart/asset-codegen";
 import { executeOpenAPIDartGeneration } from "@/plugins/builtin/ecosystem/dart/openapi-codegen";
+import { executeSchemaGeneration as executeDartSchemaGeneration } from "@/plugins/builtin/ecosystem/dart/schema-codegen";
 
 /** Dart-specific dependency fields */
 const DART_DEP_FIELDS: readonly string[] = [
@@ -56,6 +57,7 @@ const ACTION_GENERATE_API = "generate-api";
 const ACTION_GENERATE_OPENAPI_DART = "generate-openapi-dart";
 const ACTION_GENERATE_DESIGN_TOKENS = "generate-design-tokens";
 const ACTION_GENERATE_ASSETS = "generate-assets";
+const ACTION_GENERATE_SCHEMA_DART = "generate-schema-dart";
 
 async function readPubspec(pkg: WorkspacePackage, root: string): Promise<Record<string, unknown>> {
   const manifestPath = join(root, pkg.path, "pubspec.yaml");
@@ -265,7 +267,7 @@ export const dartPlugin: EcosystemPlugin = {
           args.push("--fatal-infos");
         }
         if (hasResolvedFiles(context)) {
-          args.push(...context.resolvedFiles);
+          args.push(...context.resolvedFiles!);
         } else {
           args.push(".");
         }
@@ -274,7 +276,7 @@ export const dartPlugin: EcosystemPlugin = {
 
       case STANDARD_ACTIONS.LINT_FIX:
         if (hasResolvedFiles(context)) {
-          return runCommand("dart", ["fix", "--apply", ...context.resolvedFiles], cwd);
+          return runCommand("dart", ["fix", "--apply", ...context.resolvedFiles!], cwd);
         }
         return runCommand("dart", ["fix", "--apply", "."], cwd);
 
@@ -285,7 +287,7 @@ export const dartPlugin: EcosystemPlugin = {
           args.push("--line-length", String(context.formatDart.lineLength));
         }
         if (hasResolvedFiles(context)) {
-          args.push(...context.resolvedFiles);
+          args.push(...context.resolvedFiles!);
         } else {
           const libDir = join(cwd, "lib");
           const binDir = join(cwd, "bin");
@@ -305,7 +307,7 @@ export const dartPlugin: EcosystemPlugin = {
           args.push("--line-length", String(context.formatDart.lineLength));
         }
         if (hasResolvedFiles(context)) {
-          args.push(...context.resolvedFiles);
+          args.push(...context.resolvedFiles!);
         } else {
           const libDir = join(cwd, "lib");
           const binDir = join(cwd, "bin");
@@ -362,6 +364,10 @@ export const dartPlugin: EcosystemPlugin = {
         return executeDartAssetGeneration(pkg, root, context);
       }
 
+      case ACTION_GENERATE_SCHEMA_DART: {
+        return executeDartSchemaGeneration(pkg, root, context);
+      }
+
       default:
         return {
           success: false,
@@ -399,6 +405,13 @@ export const dartPlugin: EcosystemPlugin = {
       return {
         action: ACTION_GENERATE_ASSETS,
         description: "Flutter typed asset wrappers + pubspec declarations",
+      };
+    }
+
+    if (domain === "schema") {
+      return {
+        action: ACTION_GENERATE_SCHEMA_DART,
+        description: "Dart classes from JSON Schema",
       };
     }
 

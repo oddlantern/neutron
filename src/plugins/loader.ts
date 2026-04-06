@@ -1,8 +1,13 @@
 import { typescriptPlugin } from "@/plugins/builtin/ecosystem/typescript/plugin";
 import { dartPlugin } from "@/plugins/builtin/ecosystem/dart/plugin";
+import { pythonPlugin } from "@/plugins/builtin/ecosystem/python/plugin";
+import { rustPlugin } from "@/plugins/builtin/ecosystem/rust/plugin";
+import { goPlugin } from "@/plugins/builtin/ecosystem/go/plugin";
+import { phpPlugin } from "@/plugins/builtin/ecosystem/php/plugin";
 import { assetsPlugin } from "@/plugins/builtin/domain/assets/plugin";
 import { designPlugin } from "@/plugins/builtin/domain/design/plugin";
 import { openapiPlugin } from "@/plugins/builtin/domain/openapi/plugin";
+import { schemaPlugin } from "@/plugins/builtin/domain/schema/plugin";
 import type { DomainPlugin, EcosystemPlugin } from "@/plugins/types";
 
 export interface LoadedPlugins {
@@ -18,7 +23,7 @@ export interface LoadedPlugins {
  */
 export function loadPlugins(): LoadedPlugins {
   return {
-    ecosystem: [typescriptPlugin, dartPlugin],
-    domain: [designPlugin, openapiPlugin, assetsPlugin],
+    ecosystem: [typescriptPlugin, dartPlugin, pythonPlugin, rustPlugin, goPlugin, phpPlugin],
+    domain: [designPlugin, openapiPlugin, assetsPlugin, schemaPlugin],
   };
 }

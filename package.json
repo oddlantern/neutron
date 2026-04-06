@@ -1,6 +1,6 @@
 {
-  "name": "@oddlantern/mido",
-  "version": "1.5.10",
+  "name": "@oddlantern/mido-cli",
+  "version": "1.6.0",
   "description": "Cross-ecosystem monorepo workspace tool",
   "type": "module",
   "bin": {
@@ -33,11 +33,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oddlantern/mido.git"
+    "url": "git+https://github.com/oddlantern/mido-cli.git"
   },
-  "homepage": "https://github.com/oddlantern/mido#readme",
+  "homepage": "https://github.com/oddlantern/mido-cli#readme",
   "bugs": {
-    "url": "https://github.com/oddlantern/mido/issues"
+    "url": "https://github.com/oddlantern/mido-cli/issues"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -47,6 +47,7 @@
     "chokidar": "^4.0.3",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
+    "smol-toml": "^1.6.1",
     "yaml": "^2.7.1",
     "zod": "^3.25.67"
   },

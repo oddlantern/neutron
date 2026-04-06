@@ -15,6 +15,8 @@ import type {
 import { validateTokens } from "@/plugins/builtin/domain/design/token-schema";
 import type { TokenValidationError, TokenValidationWarning } from "@/plugins/builtin/domain/design/token-schema";
 import type { ValidatedTokens } from "@/plugins/builtin/domain/design/types";
+import { detectDesignFormat } from "@/plugins/builtin/domain/design/formats";
+import { wireGeneratedDependency } from "@/plugins/builtin/shared/wire-dep";
 
 const DOMAIN_NAME = "design-tokens";
 
@@ -234,6 +236,19 @@ export const designPlugin: DomainPlugin = {
     const targetPaths = new Set(targets.map((t) => t.path));
     const relevantHandlers = handlers.filter((h) => targetPaths.has(h.pkg.path));
 
+    // Resolve format per consumer from bridge config (explicit > auto-detect)
+    const bridge = context.graph.bridges.find(
+      (b) => b.artifact === artifact && b.source === _source.path,
+    );
+    const consumerFormats = new Map<string, string>();
+    if (bridge) {
+      for (const consumer of bridge.consumers) {
+        const consumerPkg = context.graph.packages.get(consumer.path);
+        const format = consumer.format ?? (consumerPkg ? detectDesignFormat(consumerPkg) : "css");
+        consumerFormats.set(consumer.path, format);
+      }
+    }
+
     // Deduplicate by ecosystem
     const seenEcosystems = new Set<string>();
     for (const handler of relevantHandlers) {
@@ -243,10 +258,14 @@ export const designPlugin: DomainPlugin = {
       seenEcosystems.add(handler.plugin.name);
       const outputDir = join(root, _source.path, "generated", handler.plugin.name);
 
+      // Resolve format for this handler's package
+      const resolvedFormat = consumerFormats.get(handler.pkg.path)
+        ?? detectDesignFormat(handler.pkg);
+
       steps.push({
         name: `generate-${handler.plugin.name}`,
         plugin: handler.plugin.name,
-        description: `${handler.capability.description}...`,
+        description: `${handler.capability.description} (${resolvedFormat})...`,
         execute: async (): Promise<ExecuteResult> => {
           if (!shared.data) {
             return {
@@ -264,14 +283,26 @@ export const designPlugin: DomainPlugin = {
             artifactPath: artifact,
             domainData: shared.data,
             outputDir,
+            bridgeFormat: resolvedFormat,
           };
 
-          return handler.plugin.execute(
+          const result = await handler.plugin.execute(
             handler.capability.action,
             handler.pkg,
             root,
             ctxWithTokens,
           );
+
+          // Auto-wire the generated package into consumer manifests
+          if (result.success && !context.dryRun) {
+            for (const target of targets) {
+              if (target.ecosystem === handler.plugin.name) {
+                await wireGeneratedDependency(target.path, outputDir, target.ecosystem, root);
+              }
+            }
+          }
+
+          return result;
         },
       });
     }

@@ -14,6 +14,9 @@ import { STANDARD_ACTIONS } from "@/plugins/types";
 import { getScripts, hasDep, hasResolvedFiles, readPackageJson, runCommand } from "@/plugins/builtin/shared/exec";
 import { executeTypescriptAssetGeneration } from "@/plugins/builtin/ecosystem/typescript/asset-codegen";
 import { executeDesignTokenGeneration, executeOpenAPICodegen } from "@/plugins/builtin/ecosystem/typescript/openapi-codegen";
+import { executeTailwindGeneration } from "@/plugins/builtin/ecosystem/typescript/tailwind-codegen";
+import { executeBootstrapGeneration } from "@/plugins/builtin/ecosystem/typescript/bootstrap-codegen";
+import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/typescript/schema-codegen";
 import { detectOxlintPlugins, writeOxfmtConfig, writeOxlintConfig } from "@/plugins/builtin/ecosystem/typescript/lint-config";
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
@@ -28,6 +31,9 @@ const ACTION_GENERATE_DESIGN_TOKENS_CSS = "generate-design-tokens-css";
 
 /** Action name for asset path/inline generation */
 const ACTION_GENERATE_ASSETS_TS = "generate-assets-ts";
+
+/** Action name for JSON Schema → TypeScript interfaces */
+const ACTION_GENERATE_SCHEMA_TS = "generate-schema-ts";
 
 /**
  * Resolve a binary for a TS tool (linter, formatter).
@@ -200,7 +206,7 @@ export const typescriptPlugin: EcosystemPlugin = {
           args.push("--fix");
         }
         if (hasResolvedFiles(context)) {
-          args.push(...context.resolvedFiles);
+          args.push(...context.resolvedFiles!);
         } else {
           const { dir } = findSourceDir(pkg, root);
           args.push(dir);
@@ -210,7 +216,7 @@ export const typescriptPlugin: EcosystemPlugin = {
       const eslint = resolveBin("eslint", root);
       if (eslint) {
         if (hasResolvedFiles(context)) {
-          const args = fix ? ["--fix", ...context.resolvedFiles] : [...context.resolvedFiles];
+          const args = fix ? ["--fix", ...context.resolvedFiles!] : [...context.resolvedFiles!];
           return runCommand(eslint, args, cwd);
         }
         const { dir } = findSourceDir(pkg, root);
@@ -253,9 +259,17 @@ export const typescriptPlugin: EcosystemPlugin = {
       return runCommand(runner, ["tsc", "--noEmit"], cwd);
     }
 
-    // Design token CSS/TS generation
+    // Design token generation — dispatch by format
     if (action === ACTION_GENERATE_DESIGN_TOKENS_CSS) {
-      return executeDesignTokenGeneration(pkg, root, context);
+      const format = context.bridgeFormat ?? "css";
+      switch (format) {
+        case "tailwind":
+          return executeTailwindGeneration(pkg, root, context);
+        case "bootstrap":
+          return executeBootstrapGeneration(pkg, root, context);
+        default:
+          return executeDesignTokenGeneration(pkg, root, context);
+      }
     }
 
     // Direct openapi-typescript invocation
@@ -266,6 +280,11 @@ export const typescriptPlugin: EcosystemPlugin = {
     // Asset path/inline generation
     if (action === ACTION_GENERATE_ASSETS_TS) {
       return executeTypescriptAssetGeneration(pkg, root, context);
+    }
+
+    // JSON Schema → TypeScript interfaces
+    if (action === ACTION_GENERATE_SCHEMA_TS) {
+      return executeSchemaGeneration(pkg, root, context);
     }
 
     // Fallback: delegate to package manager script
@@ -300,6 +319,13 @@ export const typescriptPlugin: EcosystemPlugin = {
       return {
         action: ACTION_GENERATE_ASSETS_TS,
         description: "TypeScript asset paths + inlined SVGs",
+      };
+    }
+
+    if (domain === "schema") {
+      return {
+        action: ACTION_GENERATE_SCHEMA_TS,
+        description: "TypeScript interfaces from JSON Schema",
       };
     }
 

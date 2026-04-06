@@ -43,7 +43,7 @@ TypeScript monorepos have syncpack. Dart monorepos have melos. Neither sees the 
 ## Install
 
 ```bash
-bun add -D @oddlantern/mido   # or npm/pnpm/yarn
+bun add -D @oddlantern/mido-cli   # or npm/pnpm/yarn
 ```
 
 ## Getting started
@@ -129,7 +129,7 @@ hooks:
 | Command | Description |
 |---------|-------------|
 | `mido init` | Scan repo, generate mido.yml, install hooks |
-| `mido install` | Write git hooks to `.git/hooks/` |
+| `mido install [--dry-run]` | Write git hooks to `.git/hooks/` |
 | `mido add` | Scaffold a new package in the workspace |
 
 ### Development
@@ -137,7 +137,7 @@ hooks:
 | Command | Description |
 |---------|-------------|
 | `mido dev [--verbose]` | Watch bridges and regenerate on changes |
-| `mido generate [--force]` | Run all bridge pipelines (uses cache, `--force` to skip) |
+| `mido generate [--force] [--quiet] [--verbose] [--dry-run]` | Run all bridge pipelines (uses cache, `--force` to skip) |
 | `mido lint [--fix]` | Run linters across all packages |
 | `mido fmt [--check]` | Format all packages |
 | `mido test` | Run tests across all packages |
@@ -147,18 +147,20 @@ hooks:
 
 | Command | Description |
 |---------|-------------|
-| `mido check [--fix] [--quiet]` | Version consistency, bridge validation, env parity, staleness |
+| `mido check [--fix] [--quiet] [--hook]` | Version consistency, bridge validation, env parity, staleness |
 | `mido doctor` | Diagnostic: config, hooks, tools, generated output |
-| `mido outdated [--json]` | Check for newer dependency versions across ecosystems |
-| `mido why <dep>` | Show which packages use a dependency |
+| `mido outdated [--json] [--deep] [--verify] [--ci]` | Check for newer dependency versions across ecosystems |
+| `mido upgrade [--all] [--verify] [--dry-run]` | Interactive dependency upgrade with lock and manifest sync |
+| `mido why <dep> [--json]` | Show which packages use a dependency |
+| `mido rename <name> [--include-platform-ids] [--dry-run]` | Rename workspace across all manifests |
 
 ### CI / automation
 
 | Command | Description |
 |---------|-------------|
-| `mido ci` | Full pipeline: generate, build, lint, test, check |
+| `mido ci [--verbose]` | Full pipeline: generate, build, lint, test, check |
 | `mido affected [--base ref] [--json]` | Packages affected by changes (follows dependency + bridge edges) |
-| `mido graph [--dot] [--ascii]` | Interactive D3.js dependency graph |
+| `mido graph [--dot] [--ascii] [--no-open]` | Interactive D3.js dependency graph |
 
 ### Git hooks
 
@@ -167,19 +169,13 @@ hooks:
 | `mido pre-commit` | Format check + lint + workspace check |
 | `mido commit-msg <file>` | Validate conventional commit message |
 
-### Other
-
-| Command | Description |
-|---------|-------------|
-| `mido help` | Show all commands and flags |
-| `mido --version` | Show version |
-
 ### Common flags
 
 - `--quiet` — only show failures (lint, fmt, test, build, check)
 - `--package <path>` — target a specific package (lint, fmt, test, build)
 - `--ecosystem <name>` — target a specific ecosystem (lint, fmt, test)
 - `--json` — machine-readable output (affected, outdated, why)
+- `--dry-run` — preview changes without writing (generate, install, rename, upgrade)
 
 ## Bridges
 
@@ -191,12 +187,15 @@ bridges:
     consumers: [apps/web, apps/flutter]  # depend on generated output
     artifact: openapi.json         # the bridge file
     watch: [apps/server/src/routes/**]   # trigger regeneration
+    entryFile: src/index.ts        # server entry point (optional, for framework detection)
+    specPath: /custom/openapi.json # custom spec endpoint (optional)
+    exclude: [internal/]           # path prefixes to exclude from output (optional)
 ```
 
 ### How generation works
 
 1. Source changes trigger the bridge pipeline
-2. A **domain plugin** (openapi, design) validates/exports the artifact
+2. A **domain plugin** (openapi, design, assets) validates/exports the artifact
 3. **Ecosystem plugins** (typescript, dart) generate code for each consumer
 4. Generated output lands in `<source>/generated/<ecosystem>/`
 5. Consumers import from the generated package via workspace dependencies
@@ -206,6 +205,8 @@ apps/server/generated/typescript/      # openapi-typescript output
 apps/server/generated/dart/            # swagger_parser output
 packages/design/generated/typescript/  # CSS + TS constants
 packages/design/generated/dart/        # Flutter theme
+packages/assets/generated/typescript/  # typed asset paths + inlined SVGs
+packages/assets/generated/dart/        # typed asset wrappers
 ```
 
 The `generated/` directories are gitignored — `mido generate` runs automatically via the `prepare` script on `bun install`.
@@ -216,13 +217,71 @@ The `generated/` directories are gitignored — `mido generate` runs automatical
 
 ### Domain plugins
 
-- **openapi** — detects OpenAPI/Swagger specs, boots server frameworks (Elysia, Hono, Express, Fastify, Koa, NestJS) to export specs, delegates to ecosystem plugins for client generation
-- **design** — validates `tokens.json` schema, delegates to ecosystem plugins for theme/constant generation
+- **openapi** — detects OpenAPI/Swagger specs, boots server frameworks to export specs, delegates to ecosystem plugins for client generation
+- **design** — validates `tokens.json` schema (colors, spacing, radius, elevation, typography, extensions), delegates to ecosystem plugins for theme/constant generation
+- **assets** — scans asset directories (svg, icons, images), generates typed asset paths with SVG inlining support
+
+#### OpenAPI framework adapters
+
+mido auto-detects your server framework from dependencies, spawns it to export the spec, and shuts it down. Supported frameworks:
+
+| Framework | Spec endpoint |
+|-----------|--------------|
+| Elysia | `/openapi/json` |
+| Hono | `/openapi` |
+| Express | `/api-docs` |
+| Fastify | `/documentation/json` |
+| Koa | `/swagger.json` |
+| NestJS | `/api-docs-json` |
+
+Override with `entryFile` and `specPath` in the bridge config for edge cases.
+
+#### Design tokens
+
+`tokens.json` supports these token categories: color, spacing, radius, elevation, typography, and extensions.
+
+Typography supports font providers:
+
+| Provider | Output |
+|----------|--------|
+| `"asset"` (default) | `TextStyle(fontFamily: ...)` |
+| `"google_fonts"` | `GoogleFonts.method(...)` |
+| `"none"` | No font family |
+
+Extensions support typed fields: themed colors (`{ light, dark }` hex), static colors (`#hex`), numbers, themed numbers (`{ light, dark }` numbers), and strings.
 
 ### Ecosystem plugins
 
-- **typescript** — oxlint, oxfmt (bundled), openapi-typescript, CSS/TS design token codegen
-- **dart** — dart analyze, dart format, swagger_parser, Flutter theme codegen
+- **typescript** — oxlint, oxfmt (bundled), openapi-typescript, CSS/TS design token codegen, typed asset paths
+- **dart** — dart analyze, dart format, swagger_parser, Flutter theme codegen (M3 ColorScheme, ThemeExtensions), typed asset wrappers
+
+Oxlint plugins are auto-enabled based on your dependencies: always `typescript`, `unicorn`, `oxc`, `import`; conditionally `react`, `jsx-a11y`, `react-perf` (if React/Preact), `jest`, `vitest`, `nextjs`.
+
+## Dependency management
+
+### Outdated analysis
+
+`mido outdated` provides three-level progressive dependency analysis:
+
+**Level 1 — Registry scan** (always runs): checks npm/pub registries for newer versions, detects deprecations, peer conflicts, and computes a risk score (0–100) per dependency.
+
+**Level 2 — Static API diff** (`--deep`): downloads tarballs, extracts `.d.ts` / `.dart` files, and diffs the export surface to detect breaking changes without installing anything.
+
+**Level 3 — Live validation** (`--verify`): installs updates in a temp directory, runs typecheck and tests per ecosystem to confirm compatibility.
+
+In interactive mode, mido prompts to escalate levels after each pass. In CI, use `--ci` for Level 1 only with exit code 1 if outdated.
+
+### Upgrade
+
+`mido upgrade` provides interactive dependency upgrades with automatic lock file and manifest sync. Use `--all` to upgrade everything, `--verify` to run Level 3 validation before applying, and `--dry-run` to preview changes.
+
+### Version policy
+
+`mido check --fix` generates a `mido.lock` file that records resolved version ranges, ensuring consistent versions across all packages in the workspace.
+
+## Workspace rename
+
+`mido rename <name>` cascades the workspace name across all manifests (package.json, pubspec.yaml). Use `--include-platform-ids` to also update iOS bundle IDs, Android application IDs, and Firebase config. Use `--dry-run` to preview changes.
 
 ## CI integration
 
@@ -250,6 +309,8 @@ For monorepos with conditional builds:
 - **env** — checks shared environment keys exist in all declared env files
 - **staleness** — warns when generated output is missing
 
+All checks support `--fix` for automatic remediation and `--quiet` for failure-only output.
+
 ## Lint and format
 
 mido picks the right tool per ecosystem. All config lives in `mido.yml`:
@@ -259,6 +320,8 @@ mido picks the right tool per ecosystem. All config lives in `mido.yml`:
 
 Oxlint plugins are auto-enabled based on your dependencies (react, vitest, jest, nextjs, etc.).
 
+Lint and format run packages within the same ecosystem in parallel. Build runs sequentially (build order may matter).
+
 ## Git hooks
 
 `mido install` writes hooks configured in the `hooks` section of `mido.yml`:
@@ -267,7 +330,7 @@ Oxlint plugins are auto-enabled based on your dependencies (react, vitest, jest,
 - **commit-msg** — conventional commit validation
 - **post-merge** / **post-checkout** — workspace drift detection
 
-Set a hook to `false` to disable it.
+Set a hook to `false` to disable it. mido detects conflicts with existing hooks and warns before overwriting.
 
 ## Adding ecosystem support
 

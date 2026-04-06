@@ -12,7 +12,7 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
   const issues: CheckIssue[] = [];
 
   for (const bridge of graph.bridges) {
-    const consumerLabel = bridge.consumers.join(", ");
+    const consumerLabel = bridge.consumers.map((c) => c.path).join(", ");
 
     // Check that source package exists in the graph
     if (!graph.packages.has(bridge.source)) {
@@ -26,11 +26,11 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
 
     // Check that each consumer package exists in the graph
     for (const consumer of bridge.consumers) {
-      if (!graph.packages.has(consumer)) {
+      if (!graph.packages.has(consumer.path)) {
         issues.push({
           severity: "error",
           check: "bridges",
-          message: `Bridge consumer package not found in workspace: ${consumer}`,
+          message: `Bridge consumer package not found in workspace: ${consumer.path}`,
           details: `Declared bridge: ${bridge.source} → [${consumerLabel}] via ${bridge.artifact}`,
         });
       }
@@ -51,12 +51,12 @@ export function checkBridges(graph: WorkspaceGraph): CheckResult {
     const sourcePkg = graph.packages.get(bridge.source);
     if (sourcePkg) {
       for (const consumer of bridge.consumers) {
-        const consumerPkg = graph.packages.get(consumer);
+        const consumerPkg = graph.packages.get(consumer.path);
         if (consumerPkg && sourcePkg.ecosystem === consumerPkg.ecosystem) {
           issues.push({
             severity: "warning",
             check: "bridges",
-            message: `Bridge connects packages in the same ecosystem (${sourcePkg.ecosystem}): ${bridge.source} → ${consumer}`,
+            message: `Bridge connects packages in the same ecosystem (${sourcePkg.ecosystem}): ${bridge.source} → ${consumer.path}`,
             details:
               "Bridges are intended for cross-ecosystem edges. Intra-ecosystem dependencies should be declared in manifest files.",
           });

@@ -7,6 +7,10 @@ import type { WorkspacePackage } from "@/graph/types";
 import {
   extractTypescriptExports,
   extractDartExports,
+  extractPythonExports,
+  extractRustExports,
+  extractGoExports,
+  extractPhpExports,
   diffExports,
   findUsedSymbols,
 } from "@/outdated/api-diff";
@@ -292,9 +296,13 @@ export async function runLevel2(
   root: string,
   packages: ReadonlyMap<string, WorkspacePackage>,
 ): Promise<readonly StaticAnalysisResult[]> {
-  // Pre-collect source files per ecosystem
-  const tsSourceFiles = await collectSourceFiles(root, packages, "typescript");
-  const dartSourceFiles = await collectSourceFiles(root, packages, "dart");
+  // Pre-collect source files per ecosystem (only for ecosystems that have outdated deps)
+  const ecosystems = new Set(outdated.map((d) => d.ecosystem));
+  const sourceFilesByEcosystem = new Map<string, readonly string[]>();
+
+  for (const eco of ecosystems) {
+    sourceFilesByEcosystem.set(eco, await collectSourceFiles(root, packages, eco));
+  }
 
   const results: StaticAnalysisResult[] = [];
 
@@ -302,14 +310,87 @@ export async function runLevel2(
     const batch = outdated.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.all(
       batch.map((dep) => {
-        if (dep.ecosystem === "dart") {
-          return analyzeDartDep(dep, root, dartSourceFiles);
+        const sourceFiles = sourceFilesByEcosystem.get(dep.ecosystem) ?? [];
+        switch (dep.ecosystem) {
+          case "dart":
+            return analyzeDartDep(dep, root, sourceFiles);
+          case "python":
+          case "rust":
+          case "go":
+          case "php":
+            // New ecosystems use generic tarball analysis with ecosystem-specific extractors
+            return analyzeGenericDep(dep, root, sourceFiles);
+          default:
+            return analyzeTypescriptDep(dep, root, sourceFiles);
         }
-        return analyzeTypescriptDep(dep, root, tsSourceFiles);
       }),
     );
     results.push(...batchResults);
   }
 
   return results;
+}
+
+/**
+ * Generic dependency analysis for ecosystems without installed-package analysis.
+ * Downloads the tarball, extracts exports, and reports the diff.
+ */
+async function analyzeGenericDep(
+  dep: OutdatedDep,
+  root: string,
+  sourceFiles: readonly string[],
+): Promise<StaticAnalysisResult> {
+  if (!dep.metadata.tarballUrl) {
+    return { dep, typeDiff: undefined, usedRemovedExports: [], usedChangedExports: [] };
+  }
+
+  try {
+    const buffer = await downloadTarball(dep.metadata.tarballUrl);
+    if (!buffer) {
+      return { dep, typeDiff: undefined, usedRemovedExports: [], usedChangedExports: [] };
+    }
+
+    const extMap: Record<string, string> = {
+      python: ".py",
+      rust: ".rs",
+      go: ".go",
+      php: ".php",
+    };
+    const ext = extMap[dep.ecosystem] ?? "";
+
+    const files = extractFromTarGz(buffer, (path) => path.endsWith(ext));
+
+    const extractorMap: Record<string, (content: string) => readonly string[]> = {
+      python: extractPythonExports,
+      rust: extractRustExports,
+      go: extractGoExports,
+      php: extractPhpExports,
+    };
+    const extractor = extractorMap[dep.ecosystem];
+    if (!extractor) {
+      return { dep, typeDiff: undefined, usedRemovedExports: [], usedChangedExports: [] };
+    }
+
+    const latestExports = new Set<string>();
+    for (const content of files.values()) {
+      for (const sym of extractor(content)) {
+        latestExports.add(sym);
+      }
+    }
+
+    // Without installed-package analysis, we can only show latest exports
+    // but can't compute a diff against current. Report as informational.
+    const typeDiff = { added: [...latestExports].sort(), removed: [] as string[], changed: [] as string[] };
+
+    const usedSymbols = await findUsedSymbols(root, dep.name, dep.ecosystem, sourceFiles);
+
+    return {
+      dep,
+      typeDiff,
+      usedRemovedExports: [],
+      usedChangedExports: usedSymbols.filter((s) => latestExports.has(s)),
+    };
+  } catch {
+    return { dep, typeDiff: undefined, usedRemovedExports: [], usedChangedExports: [] };
+  }
 }
