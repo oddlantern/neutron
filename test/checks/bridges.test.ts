@@ -38,12 +38,13 @@ function makeGraph(
     packages: new Map(packages.map((p) => [p.path, p])),
     bridges: bridges.map((b) => ({
       source: b.source,
-      consumers: b.consumers,
+      consumers: b.consumers.map((c) => ({ path: c })),
       artifact: b.artifact,
       run: undefined,
       watch: undefined,
       entryFile: undefined,
       specPath: undefined,
+      exclude: undefined,
     })),
   };
 }

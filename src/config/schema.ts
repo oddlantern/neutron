@@ -6,11 +6,23 @@ const ecosystemSchema = z.object({
   packages: z.array(z.string()).min(1),
 });
 
+/** Supported design token output formats (autocomplete via JSON schema). */
+export const DESIGN_FORMATS = ["css", "tailwind", "material3", "bootstrap", "tokens"] as const;
+
+/** A consumer is either a path string or an object with path + optional format. */
+const consumerSchema = z.union([
+  z.string(),
+  z.object({
+    path: z.string(),
+    format: z.enum(DESIGN_FORMATS).optional(),
+  }),
+]);
+
 const bridgeSchema = z
   .object({
     source: z.string(),
     artifact: z.string(),
-    consumers: z.array(z.string()).min(1).optional(),
+    consumers: z.array(consumerSchema).min(1).optional(),
     /** @deprecated since v0.4.0. Use `consumers` instead. Auto-migrated on load. */
     target: z.string().optional(),
     run: z.string().regex(/^[a-zA-Z0-9_:. /-]+$/, "bridge.run must not contain shell metacharacters").optional(),

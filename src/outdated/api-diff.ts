@@ -98,6 +98,108 @@ export function extractDartExports(dartContent: string): readonly string[] {
   return [...exports].sort();
 }
 
+// ── Python export extraction ────────────────────────────────────────
+
+const PY_ALL_RE = /^__all__\s*=\s*\[([^\]]*)\]/ms;
+const PY_CLASS_RE = /^class\s+(\w+)/gm;
+const PY_DEF_RE = /^(?:async\s+)?def\s+(\w+)/gm;
+
+/**
+ * Extract public symbol names from Python source content.
+ * Uses __all__ if defined, otherwise top-level class/def names.
+ */
+export function extractPythonExports(pyContent: string): readonly string[] {
+  const allMatch = PY_ALL_RE.exec(pyContent);
+  if (allMatch?.[1]) {
+    return allMatch[1]
+      .split(",")
+      .map((s) => s.trim().replace(/["']/g, ""))
+      .filter((s) => s.length > 0)
+      .sort();
+  }
+
+  const exports = new Set<string>();
+  for (const match of pyContent.matchAll(PY_CLASS_RE)) {
+    if (match[1] && !match[1].startsWith("_")) {
+      exports.add(match[1]);
+    }
+  }
+  for (const match of pyContent.matchAll(PY_DEF_RE)) {
+    if (match[1] && !match[1].startsWith("_")) {
+      exports.add(match[1]);
+    }
+  }
+  return [...exports].sort();
+}
+
+// ── Rust export extraction ──────────────────────────────────────────
+
+const RUST_PUB_RE = /^pub\s+(?:async\s+)?(?:unsafe\s+)?(?:extern\s+"[^"]*"\s+)?(?:fn|struct|enum|trait|type|mod|const|static)\s+(\w+)/gm;
+
+/**
+ * Extract public symbol names from Rust source content.
+ */
+export function extractRustExports(rsContent: string): readonly string[] {
+  const exports = new Set<string>();
+  RUST_PUB_RE.lastIndex = 0;
+  for (const match of rsContent.matchAll(RUST_PUB_RE)) {
+    if (match[1]) {
+      exports.add(match[1]);
+    }
+  }
+  return [...exports].sort();
+}
+
+// ── Go export extraction ────────────────────────────────────────────
+
+const GO_FUNC_RE = /^func\s+(?:\([^)]+\)\s+)?(\w+)/gm;
+const GO_TYPE_RE = /^type\s+(\w+)/gm;
+const GO_CONST_RE = /^(?:const|var)\s+(\w+)/gm;
+
+/**
+ * Extract exported symbol names from Go source content.
+ * Exported names start with an uppercase letter.
+ */
+export function extractGoExports(goContent: string): readonly string[] {
+  const exports = new Set<string>();
+  const patterns = [GO_FUNC_RE, GO_TYPE_RE, GO_CONST_RE];
+
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    for (const match of goContent.matchAll(pattern)) {
+      if (match[1] && /^[A-Z]/.test(match[1])) {
+        exports.add(match[1]);
+      }
+    }
+  }
+  return [...exports].sort();
+}
+
+// ── PHP export extraction ───────────────────────────────────────────
+
+const PHP_CLASS_RE = /^(?:final\s+)?(?:abstract\s+)?class\s+(\w+)/gm;
+const PHP_INTERFACE_RE = /^interface\s+(\w+)/gm;
+const PHP_TRAIT_RE = /^trait\s+(\w+)/gm;
+const PHP_FUNCTION_RE = /^function\s+(\w+)/gm;
+
+/**
+ * Extract public symbol names from PHP source content.
+ */
+export function extractPhpExports(phpContent: string): readonly string[] {
+  const exports = new Set<string>();
+  const patterns = [PHP_CLASS_RE, PHP_INTERFACE_RE, PHP_TRAIT_RE, PHP_FUNCTION_RE];
+
+  for (const pattern of patterns) {
+    pattern.lastIndex = 0;
+    for (const match of phpContent.matchAll(pattern)) {
+      if (match[1]) {
+        exports.add(match[1]);
+      }
+    }
+  }
+  return [...exports].sort();
+}
+
 // ── Diff computation ─────────────────────────────────────────────────
 
 /**
@@ -160,6 +262,33 @@ function buildDartImportRegex(depName: string): RegExp {
   );
 }
 
+function buildPythonImportRegex(depName: string): RegExp {
+  const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `from\\s+${escaped}(?:\\.\\w+)*\\s+import\\s+([^\\n]+)`,
+    "g",
+  );
+}
+
+function buildRustImportRegex(depName: string): RegExp {
+  const escaped = depName.replace(/-/g, "_").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `use\\s+${escaped}(?:::\\{([^}]+)\\}|::(\\w+))`,
+    "g",
+  );
+}
+
+function buildGoImportRegex(depName: string): RegExp {
+  const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const alias = depName.split("/").pop() ?? depName;
+  return new RegExp(`${alias}\\.([A-Z]\\w*)`, "g");
+}
+
+function buildPhpImportRegex(depName: string): RegExp {
+  const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\//g, "\\\\\\\\");
+  return new RegExp(`use\\s+${escaped}\\\\([^;]+)`, "g");
+}
+
 /**
  * Scan source files in a directory for named imports from a specific dependency.
  * Returns the set of imported symbol names.
@@ -172,8 +301,26 @@ export async function findUsedSymbols(
 ): Promise<readonly string[]> {
   const symbols = new Set<string>();
 
-  const importRegex =
-    ecosystem === "dart" ? buildDartImportRegex(depName) : buildTsImportRegex(depName);
+  let importRegex: RegExp;
+  switch (ecosystem) {
+    case "dart":
+      importRegex = buildDartImportRegex(depName);
+      break;
+    case "python":
+      importRegex = buildPythonImportRegex(depName);
+      break;
+    case "rust":
+      importRegex = buildRustImportRegex(depName);
+      break;
+    case "go":
+      importRegex = buildGoImportRegex(depName);
+      break;
+    case "php":
+      importRegex = buildPhpImportRegex(depName);
+      break;
+    default:
+      importRegex = buildTsImportRegex(depName);
+  }
 
   for (const filePath of sourceFiles) {
     try {

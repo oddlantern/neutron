@@ -4,6 +4,7 @@ import { groupByEcosystem } from "@/commands/group";
 import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
 import type { WorkspacePackage } from "@/graph/types";
+import { topologicalSort } from "@/graph/topo";
 import { BOLD, DIM, FAIL, PASS, RESET } from "@/output";
 import { loadPlugins } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
@@ -68,8 +69,14 @@ export async function runBuild(
       );
     }
 
-    // Build sequentially within an ecosystem (build order may matter)
-    for (const pkg of packages) {
+    // Topologically sort within ecosystem so dependencies build first
+    const pkgPaths = new Set(packages.map((p) => p.path));
+    const sorted = topologicalSort(graph.packages, pkgPaths);
+    const sortedPackages = sorted
+      .map((p) => graph.packages.get(p))
+      .filter((p): p is WorkspacePackage => p !== undefined);
+
+    for (const pkg of sortedPackages) {
       // Skip leaf nodes (apps) unless --all
       if (libraryPaths && !libraryPaths.has(pkg.path)) {
         skippedApps++;

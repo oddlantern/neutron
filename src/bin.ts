@@ -1,5 +1,9 @@
 import { packageJsonParser } from "@/parsers/package-json";
 import { pubspecParser } from "@/parsers/pubspec";
+import { pyprojectParser } from "@/parsers/pyproject";
+import { cargoParser } from "@/parsers/cargo";
+import { goModParser } from "@/parsers/go-mod";
+import { composerParser } from "@/parsers/composer";
 import type { ManifestParser } from "@/parsers/types";
 import { printBanner } from "@/banner";
 import { RED, RESET } from "@/output";
@@ -9,6 +13,10 @@ import { VERSION } from "@/version";
 const parsers = new Map<string, ManifestParser>([
   [packageJsonParser.manifestName, packageJsonParser],
   [pubspecParser.manifestName, pubspecParser],
+  [pyprojectParser.manifestName, pyprojectParser],
+  [cargoParser.manifestName, cargoParser],
+  [goModParser.manifestName, goModParser],
+  [composerParser.manifestName, composerParser],
 ]);
 
 /** Extract the value following a --flag from the args list */

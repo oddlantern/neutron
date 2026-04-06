@@ -98,7 +98,7 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
 
       for (const bridge of bridges) {
         for (const consumer of bridge.consumers) {
-          const pkg = graph.packages.get(consumer);
+          const pkg = graph.packages.get(consumer.path);
           if (!pkg) {
             continue;
           }

@@ -261,6 +261,8 @@ export interface ExecutionContext {
   readonly dryRun?: boolean | undefined;
   /** Force mode — re-run all steps regardless of cache/existence checks */
   readonly force?: boolean | undefined;
+  /** Design token output format (e.g., "tailwind", "material3", "css"). Set by design domain plugin. */
+  readonly bridgeFormat?: string | undefined;
 }
 
 export interface EcosystemHandler {

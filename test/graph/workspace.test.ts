@@ -72,7 +72,7 @@ describe('buildWorkspaceGraph', () => {
     const graph = await buildWorkspaceGraph(fixtureConfig, FIXTURE_CLEAN, parsers);
     expect(graph.bridges).toHaveLength(2);
     expect(graph.bridges[0]?.source).toBe('packages/api');
-    expect(graph.bridges[0]?.consumers).toContain('packages/api/clients/dart');
+    expect(graph.bridges[0]?.consumers.map((c) => c.path)).toContain('packages/api/clients/dart');
   });
 
   test('workspace name matches config', async () => {

@@ -29,10 +29,12 @@ const MANIFEST_MAP: ReadonlyMap<string, string> = new Map([
   ["pubspec.yaml", "dart"],
   ["Cargo.toml", "rust"],
   ["pyproject.toml", "python"],
+  ["go.mod", "go"],
+  ["composer.json", "php"],
 ]);
 
 /** Ecosystems that mido currently supports */
-const SUPPORTED_ECOSYSTEMS = new Set(["typescript", "dart"]);
+const SUPPORTED_ECOSYSTEMS = new Set(["typescript", "dart", "python", "rust", "go", "php"]);
 
 export interface DiscoveredPackage {
   readonly path: string;

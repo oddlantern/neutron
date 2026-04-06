@@ -3,7 +3,9 @@ import { join, relative, resolve } from "node:path";
 
 import type { MidoConfig } from "@/config/schema";
 import type { ManifestParser } from "@/parsers/types";
-import type { Bridge, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
+import type { Bridge, BridgeConsumer, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
+import { expandPackageGlobs } from "@/graph/glob";
+import { detectCycles } from "@/graph/topo";
 
 /** Registry of parsers keyed by manifest filename */
 export type ParserRegistry = ReadonlyMap<string, ManifestParser>;
@@ -36,15 +38,16 @@ export async function buildWorkspaceGraph(
       continue;
     }
 
-    for (const pkgGlob of ecosystemConfig.packages) {
-      // For now, treat each entry as a literal path (no glob expansion in PoC)
-      const pkgDir = resolve(root, pkgGlob);
+    const expandedPaths = expandPackageGlobs(ecosystemConfig.packages, root);
+
+    for (const pkgPath of expandedPaths) {
+      const pkgDir = resolve(root, pkgPath);
       const manifestPath = join(pkgDir, ecosystemConfig.manifest);
 
       if (!existsSync(manifestPath)) {
         errors.push(
           `Manifest not found: ${manifestPath} ` +
-            `(ecosystem: ${ecosystemName}, package: ${pkgGlob})`,
+            `(ecosystem: ${ecosystemName}, package: ${pkgPath})`,
         );
         continue;
       }
@@ -91,16 +94,35 @@ export async function buildWorkspaceGraph(
     resolvedPackages.set(path, { ...pkg, localDependencies: resolvedLocalDeps });
   }
 
-  const bridges: Bridge[] = (config.bridges ?? []).map((b) => ({
-    source: b.source,
-    artifact: b.artifact,
-    consumers: b.consumers ?? (b.target ? [b.target] : []),
-    run: b.run,
-    watch: b.watch,
-    entryFile: b.entryFile,
-    specPath: b.specPath,
-    exclude: b.exclude,
-  }));
+  // Detect dependency cycles before proceeding
+  const cycles = detectCycles(resolvedPackages);
+  if (cycles.length > 0) {
+    const formatted = cycles
+      .map((cycle) => `  ${cycle.join(" → ")}`)
+      .join("\n");
+    throw new Error(
+      `Dependency cycle(s) detected in workspace graph:\n${formatted}`,
+    );
+  }
+
+  const bridges: Bridge[] = (config.bridges ?? []).map((b) => {
+    // Normalize consumers: string | { path, format? } → BridgeConsumer[]
+    const rawConsumers = b.consumers ?? (b.target ? [b.target] : []);
+    const consumers: BridgeConsumer[] = rawConsumers.map((c) =>
+      typeof c === "string" ? { path: c } : { path: c.path, format: c.format },
+    );
+
+    return {
+      source: b.source,
+      artifact: b.artifact,
+      consumers,
+      run: b.run,
+      watch: b.watch,
+      entryFile: b.entryFile,
+      specPath: b.specPath,
+      exclude: b.exclude,
+    };
+  });
 
   return {
     name: config.workspace,

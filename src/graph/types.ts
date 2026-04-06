@@ -28,6 +28,14 @@ export interface WorkspacePackage {
 }
 
 /**
+ * A bridge consumer with an optional output format override.
+ */
+export interface BridgeConsumer {
+  readonly path: string;
+  readonly format?: string | undefined;
+}
+
+/**
  * A declared cross-ecosystem bridge.
  * Represents a dependency edge that cannot be inferred from manifest files alone.
  */
@@ -36,8 +44,8 @@ export interface Bridge {
   readonly source: string;
   /** Path to the bridge artifact (e.g., openapi.json, tokens.json) */
   readonly artifact: string;
-  /** Package paths that consume the artifact */
-  readonly consumers: readonly string[];
+  /** Package paths (with optional format) that consume the artifact */
+  readonly consumers: readonly BridgeConsumer[];
   /** Override: skip plugin detection, run this script directly */
   readonly run: string | undefined;
   /** Override: watch these paths instead of plugin defaults */

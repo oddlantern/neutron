@@ -3,8 +3,10 @@ import { join } from "node:path";
 import { loadConfig } from "@/config/loader";
 import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
 import { resolveFiles } from "@/files/resolver";
+import type { WorkspacePackage } from "@/graph/types";
 import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
+import { topologicalSort } from "@/graph/topo";
 import { BOLD, DIM, FAIL, PASS, RESET } from "@/output";
 import { loadPlugins } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
@@ -17,6 +19,10 @@ import { groupByEcosystem } from "@/commands/group";
 const ECOSYSTEM_EXTENSIONS: Readonly<Record<string, readonly string[]>> = {
   typescript: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
   dart: [".dart"],
+  python: [".py"],
+  rust: [".rs"],
+  go: [".go"],
+  php: [".php"],
 };
 
 export interface EcosystemRunnerOptions extends FilterOptions {
@@ -75,8 +81,15 @@ export async function runEcosystemCommand(
         ? (config.lint?.ignore ?? [])
         : (config.format?.ignore ?? []);
 
+    // Topologically sort within ecosystem for deterministic ordering
+    const pkgPaths = new Set(packages.map((p) => p.path));
+    const sorted = topologicalSort(graph.packages, pkgPaths);
+    const sortedPackages = sorted
+      .map((p) => graph.packages.get(p))
+      .filter((p): p is WorkspacePackage => p !== undefined);
+
     const results = await Promise.all(
-      packages.map(async (pkg) => {
+      sortedPackages.map(async (pkg) => {
         const plugin = registry.getEcosystemForPackage(pkg);
         if (!plugin) {
           return {

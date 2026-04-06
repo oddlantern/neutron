@@ -117,7 +117,7 @@ export class PluginRegistry {
         const bridgeTargetPaths = new Set<string>();
         for (const bridge of graph.bridges) {
           for (const consumer of bridge.consumers) {
-            bridgeTargetPaths.add(consumer);
+            bridgeTargetPaths.add(consumer.path);
           }
         }
         const targets = [...graph.packages.values()].filter((p) => bridgeTargetPaths.has(p.path));

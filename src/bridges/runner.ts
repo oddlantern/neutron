@@ -59,15 +59,15 @@ export async function resolveBridges(
 
     // Resolve all consumers
     const targets: WorkspacePackage[] = [];
-    for (const consumerPath of bridge.consumers) {
-      const consumer = packages.get(consumerPath);
-      if (!consumer) {
+    for (const consumer of bridge.consumers) {
+      const consumerPkg = packages.get(consumer.path);
+      if (!consumerPkg) {
         console.error(
-          `${YELLOW}warn:${RESET} bridge consumer "${consumerPath}" not found in graph`,
+          `${YELLOW}warn:${RESET} bridge consumer "${consumer.path}" not found in graph`,
         );
         continue;
       }
-      targets.push(consumer);
+      targets.push(consumerPkg);
     }
 
     if (targets.length === 0) {
@@ -331,7 +331,7 @@ export function groupBridgesByArtifact(
     // Only group bridges that have a domain plugin with buildPipeline
     if (!bridge.domain?.buildPipeline) {
       // Each non-groupable bridge is its own group of 1
-      groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.consumers.join(",")}`, [
+      groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.consumers.map((c) => c.path).join(",")}`, [
         bridge,
       ]);
       continue;

@@ -1,6 +1,6 @@
 # CLAUDE.md — mido
 
-Cross-ecosystem monorepo workspace tool. Package: `@oddlantern/mido`. Binary: `mido`.
+Cross-ecosystem monorepo workspace tool. Package: `@oddlantern/mido-cli`. Binary: `mido`.
 
 ## Architecture
 
@@ -157,7 +157,7 @@ src/
 - **Oxlint plugins are auto-enabled.** The TS plugin detects dependencies and enables oxlint plugins automatically: always `typescript`, `unicorn`, `oxc`, `import`; conditionally `react`, `jsx-a11y`, `react-perf` (if React/Preact), `jest`, `vitest`, `nextjs`.
 - **Lint categories map to oxlint categories.** `lint.typescript.categories` (correctness, suspicious, pedantic, perf, style, restriction, nursery) map directly to oxlint's `--categories` config. Default: correctness=error, suspicious=warn, perf=warn.
 - **Lint/format config lives in mido.yml.** The `lint` and `format` sections configure tools per ecosystem. The TS plugin generates temporary `.oxlintrc.json` and `.oxfmtrc.json` at runtime in `node_modules/.cache/mido/` and passes `--config` flags to the tools. No config files committed to the repo. `mido init` migrates existing configs into the ecosystem-centric structure.
-- **JSON schema for VS Code autocomplete.** `scripts/generate-schema.ts` produces `schema.json` at build time. The `yaml-language-server` comment in generated mido.yml points to `node_modules/@oddlantern/mido/schema.json`. Schema ships with the npm package.
+- **JSON schema for VS Code autocomplete.** `scripts/generate-schema.ts` produces `schema.json` at build time. The `yaml-language-server` comment in generated mido.yml points to `node_modules/@oddlantern/mido-cli/schema.json`. Schema ships with the npm package.
 - **Commits is a top-level config section.** Not nested under lint. `mido init` auto-populates `commits.scopes` from detected package names.
 - **Pre-commit is a single command.** `mido pre-commit` runs format check → lint → workspace check in sequence, stopping on first failure. The pre-commit hook installed by `mido install` is just `mido pre-commit`.
 - **Parallel execution within ecosystems.** Lint and format run packages within the same ecosystem in parallel via `Promise.all`. Build runs sequentially (build order may matter).

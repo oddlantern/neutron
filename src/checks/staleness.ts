@@ -68,7 +68,7 @@ function collectBridgeOutputs(
 
   for (const bridge of bridges) {
     for (const consumer of bridge.consumers) {
-      const pkg = packages.get(consumer);
+      const pkg = packages.get(consumer.path);
       if (!pkg) {
         continue;
       }

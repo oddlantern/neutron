@@ -300,7 +300,7 @@ export const openapiPlugin: DomainPlugin = {
           const inputPath = join(root, artifact);
           const outputPath = join(root, preparedArtifact);
           const { schemaCount, removedCount } = normalizeSpec(inputPath, outputPath, {
-            excludePrefixes: bridge?.exclude,
+            excludePrefixes: bridge?.exclude ?? [],
           });
           return {
             success: true,
