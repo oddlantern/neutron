@@ -59,19 +59,54 @@ export const pythonPlugin: EcosystemPlugin = {
     _context: ExecutionContext,
   ): Promise<ExecuteResult> {
     const cwd = `${root}/${pkg.path}`;
+    const fmtPy = _context.formatPython;
+    const lintPy = _context.lintPython;
 
     switch (action) {
-      case STANDARD_ACTIONS.LINT:
-        return runCommand("ruff", ["check", "."], cwd);
+      case STANDARD_ACTIONS.LINT: {
+        const args = ["check"];
+        if (lintPy?.select) {
+          args.push("--select", lintPy.select.join(","));
+        }
+        if (lintPy?.ignore) {
+          args.push("--ignore", lintPy.ignore.join(","));
+        }
+        if (lintPy?.targetVersion) {
+          args.push("--target-version", lintPy.targetVersion);
+        }
+        args.push(".");
+        return runCommand("ruff", args, cwd);
+      }
 
-      case STANDARD_ACTIONS.LINT_FIX:
-        return runCommand("ruff", ["check", "--fix", "."], cwd);
+      case STANDARD_ACTIONS.LINT_FIX: {
+        const args = ["check", "--fix"];
+        if (lintPy?.fixable) {
+          args.push("--fixable", lintPy.fixable.join(","));
+        }
+        args.push(".");
+        return runCommand("ruff", args, cwd);
+      }
 
-      case STANDARD_ACTIONS.FORMAT:
-        return runCommand("ruff", ["format", "."], cwd);
+      case STANDARD_ACTIONS.FORMAT: {
+        const args = ["format"];
+        if (fmtPy?.lineLength) {
+          args.push("--line-length", String(fmtPy.lineLength));
+        }
+        if (fmtPy?.quoteStyle) {
+          args.push("--config", `quote-style="${fmtPy.quoteStyle}"`);
+        }
+        args.push(".");
+        return runCommand("ruff", args, cwd);
+      }
 
-      case STANDARD_ACTIONS.FORMAT_CHECK:
-        return runCommand("ruff", ["format", "--check", "."], cwd);
+      case STANDARD_ACTIONS.FORMAT_CHECK: {
+        const args = ["format", "--check"];
+        if (fmtPy?.lineLength) {
+          args.push("--line-length", String(fmtPy.lineLength));
+        }
+        args.push(".");
+        return runCommand("ruff", args, cwd);
+      }
 
       case STANDARD_ACTIONS.TEST:
         return runCommand("pytest", [], cwd);

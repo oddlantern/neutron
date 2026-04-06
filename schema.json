@@ -17108,6 +17108,84 @@
             }
           },
           "additionalProperties": false
+        },
+        "python": {
+          "type": "object",
+          "properties": {
+            "select": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ignore": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "fixable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "targetVersion": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "rust": {
+          "type": "object",
+          "properties": {
+            "denyWarnings": {
+              "type": "boolean"
+            },
+            "features": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "go": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "disable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "timeout": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "php": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "number"
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false,
@@ -17192,6 +17270,83 @@
           "properties": {
             "lineLength": {
               "type": "number"
+            }
+          },
+          "additionalProperties": true
+        },
+        "python": {
+          "type": "object",
+          "properties": {
+            "lineLength": {
+              "type": "number"
+            },
+            "indentWidth": {
+              "type": "number"
+            },
+            "quoteStyle": {
+              "type": "string",
+              "enum": [
+                "single",
+                "double"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "rust": {
+          "type": "object",
+          "properties": {
+            "edition": {
+              "type": "string",
+              "enum": [
+                "2015",
+                "2018",
+                "2021",
+                "2024"
+              ]
+            },
+            "maxWidth": {
+              "type": "number"
+            },
+            "tabSpaces": {
+              "type": "number"
+            },
+            "useSmallHeuristics": {
+              "type": "string",
+              "enum": [
+                "Default",
+                "Off",
+                "Max"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "go": {
+          "type": "object",
+          "properties": {
+            "simplify": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "php": {
+          "type": "object",
+          "properties": {
+            "rules": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "preset": {
+              "type": "string",
+              "enum": [
+                "psr12",
+                "psr2",
+                "symfony",
+                "laravel",
+                "per"
+              ]
             }
           },
           "additionalProperties": true

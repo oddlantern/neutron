@@ -91,10 +91,44 @@ const formatDartSchema = z
   })
   .passthrough();
 
+const formatPythonSchema = z
+  .object({
+    lineLength: z.number().optional(),
+    indentWidth: z.number().optional(),
+    quoteStyle: z.enum(["single", "double"]).optional(),
+  })
+  .passthrough();
+
+const formatRustSchema = z
+  .object({
+    edition: z.enum(["2015", "2018", "2021", "2024"]).optional(),
+    maxWidth: z.number().optional(),
+    tabSpaces: z.number().optional(),
+    useSmallHeuristics: z.enum(["Default", "Off", "Max"]).optional(),
+  })
+  .passthrough();
+
+const formatGoSchema = z
+  .object({
+    simplify: z.boolean().optional(),
+  })
+  .passthrough();
+
+const formatPhpSchema = z
+  .object({
+    rules: z.record(z.string(), z.unknown()).optional(),
+    preset: z.enum(["psr12", "psr2", "symfony", "laravel", "per"]).optional(),
+  })
+  .passthrough();
+
 const formatSchema = z.object({
   ignore: z.array(z.string()).optional(),
   typescript: formatTypescriptSchema.optional(),
   dart: formatDartSchema.optional(),
+  python: formatPythonSchema.optional(),
+  rust: formatRustSchema.optional(),
+  go: formatGoSchema.optional(),
+  php: formatPhpSchema.optional(),
 });
 
 // ─── Lint schemas (per-ecosystem) ────────────────────────────────────────────
@@ -120,10 +154,37 @@ const lintDartSchema = z.object({
   strict: z.boolean().optional(),
 });
 
+const lintPythonSchema = z.object({
+  select: z.array(z.string()).optional(),
+  ignore: z.array(z.string()).optional(),
+  fixable: z.array(z.string()).optional(),
+  targetVersion: z.string().optional(),
+});
+
+const lintRustSchema = z.object({
+  denyWarnings: z.boolean().optional(),
+  features: z.array(z.string()).optional(),
+});
+
+const lintGoSchema = z.object({
+  enable: z.array(z.string()).optional(),
+  disable: z.array(z.string()).optional(),
+  timeout: z.string().optional(),
+});
+
+const lintPhpSchema = z.object({
+  level: z.number().int().min(0).max(9).optional(),
+  paths: z.array(z.string()).optional(),
+});
+
 const lintSchema = z.object({
   ignore: z.array(z.string()).optional(),
   typescript: lintTypescriptSchema.optional(),
   dart: lintDartSchema.optional(),
+  python: lintPythonSchema.optional(),
+  rust: lintRustSchema.optional(),
+  go: lintGoSchema.optional(),
+  php: lintPhpSchema.optional(),
 });
 
 // ─── Hooks schema ─────────────────────────────────────────────────────────────
@@ -164,6 +225,14 @@ export type LintDartConfig = z.infer<typeof lintDartSchema>;
 export type FormatConfig = z.infer<typeof formatSchema>;
 export type FormatTypescriptConfig = z.infer<typeof formatTypescriptSchema>;
 export type FormatDartConfig = z.infer<typeof formatDartSchema>;
+export type FormatPythonConfig = z.infer<typeof formatPythonSchema>;
+export type FormatRustConfig = z.infer<typeof formatRustSchema>;
+export type FormatGoConfig = z.infer<typeof formatGoSchema>;
+export type FormatPhpConfig = z.infer<typeof formatPhpSchema>;
+export type LintPythonConfig = z.infer<typeof lintPythonSchema>;
+export type LintRustConfig = z.infer<typeof lintRustSchema>;
+export type LintGoConfig = z.infer<typeof lintGoSchema>;
+export type LintPhpConfig = z.infer<typeof lintPhpSchema>;
 
 export type HooksConfig = z.infer<typeof hooksSchema>;
 

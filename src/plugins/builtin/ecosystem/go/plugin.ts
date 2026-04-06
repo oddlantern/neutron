@@ -55,8 +55,20 @@ export const goPlugin: EcosystemPlugin = {
     const cwd = `${root}/${pkg.path}`;
 
     switch (action) {
-      case STANDARD_ACTIONS.LINT:
-        return runCommand("golangci-lint", ["run"], cwd);
+      case STANDARD_ACTIONS.LINT: {
+        const lintGo = _context.lintGo;
+        const args = ["run"];
+        if (lintGo?.enable) {
+          args.push("--enable", lintGo.enable.join(","));
+        }
+        if (lintGo?.disable) {
+          args.push("--disable", lintGo.disable.join(","));
+        }
+        if (lintGo?.timeout) {
+          args.push("--timeout", lintGo.timeout);
+        }
+        return runCommand("golangci-lint", args, cwd);
+      }
 
       case STANDARD_ACTIONS.FORMAT:
         return runCommand("gofmt", ["-w", "."], cwd);

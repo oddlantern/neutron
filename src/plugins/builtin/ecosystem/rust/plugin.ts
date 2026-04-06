@@ -42,10 +42,20 @@ export const rustPlugin: EcosystemPlugin = {
     _context: ExecutionContext,
   ): Promise<ExecuteResult> {
     const cwd = `${root}/${pkg.path}`;
+    const lintRs = _context.lintRust;
 
     switch (action) {
-      case STANDARD_ACTIONS.LINT:
-        return runCommand("cargo", ["clippy", "--", "-D", "warnings"], cwd);
+      case STANDARD_ACTIONS.LINT: {
+        const args = ["clippy"];
+        if (lintRs?.features) {
+          args.push("--features", lintRs.features.join(","));
+        }
+        args.push("--");
+        if (lintRs?.denyWarnings !== false) {
+          args.push("-D", "warnings");
+        }
+        return runCommand("cargo", args, cwd);
+      }
 
       case STANDARD_ACTIONS.LINT_FIX:
         return runCommand("cargo", ["clippy", "--fix", "--allow-dirty", "--allow-staged"], cwd);

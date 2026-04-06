@@ -70,10 +70,18 @@ export const phpPlugin: EcosystemPlugin = {
 
     switch (action) {
       case STANDARD_ACTIONS.LINT: {
+        const lintPhp = _context.lintPhp;
         const bin = existsSync(join(cwd, "vendor", "bin", "phpstan"))
           ? resolveVendorBin("phpstan", cwd)
           : resolveVendorBin("psalm", cwd);
-        return runCommand(bin, ["analyse"], cwd);
+        const args = ["analyse"];
+        if (lintPhp?.level !== undefined && bin.includes("phpstan")) {
+          args.push("--level", String(lintPhp.level));
+        }
+        if (lintPhp?.paths) {
+          args.push(...lintPhp.paths);
+        }
+        return runCommand(bin, args, cwd);
       }
 
       case STANDARD_ACTIONS.FORMAT: {

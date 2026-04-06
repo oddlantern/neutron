@@ -241,6 +241,22 @@ export interface ExecutionContext {
   readonly formatTypescript?: FormatTypescriptConfig | undefined;
   /** Ecosystem-specific format config for Dart */
   readonly formatDart?: FormatDartConfig | undefined;
+  /** Ecosystem-specific lint config for Python */
+  readonly lintPython?: import("@/config/schema").LintPythonConfig | undefined;
+  /** Ecosystem-specific lint config for Rust */
+  readonly lintRust?: import("@/config/schema").LintRustConfig | undefined;
+  /** Ecosystem-specific lint config for Go */
+  readonly lintGo?: import("@/config/schema").LintGoConfig | undefined;
+  /** Ecosystem-specific lint config for PHP */
+  readonly lintPhp?: import("@/config/schema").LintPhpConfig | undefined;
+  /** Ecosystem-specific format config for Python */
+  readonly formatPython?: import("@/config/schema").FormatPythonConfig | undefined;
+  /** Ecosystem-specific format config for Rust */
+  readonly formatRust?: import("@/config/schema").FormatRustConfig | undefined;
+  /** Ecosystem-specific format config for Go */
+  readonly formatGo?: import("@/config/schema").FormatGoConfig | undefined;
+  /** Ecosystem-specific format config for PHP */
+  readonly formatPhp?: import("@/config/schema").FormatPhpConfig | undefined;
   /** Pre-resolved file paths (relative to package root) — plugins use these instead of scanning directories */
   readonly resolvedFiles?: readonly string[] | undefined;
   /** Source package name for generated output naming (e.g., "design-system", "api") */

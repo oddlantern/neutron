@@ -110,8 +110,16 @@ export class PluginRegistry {
       force: options?.force,
       lintTypescript: options?.lintConfig?.typescript,
       lintDart: options?.lintConfig?.dart,
+      lintPython: options?.lintConfig?.python,
+      lintRust: options?.lintConfig?.rust,
+      lintGo: options?.lintConfig?.go,
+      lintPhp: options?.lintConfig?.php,
       formatTypescript: options?.formatConfig?.typescript,
       formatDart: options?.formatConfig?.dart,
+      formatPython: options?.formatConfig?.python,
+      formatRust: options?.formatConfig?.rust,
+      formatGo: options?.formatConfig?.go,
+      formatPhp: options?.formatConfig?.php,
       findEcosystemHandlers: async (domain: string, artifact: string) => {
         // Pass only bridge targets, not all packages — domain plugins filter further
         const bridgeTargetPaths = new Set<string>();
