@@ -8,7 +8,7 @@ import type { DiscoveredPackage } from '../../src/discovery/scanner.js';
 import { classifyPackage, detectBridges } from '../../src/discovery/heuristics.js';
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-heuristics-')));
+  return realpathSync(mkdtempSync(join(tmpdir(), 'neutron-test-heuristics-')));
 }
 
 describe('classifyPackage', () => {

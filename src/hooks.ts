@@ -2,25 +2,23 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { MidoConfig } from "@/config/schema";
+import { BINARY_NAME, DISPLAY_NAME, HOOK_MARKER } from "@/branding";
+import type { NeutronConfig } from "@/config/schema";
 import { HOOK_NAMES } from "@/config/schema";
 import { confirmAction } from "@/prompt";
 
 const HOOKS_DIR = ".git/hooks";
-const MIDO_MARKER = "mido";
-const HOOK_HEADER = `#!/usr/bin/env sh\n# mido — do not edit (regenerate with: mido install)\n`;
+const HOOK_HEADER = `#!/usr/bin/env sh\n# ${DISPLAY_NAME} — do not edit (regenerate with: ${BINARY_NAME} install)\n`;
 
 // ─── Default hook commands ──────────────────────────────────────────────────
 
+const CHECK_DRIFT_HOOK = `${BINARY_NAME} check --quiet || echo "⚠ ${BINARY_NAME}: workspace drift detected — run ${BINARY_NAME} check --fix"`;
+
 const DEFAULT_HOOKS: Readonly<Record<string, readonly string[]>> = {
-  "pre-commit": ["mido pre-commit"],
-  "commit-msg": ['mido commit-msg "$1"'],
-  "post-merge": [
-    'mido check --quiet || echo "⚠ mido: workspace drift detected — run mido check --fix"',
-  ],
-  "post-checkout": [
-    'mido check --quiet || echo "⚠ mido: workspace drift detected — run mido check --fix"',
-  ],
+  "pre-commit": [`${BINARY_NAME} pre-commit`],
+  "commit-msg": [`${BINARY_NAME} commit-msg "$1"`],
+  "post-merge": [CHECK_DRIFT_HOOK],
+  "post-checkout": [CHECK_DRIFT_HOOK],
 };
 
 // ─── Hook resolution ────────────────────────────────────────────────────────
@@ -37,7 +35,7 @@ interface ResolvedHook {
  * - `false` = disabled
  * - Array = custom steps
  */
-function resolveHooks(config?: MidoConfig): readonly ResolvedHook[] {
+function resolveHooks(config?: NeutronConfig): readonly ResolvedHook[] {
   const userHooks = config?.hooks;
 
   return HOOK_NAMES.map((name) => {
@@ -77,12 +75,12 @@ export interface WriteHooksResult {
 /**
  * Write hook scripts to .git/hooks/ based on resolved config.
  *
- * @param interactive - When true, prompts before overwriting non-mido hooks.
- *                      When false (watcher context), skips non-mido hooks silently.
+ * @param interactive - When true, prompts before overwriting non-neutron hooks.
+ *                      When false (watcher context), skips non-neutron hooks silently.
  */
 export async function writeHooks(
   root: string,
-  config?: MidoConfig,
+  config?: NeutronConfig,
   interactive = true,
 ): Promise<WriteHooksResult> {
   const hooksDir = join(root, HOOKS_DIR);
@@ -97,11 +95,11 @@ export async function writeHooks(
   for (const hook of resolved) {
     const hookPath = join(hooksDir, hook.name);
 
-    // Disabled hook — remove if mido-owned
+    // Disabled hook — remove if neutron-owned
     if (hook.steps === false) {
       if (existsSync(hookPath)) {
         const existing = await readFile(hookPath, "utf-8");
-        if (existing.includes(MIDO_MARKER)) {
+        if (existing.includes(HOOK_MARKER)) {
           await unlink(hookPath);
           disabled++;
         }
@@ -111,24 +109,24 @@ export async function writeHooks(
 
     const script = generateScript(hook.name, hook.steps);
 
-    // Check for existing non-mido hooks
+    // Check for existing non-neutron hooks
     if (existsSync(hookPath)) {
       const existing = await readFile(hookPath, "utf-8");
 
-      if (existing.includes(MIDO_MARKER)) {
+      if (existing.includes(HOOK_MARKER)) {
         await writeFile(hookPath, script, "utf-8");
         await chmod(hookPath, 0o755);
         installed++;
         continue;
       }
 
-      // Non-mido hook
+      // Non-neutron hook
       if (!interactive) {
         continue;
       }
 
       const overwrite = await confirmAction(
-        `Existing ${hook.name} hook found (not owned by mido). Overwrite?`,
+        `Existing ${hook.name} hook found (not owned by neutron). Overwrite?`,
         false,
       );
 

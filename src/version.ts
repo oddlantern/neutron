@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import { isRecord } from "@/guards";
 
-/** Absolute path to the mido package root directory. */
-export const MIDO_ROOT: string = join(dirname(fileURLToPath(import.meta.url)), "..");
+/** Absolute path to the neutron package root directory. */
+export const NEUTRON_ROOT: string = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-const packageJsonPath = join(MIDO_ROOT, "package.json");
+const packageJsonPath = join(NEUTRON_ROOT, "package.json");
 const raw: unknown = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
 
 function extractVersion(data: unknown): string {

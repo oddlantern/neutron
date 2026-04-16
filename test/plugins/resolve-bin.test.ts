@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
 import { resolveBin } from '../../src/plugins/builtin/ecosystem/typescript/plugin.js';
-import { MIDO_ROOT } from '../../src/version.js';
+import { NEUTRON_ROOT } from '../../src/version.js';
 
 /**
  * Create a fake binary at node_modules/.bin/<name> inside the given root.
@@ -18,7 +18,7 @@ function placeBin(root: string, name: string): string {
 }
 
 describe('resolveBin', () => {
-  const workspaceRoot = join(tmpdir(), `mido-resolve-bin-test-${Date.now()}`);
+  const workspaceRoot = join(tmpdir(), `neutron-resolve-bin-test-${Date.now()}`);
 
   beforeAll(() => {
     mkdirSync(workspaceRoot, { recursive: true });
@@ -36,19 +36,19 @@ describe('resolveBin', () => {
 
   test('falls back to bundled when workspace lacks the tool', () => {
     // Use a fresh temp dir with no node_modules
-    const emptyRoot = join(tmpdir(), `mido-resolve-empty-${Date.now()}`);
+    const emptyRoot = join(tmpdir(), `neutron-resolve-empty-${Date.now()}`);
     mkdirSync(emptyRoot, { recursive: true });
 
     const resolved = resolveBin('oxlint', emptyRoot);
-    // Should resolve to mido's own bundled oxlint
-    const expected = join(MIDO_ROOT, 'node_modules', '.bin', 'oxlint');
+    // Should resolve to neutron's own bundled oxlint
+    const expected = join(NEUTRON_ROOT, 'node_modules', '.bin', 'oxlint');
     expect(resolved).toBe(expected);
 
     rmSync(emptyRoot, { recursive: true, force: true });
   });
 
   test('returns null when tool is not found anywhere', () => {
-    const emptyRoot = join(tmpdir(), `mido-resolve-none-${Date.now()}`);
+    const emptyRoot = join(tmpdir(), `neutron-resolve-none-${Date.now()}`);
     mkdirSync(emptyRoot, { recursive: true });
 
     const resolved = resolveBin('nonexistent-tool-xyz', emptyRoot);

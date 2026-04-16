@@ -223,8 +223,8 @@ describe("formatHeader", () => {
     expect(output).toContain("12 packages");
   });
 
-  test("includes mido branding", () => {
+  test("includes neutron branding", () => {
     const output = formatHeader("test", 1);
-    expect(output).toContain("mido");
+    expect(output).toContain("neutron");
   });
 });

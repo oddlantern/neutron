@@ -9,7 +9,7 @@ import { checkEnvParity } from '../../src/checks/env.js';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'mido-env-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'neutron-env-test-'));
 });
 
 afterEach(() => {

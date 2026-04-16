@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { composerParser } from "../../src/parsers/composer.js";
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), "mido-test-composer-")));
+  return realpathSync(mkdtempSync(join(tmpdir(), "neutron-test-composer-")));
 }
 
 function writeManifest(dir: string, content: Record<string, unknown>): string {

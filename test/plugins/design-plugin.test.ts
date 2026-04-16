@@ -48,7 +48,7 @@ describe("designPlugin.detectBridge", () => {
 	});
 
 	test("returns false for JSON without color key", async () => {
-		const tmp = mkdtempSync(join(tmpdir(), "mido-test-"));
+		const tmp = mkdtempSync(join(tmpdir(), "neutron-test-"));
 		const filePath = join(tmp, "no-color.json");
 		writeFileSync(filePath, JSON.stringify({ foo: "bar" }));
 
@@ -73,7 +73,7 @@ describe("designPlugin.exportArtifact", () => {
 	});
 
 	test("fails with invalid tokens", async () => {
-		const tmp = mkdtempSync(join(tmpdir(), "mido-test-"));
+		const tmp = mkdtempSync(join(tmpdir(), "neutron-test-"));
 		const filePath = join(tmp, "bad-tokens.json");
 		writeFileSync(filePath, JSON.stringify({ color: { invalid: 123 } }));
 

@@ -26,7 +26,7 @@ export interface ThemeVariant {
 
 /** Full result of scanning an assets package */
 export interface AssetManifest {
-  /** Workspace name from mido.yml (drives generated class prefixes) */
+  /** Workspace name from neutron.yml (drives generated class prefixes) */
   readonly workspaceName: string;
   /** All discovered asset categories */
   readonly categories: readonly AssetCategory[];

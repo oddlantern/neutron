@@ -1,476 +1,21 @@
 #!/usr/bin/env node
-import { n as VERSION, r as isRecord } from "./version-M9xRTj7S.js";
-import { l as RED, r as DIM, s as ORANGE, u as RESET } from "./output-MbJ98jNX.js";
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { z } from "zod";
-import { parse } from "yaml";
-import { parse as parse$1 } from "smol-toml";
-//#region src/parsers/package-json.ts
-const DEP_FIELDS$1 = [
-	["dependencies", "production"],
-	["devDependencies", "dev"],
-	["peerDependencies", "peer"],
-	["optionalDependencies", "optional"]
-];
-const manifestSchema$1 = z.record(z.string(), z.unknown());
-function extractDeps$3(manifest, field, type) {
-	const raw = manifest[field];
-	if (!isRecord(raw)) return [];
-	return Object.entries(raw).filter((entry) => typeof entry[1] === "string").map(([name, range]) => ({
-		name,
-		range,
-		type
-	}));
-}
-function extractLocalPaths$4(manifest, manifestDir) {
-	const paths = [];
-	for (const [field] of DEP_FIELDS$1) {
-		const raw = manifest[field];
-		if (!isRecord(raw)) continue;
-		for (const value of Object.values(raw)) {
-			if (typeof value !== "string") continue;
-			if (value.startsWith("file:")) paths.push(resolve(manifestDir, value.slice(5)));
-			else if (value.startsWith("link:")) paths.push(resolve(manifestDir, value.slice(5)));
-		}
-	}
-	return paths;
-}
-const packageJsonParser = {
-	manifestName: "package.json",
-	async parse(manifestPath) {
-		const content = await readFile(manifestPath, "utf-8");
-		const manifest = manifestSchema$1.parse(JSON.parse(content));
-		return {
-			name: typeof manifest["name"] === "string" ? manifest["name"] : "<unnamed>",
-			version: typeof manifest["version"] === "string" ? manifest["version"] : void 0,
-			dependencies: DEP_FIELDS$1.flatMap(([field, type]) => extractDeps$3(manifest, field, type)),
-			localDependencyPaths: extractLocalPaths$4(manifest, dirname(manifestPath))
-		};
-	}
-};
-//#endregion
-//#region src/parsers/pubspec.ts
-const DEP_FIELDS = [
-	["dependencies", "production"],
-	["dev_dependencies", "dev"],
-	["dependency_overrides", "override"]
-];
-const manifestSchema = z.record(z.string(), z.unknown());
-/**
-* Dart dependency values can be:
-* - A string version constraint: "^1.2.3"
-* - A map with path/git/hosted source: { path: ../shared }
-* - null (meaning "any")
-*/
-function extractDeps$2(manifest, field, type) {
-	const raw = manifest[field];
-	if (!isRecord(raw)) return [];
-	const deps = [];
-	for (const [name, value] of Object.entries(raw)) if (typeof value === "string") deps.push({
-		name,
-		range: value,
-		type
-	});
-	else if (!value) deps.push({
-		name,
-		range: "any",
-		type
-	});
-	else if (isRecord(value)) if (typeof value["version"] === "string") deps.push({
-		name,
-		range: value["version"],
-		type
-	});
-	else if ("path" in value || "git" in value || "sdk" in value) deps.push({
-		name,
-		range: "<local>",
-		type
-	});
-	else deps.push({
-		name,
-		range: "any",
-		type
-	});
-	return deps;
-}
-function extractLocalPaths$3(manifest, manifestDir) {
-	const paths = [];
-	for (const [field] of DEP_FIELDS) {
-		const raw = manifest[field];
-		if (!isRecord(raw)) continue;
-		for (const value of Object.values(raw)) {
-			if (!isRecord(value)) continue;
-			if (typeof value["path"] === "string") paths.push(resolve(manifestDir, value["path"]));
-		}
-	}
-	return paths;
-}
-const pubspecParser = {
-	manifestName: "pubspec.yaml",
-	async parse(manifestPath) {
-		const content = await readFile(manifestPath, "utf-8");
-		const manifest = manifestSchema.parse(parse(content));
-		return {
-			name: typeof manifest["name"] === "string" ? manifest["name"] : "<unnamed>",
-			version: typeof manifest["version"] === "string" ? manifest["version"] : void 0,
-			dependencies: DEP_FIELDS.flatMap(([field, type]) => extractDeps$2(manifest, field, type)),
-			localDependencyPaths: extractLocalPaths$3(manifest, dirname(manifestPath))
-		};
-	}
-};
-//#endregion
-//#region src/parsers/pyproject.ts
-/**
-* Parse a PEP 508 dependency string (e.g., "requests>=2.28", "click~=8.0").
-* Extracts the package name and version specifier.
-*/
-function parsePep508(spec) {
-	const name = spec.match(/^([a-zA-Z0-9][-a-zA-Z0-9_.]*)/)?.[1] ?? spec.trim();
-	const afterName = spec.slice(name.length).replace(/\[[^\]]*\]/, "").trim();
-	return {
-		name,
-		range: afterName.startsWith("@") ? "<local>" : afterName || "any"
-	};
-}
-/**
-* Extract dependencies from PEP 621 `[project].dependencies` format.
-* Each entry is a PEP 508 string.
-*/
-function extractPep621Deps(project, field, type) {
-	const raw = project[field];
-	if (!Array.isArray(raw)) return [];
-	return raw.filter((item) => typeof item === "string").map((spec) => {
-		const { name, range } = parsePep508(spec);
-		return {
-			name,
-			range,
-			type
-		};
-	});
-}
-/**
-* Extract dependencies from PEP 621 `[project].optional-dependencies` format.
-*/
-function extractOptionalDeps(project) {
-	const groups = project["optional-dependencies"];
-	if (!isRecord(groups)) return [];
-	const deps = [];
-	for (const entries of Object.values(groups)) {
-		if (!Array.isArray(entries)) continue;
-		for (const spec of entries) {
-			if (typeof spec !== "string") continue;
-			const { name, range } = parsePep508(spec);
-			deps.push({
-				name,
-				range,
-				type: "optional"
-			});
-		}
-	}
-	return deps;
-}
-/**
-* Extract dependencies from Poetry `[tool.poetry.dependencies]` format.
-* Values are either version strings ("^1.2") or tables ({ version = "^1.2", ... }).
-*/
-function extractPoetryDeps(manifest, field, type) {
-	const tool = isRecord(manifest["tool"]) ? manifest["tool"] : null;
-	const poetry = tool && isRecord(tool["poetry"]) ? tool["poetry"] : null;
-	if (!poetry) return [];
-	const raw = poetry[field];
-	if (!isRecord(raw)) return [];
-	const deps = [];
-	for (const [name, value] of Object.entries(raw)) {
-		if (name === "python") continue;
-		if (typeof value === "string") deps.push({
-			name,
-			range: value,
-			type
-		});
-		else if (isRecord(value)) if (typeof value["path"] === "string") deps.push({
-			name,
-			range: "<local>",
-			type
-		});
-		else if (typeof value["version"] === "string") deps.push({
-			name,
-			range: value["version"],
-			type
-		});
-		else deps.push({
-			name,
-			range: "any",
-			type
-		});
-	}
-	return deps;
-}
-/**
-* Extract local dependency paths from Poetry path deps and PEP 508 file: references.
-*/
-function extractLocalPaths$2(manifest, project, manifestDir) {
-	const paths = [];
-	const tool = isRecord(manifest["tool"]) ? manifest["tool"] : null;
-	const poetry = tool && isRecord(tool["poetry"]) ? tool["poetry"] : null;
-	if (poetry) for (const field of ["dependencies", "dev-dependencies"]) {
-		const raw = poetry[field];
-		if (!isRecord(raw)) continue;
-		for (const value of Object.values(raw)) if (isRecord(value) && typeof value["path"] === "string") paths.push(resolve(manifestDir, value["path"]));
-	}
-	if (project) {
-		const deps = project["dependencies"];
-		if (Array.isArray(deps)) for (const spec of deps) {
-			if (typeof spec !== "string") continue;
-			const fileMatch = spec.match(/@\s*file:(.+)/);
-			if (fileMatch?.[1]) paths.push(resolve(manifestDir, fileMatch[1].trim()));
-		}
-	}
-	return paths;
-}
-const pyprojectParser = {
-	manifestName: "pyproject.toml",
-	async parse(manifestPath) {
-		const manifest = parse$1(await readFile(manifestPath, "utf-8"));
-		const project = isRecord(manifest["project"]) ? manifest["project"] : null;
-		const tool = isRecord(manifest["tool"]) ? manifest["tool"] : null;
-		const poetry = tool && isRecord(tool["poetry"]) ? tool["poetry"] : null;
-		const name = (project && typeof project["name"] === "string" ? project["name"] : null) ?? (poetry && typeof poetry["name"] === "string" ? poetry["name"] : null) ?? "<unnamed>";
-		const version = (project && typeof project["version"] === "string" ? project["version"] : null) ?? (poetry && typeof poetry["version"] === "string" ? poetry["version"] : null) ?? void 0;
-		let dependencies;
-		if (project && Array.isArray(project["dependencies"])) dependencies = [...extractPep621Deps(project, "dependencies", "production"), ...extractOptionalDeps(project)];
-		else if (poetry) dependencies = [...extractPoetryDeps(manifest, "dependencies", "production"), ...extractPoetryDeps(manifest, "dev-dependencies", "dev")];
-		else dependencies = [];
-		const localDependencyPaths = extractLocalPaths$2(manifest, project, dirname(manifestPath));
-		return {
-			name,
-			version,
-			dependencies,
-			localDependencyPaths
-		};
-	}
-};
-//#endregion
-//#region src/parsers/cargo.ts
-/**
-* Extract dependencies from a Cargo.toml dependency section.
-*
-* Values are either:
-* - A string version: `serde = "1.0"`
-* - A table with version: `serde = { version = "1.0", features = ["derive"] }`
-* - A table with path (local dep): `my-lib = { path = "../shared" }`
-*/
-function extractDeps$1(manifest, field, type) {
-	const raw = manifest[field];
-	if (!isRecord(raw)) return [];
-	const deps = [];
-	for (const [name, value] of Object.entries(raw)) if (typeof value === "string") deps.push({
-		name,
-		range: value,
-		type
-	});
-	else if (isRecord(value)) if (typeof value["path"] === "string") {
-		const range = typeof value["version"] === "string" ? value["version"] : "<local>";
-		deps.push({
-			name,
-			range,
-			type
-		});
-	} else if (typeof value["version"] === "string") deps.push({
-		name,
-		range: value["version"],
-		type
-	});
-	else if (typeof value["git"] === "string") deps.push({
-		name,
-		range: "<git>",
-		type
-	});
-	else deps.push({
-		name,
-		range: "any",
-		type
-	});
-	return deps;
-}
-/**
-* Extract local dependency paths from path deps across all sections.
-*/
-function extractLocalPaths$1(manifest, manifestDir) {
-	const paths = [];
-	for (const section of [
-		"dependencies",
-		"dev-dependencies",
-		"build-dependencies"
-	]) {
-		const raw = manifest[section];
-		if (!isRecord(raw)) continue;
-		for (const value of Object.values(raw)) if (isRecord(value) && typeof value["path"] === "string") paths.push(resolve(manifestDir, value["path"]));
-	}
-	return paths;
-}
-const cargoParser = {
-	manifestName: "Cargo.toml",
-	async parse(manifestPath) {
-		const manifest = parse$1(await readFile(manifestPath, "utf-8"));
-		const pkg = isRecord(manifest["package"]) ? manifest["package"] : null;
-		return {
-			name: pkg && typeof pkg["name"] === "string" ? pkg["name"] : "<unnamed>",
-			version: pkg && typeof pkg["version"] === "string" ? pkg["version"] : void 0,
-			dependencies: [
-				...extractDeps$1(manifest, "dependencies", "production"),
-				...extractDeps$1(manifest, "dev-dependencies", "dev"),
-				...extractDeps$1(manifest, "build-dependencies", "dev")
-			],
-			localDependencyPaths: extractLocalPaths$1(manifest, dirname(manifestPath))
-		};
-	}
-};
-//#endregion
-//#region src/parsers/go-mod.ts
-/**
-* Parse a go.mod file. Line-based format:
-*
-* ```
-* module github.com/org/my-module
-*
-* go 1.21
-*
-* require (
-*     github.com/gin-gonic/gin v1.9.1
-*     github.com/org/shared v0.0.0
-* )
-*
-* replace github.com/org/shared => ../shared
-* ```
-*/
-/** Parse a single require entry like "github.com/foo/bar v1.2.3" */
-function parseRequireLine(line) {
-	const trimmed = line.trim();
-	if (!trimmed || trimmed.startsWith("//")) return null;
-	const parts = trimmed.split(/\s+/);
-	if (parts.length < 2) return null;
-	return {
-		name: parts[0],
-		range: parts[1]
-	};
-}
-const goModParser = {
-	manifestName: "go.mod",
-	async parse(manifestPath) {
-		const lines = (await readFile(manifestPath, "utf-8")).split("\n");
-		let name = "<unnamed>";
-		const dependencies = [];
-		const localPaths = [];
-		const manifestDir = dirname(manifestPath);
-		let inRequireBlock = false;
-		for (const line of lines) {
-			const trimmed = line.trim();
-			if (trimmed.startsWith("module ")) {
-				name = trimmed.slice(7).trim();
-				continue;
-			}
-			if (trimmed.startsWith("require (") || trimmed === "require (") {
-				inRequireBlock = true;
-				continue;
-			}
-			if (trimmed === ")" && inRequireBlock) {
-				inRequireBlock = false;
-				continue;
-			}
-			if (inRequireBlock) {
-				const dep = parseRequireLine(trimmed);
-				if (dep) dependencies.push({
-					name: dep.name,
-					range: dep.range,
-					type: "production"
-				});
-				continue;
-			}
-			if (trimmed.startsWith("require ") && !trimmed.includes("(")) {
-				const dep = parseRequireLine(trimmed.slice(8).trim());
-				if (dep) dependencies.push({
-					name: dep.name,
-					range: dep.range,
-					type: "production"
-				});
-				continue;
-			}
-			if (trimmed.startsWith("replace ")) {
-				const arrowIndex = trimmed.indexOf("=>");
-				if (arrowIndex === -1) continue;
-				const target = trimmed.slice(arrowIndex + 2).trim();
-				if (target.startsWith(".") || target.startsWith("/")) {
-					const pathPart = target.split(/\s+/)[0];
-					localPaths.push(resolve(manifestDir, pathPart));
-				}
-			}
-		}
-		return {
-			name,
-			version: void 0,
-			dependencies,
-			localDependencyPaths: localPaths
-		};
-	}
-};
-//#endregion
-//#region src/parsers/composer.ts
-/** Platform requirements that are not actual packages */
-function isPlatformRequirement(name) {
-	return name === "php" || name.startsWith("ext-") || name.startsWith("lib-") || name === "composer";
-}
-function extractDeps(manifest, field, type) {
-	const raw = manifest[field];
-	if (!isRecord(raw)) return [];
-	return Object.entries(raw).filter((entry) => typeof entry[1] === "string").filter(([name]) => !isPlatformRequirement(name)).map(([name, range]) => ({
-		name,
-		range,
-		type
-	}));
-}
-/**
-* Extract local dependency paths from composer.json repositories.
-* Path repositories look like: { "type": "path", "url": "../shared" }
-*/
-function extractLocalPaths(manifest, manifestDir) {
-	const repos = manifest["repositories"];
-	if (!Array.isArray(repos)) return [];
-	const paths = [];
-	for (const repo of repos) {
-		if (!isRecord(repo)) continue;
-		if (repo["type"] === "path" && typeof repo["url"] === "string") paths.push(resolve(manifestDir, repo["url"]));
-	}
-	return paths;
-}
-const composerParser = {
-	manifestName: "composer.json",
-	async parse(manifestPath) {
-		const content = await readFile(manifestPath, "utf-8");
-		const manifest = JSON.parse(content);
-		if (!isRecord(manifest)) throw new Error(`Expected object in ${manifestPath}`);
-		return {
-			name: typeof manifest["name"] === "string" ? manifest["name"] : "<unnamed>",
-			version: typeof manifest["version"] === "string" ? manifest["version"] : void 0,
-			dependencies: [...extractDeps(manifest, "require", "production"), ...extractDeps(manifest, "require-dev", "dev")],
-			localDependencyPaths: extractLocalPaths(manifest, dirname(manifestPath))
-		};
-	}
-};
-//#endregion
+import { a as pubspecParser, i as pyprojectParser, n as goModParser, o as packageJsonParser, r as cargoParser, t as composerParser } from "./composer-DfQKH7d7.js";
+import { l as RED, r as DIM, s as ORANGE, u as RESET } from "./output-DN5bGOyX.js";
+import { n as VERSION } from "./version-D_35A4VD.js";
 //#region src/banner.ts
 const ART = `\
-░███     ░███ ░██████░███████     ░██████
-░████   ░████   ░██  ░██   ░██   ░██   ░██
-░██░██ ░██░██   ░██  ░██    ░██ ░██     ░██
-░██ ░████ ░██   ░██  ░██    ░██ ░██     ░██
-░██  ░██  ░██   ░██  ░██    ░██ ░██     ░██
-░██       ░██   ░██  ░██   ░██   ░██   ░██
-░██       ░██ ░██████░███████     ░██████`;
-const ART_WIDTH = 43;
+ ░███    ░██ ░████████░██    ░██ ░████████░███████   ░██████  ░███    ░██
+ ░████   ░██ ░██      ░██    ░██    ░██   ░██   ░██ ░██   ░██ ░████   ░██
+ ░██░██  ░██ ░██      ░██    ░██    ░██   ░██    ░██░██    ░██░██░██  ░██
+ ░██ ░██ ░██ ░██████  ░██    ░██    ░██   ░███████  ░██    ░██░██ ░██ ░██
+ ░██  ░██░██ ░██      ░██    ░██    ░██   ░██   ░██ ░██    ░██░██  ░██░██
+ ░██   ░████ ░██       ░██  ░██     ░██   ░██    ░██░██   ░██ ░██   ░████
+ ░██    ░███ ░████████  ░████       ░██   ░██    ░██ ░██████  ░██    ░███`;
+const ART_WIDTH = 74;
+const TAGLINE = "dense workspace synchronization";
 function printBanner() {
 	const versionLine = `v${VERSION}`.padStart(ART_WIDTH);
-	const tagLine = "workspace guardian".padStart(Math.floor((ART_WIDTH + 18) / 2));
+	const tagLine = TAGLINE.padStart(Math.floor((ART_WIDTH + 31) / 2));
 	console.log(`\n${ORANGE}${ART}${RESET}\n${DIM}${versionLine}\n${tagLine}${RESET}\n`);
 }
 //#endregion
@@ -490,13 +35,13 @@ function getFlagValue(args, flag) {
 	return args[idx + 1];
 }
 const HELP = `
-mido — cross-ecosystem monorepo workspace tool
+neutron — cross-ecosystem monorepo workspace tool
 
 Usage:
-  mido <command> [options]
+  neutron <command> [options]
 
 Setup:
-  init              Scan repo, generate mido.yml, install hooks
+  init              Scan repo, generate neutron.yml, install hooks
   install           Write git hooks to .git/hooks/
   add               Scaffold a new package in the workspace
 
@@ -531,8 +76,8 @@ Common flags:
   --json               Machine-readable output (affected, outdated, why)
 
 Config:
-  mido.yml          Workspace config (searched upward from cwd)
-  mido.lock         Resolved version policy (auto-generated by --fix)
+  neutron.yml          Workspace config (searched upward from cwd)
+  neutron.lock         Resolved version policy (auto-generated by --fix)
 
 Options:
   --help, -h       Show help
@@ -553,7 +98,7 @@ async function main() {
 	if (command === "affected") {
 		const base = getFlagValue(args, "--base");
 		const json = args.includes("--json");
-		const { runAffected } = await import("./affected-DnJ6XUw8.js");
+		const { runAffected } = await import("./affected-DNpcS2X2.js");
 		const exitCode = await runAffected(parsers, {
 			base,
 			json
@@ -563,7 +108,7 @@ async function main() {
 	if (command === "check") {
 		const fix = args.includes("--fix");
 		const quiet = args.includes("--quiet") || args.includes("--hook");
-		const { runCheck } = await import("./check-DvhvtS5Q.js").then((n) => n.t);
+		const { runCheck } = await import("./check-CCPCyhFP.js").then((n) => n.t);
 		const exitCode = await runCheck(parsers, {
 			fix,
 			quiet
@@ -571,19 +116,19 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "add") {
-		const { runAdd } = await import("./add-DzYC4n8a.js");
+		const { runAdd } = await import("./add-DCN6JTTv.js");
 		const exitCode = await runAdd();
 		process.exit(exitCode);
 	}
 	if (command === "init") {
-		const { runInit } = await import("./init-BNM0IiRK.js");
+		const { runInit } = await import("./init-BOQiLyEX.js");
 		const exitCode = await runInit(process.cwd(), parsers);
 		process.exit(exitCode);
 	}
 	if (command === "graph") {
 		const format = args.includes("--dot") ? "dot" : args.includes("--ascii") ? "ascii" : "html";
 		const noOpen = args.includes("--no-open");
-		const { runGraph } = await import("./graph-DXMe_Pmi.js");
+		const { runGraph } = await import("./graph-KIfJusDh.js");
 		const exitCode = await runGraph(parsers, {
 			format,
 			open: !noOpen
@@ -591,19 +136,19 @@ async function main() {
 		process.exit(exitCode);
 	}
 	if (command === "doctor") {
-		const { runDoctor } = await import("./doctor-DMYWHWhR.js");
+		const { runDoctor } = await import("./doctor-Bv7vV6aU.js");
 		const exitCode = await runDoctor(parsers);
 		process.exit(exitCode);
 	}
 	if (command === "dev") {
 		const verbose = args.includes("--verbose");
-		const { runDev } = await import("./dev-ClPbI32z.js");
+		const { runDev } = await import("./dev-Kp2THJ8p.js");
 		const exitCode = await runDev(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "install") {
 		const dryRun = args.includes("--dry-run");
-		const { runInstall } = await import("./install-OttyIkWf.js");
+		const { runInstall } = await import("./install-CMSM_J8m.js");
 		const exitCode = await runInstall(process.cwd(), { dryRun }, void 0);
 		process.exit(exitCode);
 	}
@@ -612,7 +157,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runLint } = await import("./lint-BUqJVoyv.js");
+		const { runLint } = await import("./lint-e1FEeln6.js");
 		const exitCode = await runLint(parsers, {
 			fix,
 			quiet,
@@ -626,7 +171,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runFmt } = await import("./fmt-D71LrI6g.js");
+		const { runFmt } = await import("./fmt-DIymNgQF.js");
 		const exitCode = await runFmt(parsers, {
 			check,
 			quiet,
@@ -640,7 +185,7 @@ async function main() {
 		const verbose = args.includes("--verbose");
 		const force = args.includes("--force");
 		const dryRun = args.includes("--dry-run");
-		const { runGenerate } = await import("./generate-VubbPoaH.js");
+		const { runGenerate } = await import("./generate-CvaPdN87.js");
 		const exitCode = await runGenerate(parsers, {
 			quiet,
 			verbose,
@@ -654,7 +199,7 @@ async function main() {
 		const deep = args.includes("--deep");
 		const verify = args.includes("--verify");
 		const ci = args.includes("--ci");
-		const { runOutdated } = await import("./outdated-CMMPZr5R.js");
+		const { runOutdated } = await import("./outdated-cyo-M4TL.js");
 		const exitCode = await runOutdated(parsers, {
 			json,
 			deep,
@@ -667,7 +212,7 @@ async function main() {
 		const all = args.includes("--all");
 		const verify = args.includes("--verify");
 		const dryRun = args.includes("--dry-run");
-		const { runUpgrade } = await import("./upgrade-DPFkYzT_.js");
+		const { runUpgrade } = await import("./upgrade-rwFJ1jmT.js");
 		const exitCode = await runUpgrade(parsers, {
 			all,
 			verify,
@@ -679,7 +224,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const pkg = getFlagValue(args, "--package");
 		const ecosystem = getFlagValue(args, "--ecosystem");
-		const { runTest } = await import("./test-C960FIze.js");
+		const { runTest } = await import("./test-dNvF1VdU.js");
 		const exitCode = await runTest(parsers, {
 			quiet,
 			package: pkg,
@@ -691,7 +236,7 @@ async function main() {
 		const quiet = args.includes("--quiet");
 		const all = args.includes("--all");
 		const pkg = getFlagValue(args, "--package");
-		const { runBuild } = await import("./build-Cpzmpvbg.js");
+		const { runBuild } = await import("./build-CpwukQO3.js");
 		const exitCode = await runBuild(parsers, {
 			quiet,
 			all,
@@ -701,45 +246,45 @@ async function main() {
 	}
 	if (command === "ci") {
 		const verbose = args.includes("--verbose");
-		const { runCi } = await import("./ci-D6ef2ajr.js");
+		const { runCi } = await import("./ci-DXnUnELG.js");
 		const exitCode = await runCi(parsers, { verbose });
 		process.exit(exitCode);
 	}
 	if (command === "pre-commit") {
-		const { runPreCommit } = await import("./pre-commit-D2V4YM3_.js");
+		const { runPreCommit } = await import("./pre-commit-BM-XPNfH.js");
 		const exitCode = await runPreCommit(parsers);
 		process.exit(exitCode);
 	}
 	if (command === "commit-msg") {
 		const filePath = args[1];
 		if (!filePath) {
-			console.error("Usage: mido commit-msg <file>");
+			console.error("Usage: neutron commit-msg <file>");
 			process.exit(1);
 		}
-		const { runCommitMsg } = await import("./commit-msg-C9ZMU3F-.js");
+		const { runCommitMsg } = await import("./commit-msg-CX9YLmkW.js");
 		const exitCode = await runCommitMsg(filePath);
 		process.exit(exitCode);
 	}
 	if (command === "why") {
 		const depName = args[1];
 		if (!depName) {
-			console.error("Usage: mido why <dependency>");
+			console.error("Usage: neutron why <dependency>");
 			process.exit(1);
 		}
 		const json = args.includes("--json");
-		const { runWhy } = await import("./why-kpasn-Yd.js");
+		const { runWhy } = await import("./why-B1o8iSJA.js");
 		const exitCode = await runWhy(parsers, depName, { json });
 		process.exit(exitCode);
 	}
 	if (command === "rename") {
 		const newName = args[1];
 		if (!newName) {
-			console.error("Usage: mido rename <new-name> [--include-platform-ids]");
+			console.error("Usage: neutron rename <new-name> [--include-platform-ids]");
 			process.exit(1);
 		}
 		const includePlatformIds = args.includes("--include-platform-ids");
 		const dryRun = args.includes("--dry-run");
-		const { runRename } = await import("./rename-CQS6gBej.js");
+		const { runRename } = await import("./rename-Bx5y7IGO.js");
 		const exitCode = await runRename(parsers, newName, {
 			includePlatformIds,
 			dryRun

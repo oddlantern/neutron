@@ -10,7 +10,7 @@ import {
   spinner,
 } from "@clack/prompts";
 
-import type { MidoConfig } from "@/config/schema";
+import type { NeutronConfig } from "@/config/schema";
 import { loadConfig } from "@/config/loader";
 import { scanRepo, type DiscoveredPackage } from "@/discovery/scanner";
 import { printBanner } from "@/banner";
@@ -43,15 +43,15 @@ export async function runReconciliation(
   parsers: ParserRegistry,
 ): Promise<number> {
   printBanner();
-  intro("mido init \u2014 reconciling with existing config");
+  intro("neutron init \u2014 reconciling with existing config");
 
   const s = spinner();
-  s.start("Scanning repo and comparing with mido.yml...");
+  s.start("Scanning repo and comparing with neutron.yml...");
 
   const discovered = scanRepo(root);
   const supported = discovered.filter((p) => p.supported);
 
-  let existing: MidoConfig;
+  let existing: NeutronConfig;
   try {
     const loaded = await loadConfig(root);
     existing = loaded.config;

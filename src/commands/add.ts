@@ -8,7 +8,7 @@ import { Document, isMap, isSeq, parseDocument } from "yaml";
 import { loadConfig } from "@/config/loader";
 import { BOLD, DIM, GREEN, ORANGE, RESET } from "@/output";
 
-const CONFIG_FILENAME = "mido.yml";
+const CONFIG_FILENAME = "neutron.yml";
 
 class CancelError extends Error {
   constructor() {
@@ -24,13 +24,13 @@ function handleCancel(): never {
 /**
  * Scaffold a new package in the workspace.
  *
- * Creates the directory, a minimal manifest, and updates mido.yml.
+ * Creates the directory, a minimal manifest, and updates neutron.yml.
  * Does NOT run package managers — the user does that.
  *
  * @returns exit code (0 = success, 1 = error)
  */
 export async function runAdd(): Promise<number> {
-  intro("mido add");
+  intro("neutron add");
 
   // Load existing config
   let root: string;
@@ -38,7 +38,7 @@ export async function runAdd(): Promise<number> {
     const loaded = await loadConfig();
     root = loaded.root;
   } catch {
-    log.error("No mido.yml found. Run `mido init` first.");
+    log.error("No neutron.yml found. Run `neutron init` first.");
     return 1;
   }
 
@@ -97,7 +97,7 @@ export async function runAdd(): Promise<number> {
   const absPath = join(root, pkgPath);
   if (existsSync(absPath)) {
     const overwrite = await confirm({
-      message: `${pkgPath} already exists. Add to mido.yml anyway?`,
+      message: `${pkgPath} already exists. Add to neutron.yml anyway?`,
       initialValue: false,
     });
     if (isCancel(overwrite) || !overwrite) {
@@ -116,7 +116,7 @@ export async function runAdd(): Promise<number> {
     log.success(`Scaffolded ${ORANGE}${pkgPath}${RESET}`);
   }
 
-  // Update mido.yml
+  // Update neutron.yml
   await addToConfig(root, pkgPath, ecosystem);
   log.success(`Added to ${ORANGE}${CONFIG_FILENAME}${RESET}`);
 

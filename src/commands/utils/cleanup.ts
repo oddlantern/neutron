@@ -33,7 +33,7 @@ export async function runPostInitCheck(parsers: ParserRegistry): Promise<boolean
 
   if (mismatches.length === 0) {
     log.warn(
-      `${DIM}Some checks failed. Run${RESET} ${BOLD}mido check${RESET} ${DIM}to see details.${RESET}`,
+      `${DIM}Some checks failed. Run${RESET} ${BOLD}neutron check${RESET} ${DIM}to see details.${RESET}`,
     );
     return false;
   }
@@ -57,10 +57,10 @@ export async function runPostInitCheck(parsers: ParserRegistry): Promise<boolean
 // ─── Next steps ──────────────────────────────────────────────────────────────
 
 const HELP_LINES = [
-  `${BOLD}mido dev${RESET}              ${DIM}Watch bridges and regenerate on changes${RESET}`,
-  `${BOLD}mido check${RESET}            ${DIM}Run all workspace consistency checks${RESET}`,
-  `${BOLD}mido check --fix${RESET}      ${DIM}Interactively resolve version mismatches${RESET}`,
-  `${BOLD}mido install${RESET}          ${DIM}Install git hooks${RESET}`,
+  `${BOLD}neutron dev${RESET}              ${DIM}Watch bridges and regenerate on changes${RESET}`,
+  `${BOLD}neutron check${RESET}            ${DIM}Run all workspace consistency checks${RESET}`,
+  `${BOLD}neutron check --fix${RESET}      ${DIM}Interactively resolve version mismatches${RESET}`,
+  `${BOLD}neutron install${RESET}          ${DIM}Install git hooks${RESET}`,
 ].join("\n");
 
 export async function promptNextSteps(
@@ -87,9 +87,9 @@ export async function promptNextSteps(
   const next = await select({
     message: "What's next?",
     options: [
-      { value: "dev", label: "Start watching", hint: "mido dev" },
-      { value: "check", label: "Check workspace health", hint: "mido check" },
-      { value: "help", label: "View help", hint: "mido help" },
+      { value: "dev", label: "Start watching", hint: "neutron dev" },
+      { value: "check", label: "Check workspace health", hint: "neutron check" },
+      { value: "help", label: "View help", hint: "neutron help" },
       { value: "exit", label: "Exit" },
     ],
   });
@@ -135,14 +135,14 @@ interface DetectedTool {
 const REPLACEABLE_TOOLS: readonly DetectedTool[] = [
   {
     name: "Husky",
-    replacement: "mido install (git hooks)",
+    replacement: "neutron install (git hooks)",
     deps: ["husky"],
     configs: [],
     dirs: [".husky"],
   },
   {
     name: "commitlint",
-    replacement: "mido commit-msg (conventional commits)",
+    replacement: "neutron commit-msg (conventional commits)",
     deps: ["@commitlint/cli", "@commitlint/config-conventional", "@commitlint/config-angular"],
     configs: [
       "commitlint.config.js",
@@ -156,14 +156,14 @@ const REPLACEABLE_TOOLS: readonly DetectedTool[] = [
   },
   {
     name: "lint-staged",
-    replacement: "mido pre-commit",
+    replacement: "neutron pre-commit",
     deps: ["lint-staged"],
     configs: [".lintstagedrc", ".lintstagedrc.json", ".lintstagedrc.yml", ".lintstagedrc.js"],
     dirs: [],
   },
   {
     name: "Prettier",
-    replacement: "mido fmt (oxfmt, bundled)",
+    replacement: "neutron fmt (oxfmt, bundled)",
     deps: ["prettier"],
     configs: [
       ".prettierrc",
@@ -180,7 +180,7 @@ const REPLACEABLE_TOOLS: readonly DetectedTool[] = [
   },
   {
     name: "ESLint",
-    replacement: "mido lint (oxlint, bundled)",
+    replacement: "neutron lint (oxlint, bundled)",
     deps: ["eslint"],
     configs: [
       ".eslintrc.json",
@@ -198,28 +198,28 @@ const REPLACEABLE_TOOLS: readonly DetectedTool[] = [
   },
   {
     name: "Biome",
-    replacement: "mido lint + mido fmt",
+    replacement: "neutron lint + neutron fmt",
     deps: ["@biomejs/biome"],
     configs: ["biome.json", "biome.jsonc"],
     dirs: [],
   },
   {
     name: "syncpack",
-    replacement: "mido check --fix (version consistency)",
+    replacement: "neutron check --fix (version consistency)",
     deps: ["syncpack"],
     configs: [".syncpackrc", ".syncpackrc.json", ".syncpackrc.yml", ".syncpackrc.js"],
     dirs: [],
   },
   {
     name: "oxlint (standalone)",
-    replacement: "mido lint (oxlint bundled with mido)",
+    replacement: "neutron lint (oxlint bundled with neutron)",
     deps: ["oxlint"],
     configs: [".oxlintrc.json", "oxlint.config.ts", "oxlint.config.js"],
     dirs: [],
   },
   {
     name: "oxfmt (standalone)",
-    replacement: "mido fmt (oxfmt bundled with mido)",
+    replacement: "neutron fmt (oxfmt bundled with neutron)",
     deps: ["oxfmt"],
     configs: [".oxfmtrc.json", ".oxfmtrc.jsonc", ".oxfmtignore"],
     dirs: [],
@@ -253,7 +253,7 @@ function detectTools(
 }
 
 /**
- * Detect all tools that mido replaces, show a summary table,
+ * Detect all tools that neutron replaces, show a summary table,
  * and offer to remove them.
  */
 export async function cleanupReplacedTooling(root: string): Promise<void> {
@@ -286,7 +286,7 @@ export async function cleanupReplacedTooling(root: string): Promise<void> {
 
   note(
     tableLines.join("\n\n"),
-    `${ORANGE}${BOLD}mido replaces ${found.length} tool(s)${RESET}`,
+    `${ORANGE}${BOLD}neutron replaces ${found.length} tool(s)${RESET}`,
   );
 
   const cleanup = await confirm({
@@ -365,9 +365,9 @@ export async function cleanupReplacedTooling(root: string): Promise<void> {
       if (scripts && typeof scripts["prepare"] === "string") {
         const prepare = scripts["prepare"];
         if (prepare === "husky" || prepare === "husky install") {
-          scripts["prepare"] = "mido generate";
+          scripts["prepare"] = "neutron generate";
           await writeFile(pkgJsonPath, JSON.stringify(freshPkg, null, 2) + "\n", "utf-8");
-          log.step('Updated scripts.prepare → "mido generate"');
+          log.step('Updated scripts.prepare → "neutron generate"');
         }
       }
     }

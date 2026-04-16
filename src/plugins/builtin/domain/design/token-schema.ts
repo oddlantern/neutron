@@ -85,7 +85,7 @@ const typographySchema = z
 
 // ─── Standard section keys ─────────────────────────────────────────────────
 
-/** Keys that mido recognizes as standard sections */
+/** Keys that neutron recognizes as standard sections */
 const STANDARD_KEYS = new Set([
   "meta",
   "brand",
@@ -264,7 +264,7 @@ function parseExtension(
 }
 
 /**
- * Validate a parsed tokens.json against the mido-design token schema.
+ * Validate a parsed tokens.json against the neutron-design token schema.
  * Standard sections are validated by Zod. Any unknown top-level key
  * is treated as a custom extension section.
  */

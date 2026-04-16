@@ -47,12 +47,12 @@ describe("install command", () => {
 	let tmpDir: string;
 
 	beforeEach(() => {
-		tmpDir = mkdtempSync(join(tmpdir(), "mido-install-test-"));
+		tmpDir = mkdtempSync(join(tmpdir(), "neutron-install-test-"));
 		// Initialize a git repo so .git/hooks/ can be written
 		spawnSync("git", ["init"], { cwd: tmpDir });
-		// Write a minimal mido.yml
+		// Write a minimal neutron.yml
 		writeFileSync(
-			join(tmpDir, "mido.yml"),
+			join(tmpDir, "neutron.yml"),
 			[
 				"workspace: smoke-test",
 				"ecosystems:",

@@ -14,7 +14,7 @@ const FIXTURE_DIR = resolve(import.meta.dir, '../fixture-server');
 const TEST_TIMEOUT = 20_000;
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-exporter-')));
+  return realpathSync(mkdtempSync(join(tmpdir(), 'neutron-test-exporter-')));
 }
 
 /**

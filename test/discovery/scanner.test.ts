@@ -8,7 +8,7 @@ import { scanRepo } from '../../src/discovery/scanner.js';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'mido-scanner-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'neutron-scanner-test-'));
 });
 
 afterEach(() => {

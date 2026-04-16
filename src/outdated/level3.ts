@@ -36,7 +36,7 @@ async function validateTypescriptDeps(
   root: string,
   packages: ReadonlyMap<string, WorkspacePackage>,
 ): Promise<readonly ValidationResult[]> {
-  const tmpDir = await mkdtemp(join(tmpdir(), "mido-validate-ts-"));
+  const tmpDir = await mkdtemp(join(tmpdir(), "neutron-validate-ts-"));
 
   try {
     // Build a package.json with all workspace deps, overriding outdated ones
@@ -64,7 +64,7 @@ async function validateTypescriptDeps(
     }
 
     const manifest = {
-      name: "mido-validate",
+      name: "neutron-validate",
       private: true,
       dependencies: allDeps,
     };
@@ -144,7 +144,7 @@ async function validateDartDeps(
   root: string,
   packages: ReadonlyMap<string, WorkspacePackage>,
 ): Promise<readonly ValidationResult[]> {
-  const tmpDir = await mkdtemp(join(tmpdir(), "mido-validate-dart-"));
+  const tmpDir = await mkdtemp(join(tmpdir(), "neutron-validate-dart-"));
 
   try {
     // Build a pubspec.yaml with all workspace deps, overriding outdated ones

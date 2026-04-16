@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { goModParser } from "../../src/parsers/go-mod.js";
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), "mido-test-gomod-")));
+  return realpathSync(mkdtempSync(join(tmpdir(), "neutron-test-gomod-")));
 }
 
 function writeManifest(dir: string, content: string): string {

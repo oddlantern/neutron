@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { pyprojectParser } from "../../src/parsers/pyproject.js";
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), "mido-test-pyproject-")));
+  return realpathSync(mkdtempSync(join(tmpdir(), "neutron-test-pyproject-")));
 }
 
 function writeManifest(dir: string, content: string): string {

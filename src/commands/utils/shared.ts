@@ -1,10 +1,10 @@
 import { cancel } from "@clack/prompts";
 
-import type { MidoConfig } from "@/config/schema";
+import type { NeutronConfig } from "@/config/schema";
 import type { DiscoveredPackage } from "@/discovery/scanner";
 import { BOLD, DIM, ORANGE, RESET } from "@/output";
 
-export const CONFIG_FILENAME = "mido.yml";
+export const CONFIG_FILENAME = "neutron.yml";
 export const MIN_ENV_FILES_FOR_PARITY = 2;
 
 export const ECOSYSTEM_MANIFESTS: Readonly<Record<string, string>> = {
@@ -72,7 +72,7 @@ export function buildPackageMap(
 
 // ─── Config helpers ─────────────────────────────────────────────────────────
 
-export function getAllPackagePaths(config: MidoConfig): string[] {
+export function getAllPackagePaths(config: NeutronConfig): string[] {
   const paths: string[] = [];
   for (const group of Object.values(config.ecosystems)) {
     paths.push(...group.packages);
@@ -80,7 +80,7 @@ export function getAllPackagePaths(config: MidoConfig): string[] {
   return paths.sort();
 }
 
-export function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): void {
+export function addPackageToConfig(config: NeutronConfig, pkg: DiscoveredPackage): void {
   const eco = config.ecosystems[pkg.ecosystem];
   if (eco) {
     config.ecosystems[pkg.ecosystem] = {
@@ -95,7 +95,7 @@ export function addPackageToConfig(config: MidoConfig, pkg: DiscoveredPackage): 
   }
 }
 
-export function removePackageFromConfig(config: MidoConfig, path: string): void {
+export function removePackageFromConfig(config: NeutronConfig, path: string): void {
   for (const [ecoName, group] of Object.entries(config.ecosystems)) {
     if (!group.packages.includes(path)) {
       continue;

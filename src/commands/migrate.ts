@@ -80,7 +80,7 @@ async function promptRemoveFile(
   onCancel: () => never,
 ): Promise<boolean> {
   const answer = await confirm({
-    message: `Remove ${label}? (config now lives in mido.yml)`,
+    message: `Remove ${label}? (config now lives in neutron.yml)`,
     initialValue: true,
   });
   if (isCancel(answer)) {
@@ -100,7 +100,7 @@ const OXLINT_JSON_CONFIGS = [".oxlintrc.json"] as const;
 const OXLINT_JS_CONFIGS = ["oxlint.config.ts", "oxlint.config.js"] as const;
 
 /**
- * Extract the mido lint section from an oxlint config object.
+ * Extract the neutron lint section from an oxlint config object.
  * Produces ecosystem-centric structure: { ignore, typescript: { categories, rules } }
  */
 function extractLintConfig(parsed: Record<string, unknown>): Record<string, unknown> {
@@ -164,7 +164,7 @@ const STALE_PRETTIER_CONFIGS = [".prettierrc", ".prettierrc.json", ".prettierign
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Migrate existing lint/format config files into mido.yml sections.
+ * Migrate existing lint/format config files into neutron.yml sections.
  *
  * Detects:
  *  - oxlint: .oxlintrc.json, oxlint.config.ts, oxlint.config.js
@@ -192,7 +192,7 @@ export async function migrateLintFormatConfig(
     const lint = extractLintConfig(parsed);
     if (Object.keys(lint).length > 0) {
       migrated.lint = lint;
-      log.info(`Migrated ${name} into mido.yml lint section`);
+      log.info(`Migrated ${name} into neutron.yml lint section`);
     }
     const removed = await promptRemoveFile(filePath, name, onCancel);
     if (removed) {
@@ -213,14 +213,14 @@ export async function migrateLintFormatConfig(
         const lint = extractLintConfig(parsed);
         if (Object.keys(lint).length > 0) {
           migrated.lint = lint;
-          log.info(`Migrated ${name} into mido.yml lint section`);
+          log.info(`Migrated ${name} into neutron.yml lint section`);
         }
         const removed = await promptRemoveFile(filePath, name, onCancel);
         if (removed) {
           removedFiles.add(name);
         }
       } else {
-        log.warn(`Could not load ${name} — migrate manually into the lint section of mido.yml`);
+        log.warn(`Could not load ${name} — migrate manually into the lint section of neutron.yml`);
         const removed = await promptRemoveFile(filePath, name, onCancel);
         if (removed) {
           removedFiles.add(name);
@@ -242,7 +242,7 @@ export async function migrateLintFormatConfig(
     const format = extractFormatConfig(parsed);
     if (Object.keys(format).length > 0) {
       migrated.format = format;
-      log.info(`Migrated ${name} into mido.yml format section`);
+      log.info(`Migrated ${name} into neutron.yml format section`);
     }
     const removed = await promptRemoveFile(filePath, name, onCancel);
     if (removed) {
@@ -267,7 +267,7 @@ export async function migrateLintFormatConfig(
       ? migrated.format["ignore"]
       : [];
     migrated.format["ignore"] = [...existingIgnore, ...patterns];
-    log.info(`Migrated ${name} patterns into mido.yml format.ignore`);
+    log.info(`Migrated ${name} patterns into neutron.yml format.ignore`);
 
     const removed = await promptRemoveFile(filePath, name, onCancel);
     if (removed) {
@@ -287,7 +287,7 @@ export async function migrateLintFormatConfig(
         continue;
       }
       const answer = await confirm({
-        message: `${name} found — mido now uses oxlint. Remove?`,
+        message: `${name} found — neutron now uses oxlint. Remove?`,
         initialValue: true,
       });
       if (isCancel(answer)) {
@@ -310,7 +310,7 @@ export async function migrateLintFormatConfig(
         continue;
       }
       const answer = await confirm({
-        message: `${name} found — mido now uses oxfmt. Remove?`,
+        message: `${name} found — neutron now uses oxfmt. Remove?`,
         initialValue: true,
       });
       if (isCancel(answer)) {

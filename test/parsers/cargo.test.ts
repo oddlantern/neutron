@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { cargoParser } from "../../src/parsers/cargo.js";
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), "mido-test-cargo-")));
+  return realpathSync(mkdtempSync(join(tmpdir(), "neutron-test-cargo-")));
 }
 
 function writeManifest(dir: string, content: string): string {

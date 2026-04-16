@@ -214,7 +214,7 @@ export const configSchema = z.object({
   hooks: hooksSchema.optional(),
 });
 
-export type MidoConfig = z.infer<typeof configSchema>;
+export type NeutronConfig = z.infer<typeof configSchema>;
 export type EcosystemConfig = z.infer<typeof ecosystemSchema>;
 export type BridgeConfig = z.infer<typeof bridgeSchema>;
 export type EnvConfig = z.infer<typeof envSchema>;

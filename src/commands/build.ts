@@ -110,7 +110,7 @@ export async function runBuild(
         const firstLine = result.output?.trim().split("\n")[0] ?? "";
         diag.error(`Build failed: ${pkg.path}`, {
           detail: firstLine,
-          fix: `Run mido build --package ${pkg.path} for full output`,
+          fix: `Run neutron build --package ${pkg.path} for full output`,
         });
       }
 

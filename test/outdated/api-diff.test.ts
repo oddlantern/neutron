@@ -172,7 +172,7 @@ describe("findUsedSymbols", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = await mkdtemp(join(tmpdir(), "mido-find-symbols-"));
+    tmpDir = await mkdtemp(join(tmpdir(), "neutron-find-symbols-"));
   });
 
   afterEach(async () => {

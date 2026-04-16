@@ -109,14 +109,14 @@ export function printBridgeSummary(
     const watchLabels = r.watchPatterns.join(", ");
 
     if (r.domain) {
-      const plugins: string[] = [`mido-${r.domain.name}`];
+      const plugins: string[] = [`neutron-${r.domain.name}`];
       if (r.sourcePlugin) {
-        plugins.push(`mido-${r.sourcePlugin.name}`);
+        plugins.push(`neutron-${r.sourcePlugin.name}`);
       }
       for (const t of r.targets) {
         const eco = registry.getEcosystemForPackage(t);
-        if (eco && !plugins.includes(`mido-${eco.name}`)) {
-          plugins.push(`mido-${eco.name}`);
+        if (eco && !plugins.includes(`neutron-${eco.name}`)) {
+          plugins.push(`neutron-${eco.name}`);
         }
       }
 
@@ -142,7 +142,7 @@ export function printBridgeSummary(
 
 export function printStartup(resolved: readonly ResolvedBridge[], registry: PluginRegistry): void {
   console.log(
-    `\n${CYAN}${BOLD}mido dev${RESET} ${DIM}\u2014 watching ${resolved.length} bridge(s)${RESET}\n`,
+    `\n${CYAN}${BOLD}neutron dev${RESET} ${DIM}\u2014 watching ${resolved.length} bridge(s)${RESET}\n`,
   );
   printBridgeSummary(resolved, registry);
   console.log(`  ${DIM}Waiting for changes...${RESET}\n`);
@@ -248,7 +248,7 @@ async function executeBridge(
     }
 
     // Fallback: legacy export + generateDownstream flow
-    logStep(`mido-${resolved.domain.name}: exporting spec...`);
+    logStep(`neutron-${resolved.domain.name}: exporting spec...`);
     const exportResult = await resolved.domain.exportArtifact(
       resolved.source,
       bridge.artifact,
@@ -307,7 +307,7 @@ async function executeBridge(
       return;
     }
 
-    logStep(`mido-${resolved.sourcePlugin.name}: running "${action}"...`);
+    logStep(`neutron-${resolved.sourcePlugin.name}: running "${action}"...`);
     const result = await resolved.sourcePlugin.execute(action, resolved.source, root, context);
     printResult(result, `${resolved.source.path} bridge`);
     return;

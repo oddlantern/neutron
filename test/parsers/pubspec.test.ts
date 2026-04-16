@@ -7,7 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { pubspecParser } from '../../src/parsers/pubspec.js';
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-pubspec-')));
+  return realpathSync(mkdtempSync(join(tmpdir(), 'neutron-test-pubspec-')));
 }
 
 function writePubspec(dir: string, content: string): string {

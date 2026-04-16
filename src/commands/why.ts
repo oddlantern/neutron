@@ -79,7 +79,7 @@ export async function runWhy(
   const ranges = new Set(occurrences.map((o) => o.range));
   if (ranges.size > 1) {
     console.log(`\n  ${ORANGE}${BOLD}warning:${RESET} ${ranges.size} different version ranges detected`);
-    console.log(`  ${DIM}Run \`mido check --fix\` to resolve${RESET}`);
+    console.log(`  ${DIM}Run \`neutron check --fix\` to resolve${RESET}`);
   }
 
   console.log();

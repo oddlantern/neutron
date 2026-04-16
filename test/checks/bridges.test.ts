@@ -9,7 +9,7 @@ import { checkBridges } from '../../src/checks/bridges.js';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'mido-bridges-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'neutron-bridges-test-'));
 });
 
 afterEach(() => {

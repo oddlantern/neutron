@@ -39,7 +39,7 @@ export async function checkStaleness(
       issues.push({
         severity: "warning",
         check: CHECK_NAME,
-        message: `${output.source}/generated/${output.ecosystem}/ missing — run \`mido generate\``,
+        message: `${output.source}/generated/${output.ecosystem}/ missing — run \`neutron generate\``,
       });
     }
   }

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
-import { MIDO_ROOT } from "@/version";
+import { NEUTRON_ROOT } from "@/version";
 import type {
   DomainCapability,
   EcosystemPlugin,
@@ -40,7 +40,7 @@ const ACTION_GENERATE_SCHEMA_TS = "generate-schema-ts";
  *
  * Resolution order:
  *  1. Workspace root node_modules — user override takes precedence
- *  2. Mido's own node_modules   — bundled oxlint / oxfmt
+ *  2. Neutron's own node_modules   — bundled oxlint / oxfmt
  *  3. Fall through (null)        — caller can try bare name on PATH
  */
 export function resolveBin(name: string, workspaceRoot: string): string | null {
@@ -49,7 +49,7 @@ export function resolveBin(name: string, workspaceRoot: string): string | null {
     return workspaceBin;
   }
 
-  const bundledBin = join(MIDO_ROOT, "node_modules", ".bin", name);
+  const bundledBin = join(NEUTRON_ROOT, "node_modules", ".bin", name);
   if (existsSync(bundledBin)) {
     return bundledBin;
   }

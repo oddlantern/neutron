@@ -24,7 +24,7 @@ const MS_PER_SECOND = 1000;
 export async function runCi(parsers: ParserRegistry, options: CiOptions = {}): Promise<number> {
   const { verbose = false } = options;
 
-  console.log(`\n${BOLD}mido ci${RESET} ${DIM}— full pipeline${RESET}\n`);
+  console.log(`\n${BOLD}neutron ci${RESET} ${DIM}— full pipeline${RESET}\n`);
 
   const diag = new DiagnosticCollector();
   const results: StepResult[] = [];
@@ -85,7 +85,7 @@ export async function runCi(parsers: ParserRegistry, options: CiOptions = {}): P
     if (exitCode !== 0) {
       diag.error(`${step.name} failed`, {
         detail: `exit code ${exitCode}`,
-        fix: `Run mido ${step.name} for full output`,
+        fix: `Run neutron ${step.name} for full output`,
       });
       break;
     }

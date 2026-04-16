@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-import { MIDO_ROOT, VERSION } from "../src/version";
+import { NEUTRON_ROOT, VERSION } from "../src/version";
 
 describe("VERSION", () => {
   test("is a non-empty string", () => {
@@ -12,7 +12,7 @@ describe("VERSION", () => {
   });
 
   test("matches the version in package.json", () => {
-    const pkgPath = join(MIDO_ROOT, "package.json");
+    const pkgPath = join(NEUTRON_ROOT, "package.json");
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
     expect(VERSION).toBe(pkg.version);
   });
@@ -22,19 +22,19 @@ describe("VERSION", () => {
   });
 });
 
-describe("MIDO_ROOT", () => {
+describe("NEUTRON_ROOT", () => {
   test("is an absolute path", () => {
-    expect(isAbsolute(MIDO_ROOT)).toBe(true);
+    expect(isAbsolute(NEUTRON_ROOT)).toBe(true);
   });
 
   test("contains a package.json file", () => {
-    const pkgPath = join(MIDO_ROOT, "package.json");
+    const pkgPath = join(NEUTRON_ROOT, "package.json");
     expect(existsSync(pkgPath)).toBe(true);
   });
 
-  test("package.json at MIDO_ROOT has the mido package name", () => {
-    const pkgPath = join(MIDO_ROOT, "package.json");
+  test("package.json at NEUTRON_ROOT has the neutron package name", () => {
+    const pkgPath = join(NEUTRON_ROOT, "package.json");
     const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-    expect(pkg.name).toBe("@oddlantern/mido-cli");
+    expect(pkg.name).toBe("@oddlantern/neutron");
   });
 });

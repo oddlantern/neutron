@@ -83,7 +83,7 @@ export interface WatchPathSuggestion {
 /**
  * Ecosystem plugin — handles language-level operations.
  *
- * Examples: mido-typescript, mido-dart, mido-rust
+ * Examples: neutron-typescript, neutron-dart, neutron-rust
  */
 export interface EcosystemPlugin {
   readonly type: "ecosystem";
@@ -154,7 +154,7 @@ export interface DomainCapability {
  * Domain plugin — handles protocol/spec-level operations.
  * Delegates actual code generation to ecosystem plugins.
  *
- * Examples: mido-openapi, mido-graphql, mido-protobuf
+ * Examples: neutron-openapi, neutron-graphql, neutron-protobuf
  */
 export interface DomainPlugin {
   readonly type: "domain";
@@ -217,7 +217,7 @@ export interface DomainPlugin {
 }
 
 /**
- * Execution context provided by mido core to plugins.
+ * Execution context provided by neutron core to plugins.
  * Gives plugins access to the registry without importing other plugins directly.
  */
 export interface ExecutionContext {
@@ -287,4 +287,4 @@ export interface EcosystemHandler {
   readonly capability: DomainCapability;
 }
 
-export type MidoPlugin = EcosystemPlugin | DomainPlugin;
+export type NeutronPlugin = EcosystemPlugin | DomainPlugin;

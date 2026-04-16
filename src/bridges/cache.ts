@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { CACHE_DIR } from "@/branding";
 import { isRecord } from "@/guards";
 
-const CACHE_DIR = "node_modules/.cache/mido";
 const CACHE_FILE = "pipeline-cache.json";
 
 interface CacheEntry {

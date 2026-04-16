@@ -1,3 +1,4 @@
+import { USER_AGENT } from "@/branding";
 import {
   parseCratesIo,
   parseGoProxy,
@@ -181,7 +182,7 @@ export async function fetchCratesMetadata(name: string): Promise<RegistryMetadat
 
     const res = await fetch(`${CRATES_IO_API}/${name}`, {
       signal: controller.signal,
-      headers: { "User-Agent": "mido-cli (https://github.com/oddlantern/mido-cli)" },
+      headers: { "User-Agent": USER_AGENT },
     });
     clearTimeout(timeout);
 
