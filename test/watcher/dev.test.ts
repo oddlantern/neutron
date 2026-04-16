@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 
 import { afterEach, describe, expect, test } from 'bun:test';
 
-const MIDO_BIN = join(import.meta.dirname, '..', '..', 'dist', 'bin.js');
+const NEUTRON_BIN = join(import.meta.dirname, '..', '..', 'dist', 'bin.js');
 const TIMEOUT_MS = 10_000;
 
 function makeTempWorkspace(): string {
@@ -85,7 +85,7 @@ describe('neutron dev integration', () => {
       const outputFile = join(root, 'packages', 'source', 'output.txt');
 
       // Start neutron dev
-      child = spawn('node', [MIDO_BIN, 'dev', '--verbose'], {
+      child = spawn('node', [NEUTRON_BIN, 'dev', '--verbose'], {
         cwd: root,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -163,7 +163,7 @@ describe('neutron dev integration', () => {
     async () => {
       const root = makeTempWorkspace();
 
-      child = spawn('node', [MIDO_BIN, 'dev', '--verbose'], {
+      child = spawn('node', [NEUTRON_BIN, 'dev', '--verbose'], {
         cwd: root,
         stdio: ['ignore', 'pipe', 'pipe'],
       });

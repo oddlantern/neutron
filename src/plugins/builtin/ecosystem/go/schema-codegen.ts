@@ -3,7 +3,11 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import type { SchemaDefinition, SchemaProperty, ValidatedSchema } from "@/plugins/builtin/domain/schema/types";
+import type {
+  SchemaDefinition,
+  SchemaProperty,
+  ValidatedSchema,
+} from "@/plugins/builtin/domain/schema/types";
 
 const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.\n\npackage schema\n";
 
@@ -13,24 +17,37 @@ function goType(prop: SchemaProperty): string {
   }
 
   switch (prop.type) {
-    case "string": return "string";
-    case "number": return "float64";
-    case "integer": return "int64";
-    case "boolean": return "bool";
-    case "array": return `[]${goItemType(prop.items)}`;
-    case "object": return "map[string]interface{}";
-    default: return "interface{}";
+    case "string":
+      return "string";
+    case "number":
+      return "float64";
+    case "integer":
+      return "int64";
+    case "boolean":
+      return "bool";
+    case "array":
+      return `[]${goItemType(prop.items)}`;
+    case "object":
+      return "map[string]interface{}";
+    default:
+      return "interface{}";
   }
 }
 
 function goItemType(items: string | undefined): string {
   switch (items) {
-    case "string": return "string";
-    case "number": return "float64";
-    case "integer": return "int64";
-    case "boolean": return "bool";
-    case undefined: return "interface{}";
-    default: return items;
+    case "string":
+      return "string";
+    case "number":
+      return "float64";
+    case "integer":
+      return "int64";
+    case "boolean":
+      return "bool";
+    case undefined:
+      return "interface{}";
+    default:
+      return items;
   }
 }
 
@@ -48,7 +65,7 @@ function generateStruct(def: SchemaDefinition): string {
 
   for (const prop of def.properties) {
     let type = goType(prop);
-    const pointer = (prop.nullable || !prop.required) ? "*" : "";
+    const pointer = prop.nullable || !prop.required ? "*" : "";
     const jsonTag = `\`json:"${prop.name}${!prop.required ? ",omitempty" : ""}"\``;
 
     if (prop.description) {

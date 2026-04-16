@@ -79,11 +79,23 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
     }
 
     if (installedCount === hookNames.length) {
-      results.push({ label: "git hooks", status: "ok", detail: `${installedCount}/${hookNames.length} installed` });
+      results.push({
+        label: "git hooks",
+        status: "ok",
+        detail: `${installedCount}/${hookNames.length} installed`,
+      });
     } else if (installedCount > 0) {
-      results.push({ label: "git hooks", status: "warn", detail: `${installedCount}/${hookNames.length} installed — run \`neutron install\`` });
+      results.push({
+        label: "git hooks",
+        status: "warn",
+        detail: `${installedCount}/${hookNames.length} installed — run \`neutron install\``,
+      });
     } else {
-      results.push({ label: "git hooks", status: "warn", detail: "none installed — run `neutron install`" });
+      results.push({
+        label: "git hooks",
+        status: "warn",
+        detail: "none installed — run `neutron install`",
+      });
     }
   }
 
@@ -112,9 +124,17 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
       }
 
       if (missingCount === 0 && presentCount > 0) {
-        results.push({ label: "generated output", status: "ok", detail: `${presentCount} output(s) present` });
+        results.push({
+          label: "generated output",
+          status: "ok",
+          detail: `${presentCount} output(s) present`,
+        });
       } else if (missingCount > 0) {
-        results.push({ label: "generated output", status: "warn", detail: `${missingCount} missing — run \`neutron generate\`` });
+        results.push({
+          label: "generated output",
+          status: "warn",
+          detail: `${missingCount} missing — run \`neutron generate\``,
+        });
       } else if (bridges.length === 0) {
         results.push({ label: "generated output", status: "ok", detail: "no bridges configured" });
       }
@@ -135,7 +155,11 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
     results.push({ label: "flutter", status: "ok", detail: flutterVersion });
   }
   if (!dartVersion && !flutterVersion) {
-    results.push({ label: "dart/flutter", status: "warn", detail: "not found (only needed for Dart ecosystems)" });
+    results.push({
+      label: "dart/flutter",
+      status: "warn",
+      detail: "not found (only needed for Dart ecosystems)",
+    });
   }
 
   // 5. Package manager

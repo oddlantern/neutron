@@ -79,7 +79,8 @@ export async function runCi(parsers: ParserRegistry, options: CiOptions = {}): P
     results.push({ name: step.name, exitCode, duration });
 
     const icon = exitCode === 0 ? PASS : FAIL;
-    const ms = duration >= MS_PER_SECOND ? `${(duration / MS_PER_SECOND).toFixed(1)}s` : `${duration}ms`;
+    const ms =
+      duration >= MS_PER_SECOND ? `${(duration / MS_PER_SECOND).toFixed(1)}s` : `${duration}ms`;
     console.log(`  ${icon} ${step.name} (${ms})`);
 
     if (exitCode !== 0) {
@@ -92,9 +93,10 @@ export async function runCi(parsers: ParserRegistry, options: CiOptions = {}): P
   }
 
   const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
-  const totalMs = totalDuration >= MS_PER_SECOND
-    ? `${(totalDuration / MS_PER_SECOND).toFixed(1)}s`
-    : `${totalDuration}ms`;
+  const totalMs =
+    totalDuration >= MS_PER_SECOND
+      ? `${(totalDuration / MS_PER_SECOND).toFixed(1)}s`
+      : `${totalDuration}ms`;
 
   if (!diag.hasErrors) {
     console.log(`\n${GREEN}${BOLD}CI passed${RESET} ${DIM}(${totalMs})${RESET}`);

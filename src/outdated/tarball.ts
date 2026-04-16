@@ -30,7 +30,10 @@ const SIZE_FIELD_END = 135;
  * Parse the file size from a tar header's octal size field.
  */
 function parseOctalSize(header: Buffer, offset: number): number {
-  const raw = header.subarray(offset + SIZE_FIELD_OFFSET, offset + SIZE_FIELD_END).toString("ascii").trim();
+  const raw = header
+    .subarray(offset + SIZE_FIELD_OFFSET, offset + SIZE_FIELD_END)
+    .toString("ascii")
+    .trim();
   return parseInt(raw, 8) || 0;
 }
 

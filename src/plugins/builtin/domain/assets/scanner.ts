@@ -1,17 +1,15 @@
 import { readdirSync, statSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 
-import type { AssetCategory, AssetEntry, AssetManifest, ThemeVariant } from "@/plugins/builtin/domain/assets/types";
+import type {
+  AssetCategory,
+  AssetEntry,
+  AssetManifest,
+  ThemeVariant,
+} from "@/plugins/builtin/domain/assets/types";
 
 /** File extensions recognized as assets */
-const ASSET_EXTENSIONS: ReadonlySet<string> = new Set([
-  "svg",
-  "png",
-  "jpg",
-  "jpeg",
-  "webp",
-  "gif",
-]);
+const ASSET_EXTENSIONS: ReadonlySet<string> = new Set(["svg", "png", "jpg", "jpeg", "webp", "gif"]);
 
 /** Directory names that indicate theme variants */
 const THEME_VARIANT_DIRS: ReadonlySet<string> = new Set(["light", "dark"]);
@@ -93,9 +91,7 @@ function scanDir(absDir: string, assetsRoot: string, parentDir: string): AssetEn
 /**
  * Detect theme variants in directories that contain light/dark subdirectories.
  */
-function detectThemeVariants(
-  allEntries: readonly AssetEntry[],
-): readonly ThemeVariant[] {
+function detectThemeVariants(allEntries: readonly AssetEntry[]): readonly ThemeVariant[] {
   // Group entries whose path contains a theme variant directory
   const variantMap = new Map<string, Map<string, AssetEntry[]>>();
 
@@ -134,9 +130,7 @@ function detectThemeVariants(
 /**
  * Collect unique top-level asset directories for pubspec declarations.
  */
-function collectAssetDirectories(
-  allEntries: readonly AssetEntry[],
-): readonly string[] {
+function collectAssetDirectories(allEntries: readonly AssetEntry[]): readonly string[] {
   const dirs = new Set<string>();
   for (const entry of allEntries) {
     const parts = entry.relativePath.split("/");

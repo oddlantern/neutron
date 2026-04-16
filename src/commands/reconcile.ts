@@ -1,14 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { basename } from "node:path";
 
-import {
-  confirm,
-  intro,
-  isCancel,
-  log,
-  select,
-  spinner,
-} from "@clack/prompts";
+import { confirm, intro, isCancel, log, select, spinner } from "@clack/prompts";
 
 import type { NeutronConfig } from "@/config/schema";
 import { loadConfig } from "@/config/loader";

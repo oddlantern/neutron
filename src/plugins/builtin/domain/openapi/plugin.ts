@@ -11,7 +11,11 @@ import type {
 } from "@/plugins/types";
 import { getScripts, hasDep, readPackageJson, runCommand } from "@/plugins/builtin/shared/exec";
 import type { FrameworkAdapter } from "@/plugins/builtin/domain/openapi/adapters/types";
-import { assertWithinRoot, detectFrameworkAdapter, exportSpec } from "@/plugins/builtin/domain/openapi/exporter";
+import {
+  assertWithinRoot,
+  detectFrameworkAdapter,
+  exportSpec,
+} from "@/plugins/builtin/domain/openapi/exporter";
 import { normalizeSpec } from "@/plugins/builtin/domain/openapi/normalizer";
 
 const OPENAPI_FILENAMES: ReadonlySet<string> = new Set([
@@ -31,7 +35,6 @@ const SERVER_FRAMEWORKS: ReadonlyMap<string, readonly string[]> = new Map([
   ["koa", ["src/routes/**", "routes/**"]],
   ["@nestjs/core", ["src/**/*.controller.ts", "src/**/*.ts"]],
 ]);
-
 
 /**
  * Find which package in the workspace has the server framework that

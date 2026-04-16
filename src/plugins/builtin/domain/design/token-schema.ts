@@ -5,8 +5,7 @@ import { isRecord } from "@/guards";
 // ─── Primitives ────────────────────────────────────────────────────────────
 
 /** Matches all common CSS color notations: hex, rgb(a), hsl(a) */
-const COLOR_PATTERN =
-  /^(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\()/;
+const COLOR_PATTERN = /^(#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\()/;
 
 /** Accepts hex (#RGB, #RRGGBB, #RRGGBBAA), rgb(a)(), and hsl(a)() color values */
 const colorValue = z.string().refine((v) => COLOR_PATTERN.test(v), {
@@ -330,10 +329,7 @@ export function validateTokens(raw: unknown): TokenValidationResult {
       continue;
     }
 
-    const { parsed, errors: extErrors } = parseExtension(
-      key,
-      sectionValue,
-    );
+    const { parsed, errors: extErrors } = parseExtension(key, sectionValue);
     errors.push(...extErrors);
     extensions[key] = parsed;
   }

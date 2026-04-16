@@ -3,9 +3,14 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import type { SchemaDefinition, SchemaProperty, ValidatedSchema } from "@/plugins/builtin/domain/schema/types";
+import type {
+  SchemaDefinition,
+  SchemaProperty,
+  ValidatedSchema,
+} from "@/plugins/builtin/domain/schema/types";
 
-const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.\n\nuse serde::{Deserialize, Serialize};\n";
+const HEADER =
+  "// GENERATED — DO NOT EDIT. Changes will be overwritten.\n\nuse serde::{Deserialize, Serialize};\n";
 
 function rustType(prop: SchemaProperty): string {
   if (prop.enumValues) {
@@ -16,24 +21,37 @@ function rustType(prop: SchemaProperty): string {
   }
 
   switch (prop.type) {
-    case "string": return "String";
-    case "number": return "f64";
-    case "integer": return "i64";
-    case "boolean": return "bool";
-    case "array": return `Vec<${rustItemType(prop.items)}>`;
-    case "object": return "serde_json::Value";
-    default: return "serde_json::Value";
+    case "string":
+      return "String";
+    case "number":
+      return "f64";
+    case "integer":
+      return "i64";
+    case "boolean":
+      return "bool";
+    case "array":
+      return `Vec<${rustItemType(prop.items)}>`;
+    case "object":
+      return "serde_json::Value";
+    default:
+      return "serde_json::Value";
   }
 }
 
 function rustItemType(items: string | undefined): string {
   switch (items) {
-    case "string": return "String";
-    case "number": return "f64";
-    case "integer": return "i64";
-    case "boolean": return "bool";
-    case undefined: return "serde_json::Value";
-    default: return items;
+    case "string":
+      return "String";
+    case "number":
+      return "f64";
+    case "integer":
+      return "i64";
+    case "boolean":
+      return "bool";
+    case undefined:
+      return "serde_json::Value";
+    default:
+      return items;
   }
 }
 

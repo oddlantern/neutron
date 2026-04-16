@@ -20,7 +20,10 @@ function parsePep508(spec: string): { readonly name: string; readonly range: str
   const name = match?.[1] ?? spec.trim();
 
   // Extract version specifier after the name (and optional extras)
-  const afterName = spec.slice(name.length).replace(/\[[^\]]*\]/, "").trim();
+  const afterName = spec
+    .slice(name.length)
+    .replace(/\[[^\]]*\]/, "")
+    .trim();
   const range = afterName.startsWith("@") ? "<local>" : afterName || "any";
 
   return { name, range };

@@ -150,9 +150,7 @@ export function topologicalSort(
 
   if (sorted.length !== nodes.size) {
     const stuck = [...nodes].filter((p) => !sorted.includes(p));
-    throw new Error(
-      `Dependency cycle detected among: ${stuck.join(", ")}`,
-    );
+    throw new Error(`Dependency cycle detected among: ${stuck.join(", ")}`);
   }
 
   return sorted;

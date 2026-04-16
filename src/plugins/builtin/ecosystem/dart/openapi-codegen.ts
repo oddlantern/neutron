@@ -64,7 +64,11 @@ export async function executeOpenAPIDartGeneration(
   // Write swagger_parser config pointing to the artifact
   const artifactPath = context.artifactPath;
   if (!artifactPath) {
-    return { success: false, duration: 0, summary: "No artifact path provided for OpenAPI generation" };
+    return {
+      success: false,
+      duration: 0,
+      summary: "No artifact path provided for OpenAPI generation",
+    };
   }
 
   const artifactAbsolute = join(root, artifactPath);

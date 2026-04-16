@@ -56,7 +56,7 @@ function escapeRegex(str: string): string {
 /**
  * Update the workspace name in neutron.yml.
  */
-function updateMidoYml(root: string, oldName: string, newName: string, fs: DryFs): boolean {
+function updateNeutronYml(root: string, oldName: string, newName: string, fs: DryFs): boolean {
   const configPath = join(root, "neutron.yml");
   if (!existsSync(configPath)) {
     return false;
@@ -157,7 +157,12 @@ function updatePubspec(filePath: string, oldName: string, newName: string, fs: D
  * Update dependency references in pubspec.yaml that reference old workspace packages.
  * Only targets lines in dependency sections (indented key: value pairs).
  */
-function updatePubspecDependencies(filePath: string, oldName: string, newName: string, fs: DryFs): boolean {
+function updatePubspecDependencies(
+  filePath: string,
+  oldName: string,
+  newName: string,
+  fs: DryFs,
+): boolean {
   if (!existsSync(filePath)) {
     return false;
   }
@@ -183,7 +188,10 @@ function updatePubspecDependencies(filePath: string, oldName: string, newName: s
 /**
  * Scan for platform identifiers and return warnings.
  */
-function detectPlatformIdentifiers(root: string, ecosystemPaths: readonly string[]): readonly string[] {
+function detectPlatformIdentifiers(
+  root: string,
+  ecosystemPaths: readonly string[],
+): readonly string[] {
   const warnings: string[] = [];
 
   // Check each app directory from the config
@@ -289,7 +297,9 @@ export async function runRename(
   const fs = createDryFs(dryRun, root);
 
   if (dryRun) {
-    console.log(`\n${YELLOW}dry-run${RESET} Renaming workspace: ${oldName} → ${GREEN}${newName}${RESET}\n`);
+    console.log(
+      `\n${YELLOW}dry-run${RESET} Renaming workspace: ${oldName} → ${GREEN}${newName}${RESET}\n`,
+    );
   } else {
     console.log(`\nRenaming workspace: ${oldName} → ${GREEN}${newName}${RESET}\n`);
   }
@@ -297,7 +307,7 @@ export async function runRename(
   const updatedFiles: string[] = [];
 
   // 1. Update neutron.yml
-  if (updateMidoYml(root, oldName, newName, fs)) {
+  if (updateNeutronYml(root, oldName, newName, fs)) {
     updatedFiles.push("neutron.yml");
     console.log(`  ${GREEN}✓${RESET} neutron.yml`);
   }

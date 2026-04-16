@@ -225,7 +225,11 @@ function generateDot(
   edges: readonly GraphEdge[],
   workspaceName: string,
 ): string {
-  const lines: string[] = [`digraph "${workspaceName}" {`, "  rankdir=LR;", '  node [shape=box, style=rounded];'];
+  const lines: string[] = [
+    `digraph "${workspaceName}" {`,
+    "  rankdir=LR;",
+    "  node [shape=box, style=rounded];",
+  ];
 
   // Subgraphs per ecosystem
   const byEcosystem = new Map<string, GraphNode[]>();
@@ -250,7 +254,12 @@ function generateDot(
   }
 
   for (const edge of edges) {
-    const style = edge.type === "bridge" ? ' [style=dashed, color=orange]' : edge.type === "generated" ? " [color=purple]" : "";
+    const style =
+      edge.type === "bridge"
+        ? " [style=dashed, color=orange]"
+        : edge.type === "generated"
+          ? " [color=purple]"
+          : "";
     lines.push(`  "${edge.source}" -> "${edge.target}"${style};`);
   }
 
@@ -258,10 +267,7 @@ function generateDot(
   return lines.join("\n");
 }
 
-function generateAscii(
-  nodes: readonly GraphNode[],
-  edges: readonly GraphEdge[],
-): string {
+function generateAscii(nodes: readonly GraphNode[], edges: readonly GraphEdge[]): string {
   const lines: string[] = [];
 
   // Group by ecosystem
@@ -331,18 +337,23 @@ export async function runGraph(
     return 0;
   }
 
-  // HTML — write to .neutron/graph.html and open
+  // HTML — write to state dir and open
   const html = generateHtml(nodes, edges, graph.name);
-  const midoDir = join(root, ".neutron");
-  mkdirSync(midoDir, { recursive: true });
-  const outputPath = join(midoDir, "graph.html");
+  const stateDir = join(root, STATE_DIR);
+  mkdirSync(stateDir, { recursive: true });
+  const outputPath = join(stateDir, "graph.html");
   writeFileSync(outputPath, html, "utf-8");
   console.log(`${BOLD}neutron graph${RESET} ${DIM}\u2192 ${outputPath}${RESET}`);
 
   if (options.open !== false) {
     try {
       const { spawnSync: spawn } = await import("node:child_process");
-      const openCmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+      const openCmd =
+        process.platform === "darwin"
+          ? "open"
+          : process.platform === "win32"
+            ? "start"
+            : "xdg-open";
       spawn(openCmd, [outputPath], { stdio: "ignore" });
     } catch {
       console.log(`${DIM}\u2192 Could not open browser. Open ${outputPath} manually.${RESET}`);

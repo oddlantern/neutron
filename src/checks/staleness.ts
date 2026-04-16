@@ -12,10 +12,7 @@ const CHECK_NAME = "staleness";
  *
  * Reports warnings (not errors) — doesn't block pre-commit or CI.
  */
-export async function checkStaleness(
-  graph: WorkspaceGraph,
-  root: string,
-): Promise<CheckResult> {
+export async function checkStaleness(graph: WorkspaceGraph, root: string): Promise<CheckResult> {
   const issues: CheckIssue[] = [];
   const bridgeOutputs = collectBridgeOutputs(graph.bridges, graph.packages);
 
@@ -47,9 +44,10 @@ export async function checkStaleness(
   return {
     check: CHECK_NAME,
     passed: true,
-    summary: issues.length > 0
-      ? `${issues.length} generated output(s) missing`
-      : `${presentCount} generated output(s) present`,
+    summary:
+      issues.length > 0
+        ? `${issues.length} generated output(s) missing`
+        : `${presentCount} generated output(s) present`,
     issues,
   };
 }

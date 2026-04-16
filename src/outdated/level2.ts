@@ -23,10 +23,7 @@ import type { OutdatedDep, StaticAnalysisResult } from "@/outdated/types";
  * Find the main .d.ts file for an installed npm package.
  * Checks package.json `types`/`typings` field, then falls back to `index.d.ts`.
  */
-async function findInstalledDts(
-  root: string,
-  depName: string,
-): Promise<readonly string[] | null> {
+async function findInstalledDts(root: string, depName: string): Promise<readonly string[] | null> {
   const pkgDir = join(root, "node_modules", depName);
 
   try {
@@ -52,9 +49,7 @@ async function findInstalledDts(
       if (dtsFiles.length === 0) {
         return null;
       }
-      const contents = await Promise.all(
-        dtsFiles.map((f) => readFile(join(pkgDir, f), "utf-8")),
-      );
+      const contents = await Promise.all(dtsFiles.map((f) => readFile(join(pkgDir, f), "utf-8")));
       return contents;
     } catch {
       return null;
@@ -207,8 +202,9 @@ async function analyzeDartDep(
     return { dep, typeDiff: undefined, usedRemovedExports: [], usedChangedExports: [] };
   }
 
-  const latestFiles = extractFromTarGz(tarball, (path) =>
-    path.startsWith("lib/") && path.endsWith(".dart"),
+  const latestFiles = extractFromTarGz(
+    tarball,
+    (path) => path.startsWith("lib/") && path.endsWith(".dart"),
   );
   const latestExports = [...latestFiles.values()].flatMap((content) => [
     ...extractDartExports(content),
@@ -380,7 +376,11 @@ async function analyzeGenericDep(
 
     // Without installed-package analysis, we can only show latest exports
     // but can't compute a diff against current. Report as informational.
-    const typeDiff = { added: [...latestExports].sort(), removed: [] as string[], changed: [] as string[] };
+    const typeDiff = {
+      added: [...latestExports].sort(),
+      removed: [] as string[],
+      changed: [] as string[],
+    };
 
     const usedSymbols = await findUsedSymbols(root, dep.name, dep.ecosystem, sourceFiles);
 

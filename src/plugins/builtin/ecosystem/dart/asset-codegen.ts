@@ -1,10 +1,14 @@
-import { existsSync, mkdirSync, readdirSync, writeFileSync, cpSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, cpSync } from "node:fs";
 import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
 import { isRecord, runCommand } from "@/plugins/builtin/shared/exec";
-import type { AssetCategory, AssetManifest, ThemeVariant } from "@/plugins/builtin/domain/assets/types";
+import type {
+  AssetCategory,
+  AssetManifest,
+  ThemeVariant,
+} from "@/plugins/builtin/domain/assets/types";
 
 const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.";
 
@@ -26,7 +30,7 @@ function toPascalCase(str: string): string {
  * Keys starting with a digit get a `$` prefix.
  */
 function toCamelCase(str: string): string {
-  const parts = str.split(/[_\-]/).filter((p) => p.length > 0);
+  const parts = str.split(/[_-]/).filter((p) => p.length > 0);
   if (parts.length === 0) {
     return str;
   }
@@ -117,7 +121,7 @@ function generateCategoryClass(
       lines.push(`  /// Dynamic accessor — loads by key from the ${category.name} directory.`);
       lines.push("  static Widget byKey(String key, {double? size, Color? color}) =>");
       lines.push("    SvgPicture.asset(");
-      lines.push(`      'assets/${dir}/${category.name}_\$key.svg',`);
+      lines.push(`      'assets/${dir}/${category.name}_$key.svg',`);
       lines.push(`      package: '${packageName}',`);
       lines.push("      width: size,");
       lines.push("      height: size,");
@@ -195,7 +199,9 @@ function generateThemeVariantClass(
   const sortedKeys = [...allKeys].sort();
   for (const key of sortedKeys) {
     const methodName = toCamelCase(key);
-    lines.push(`  static Widget ${methodName}({required bool isDark, double? size, Color? color}) {`);
+    lines.push(
+      `  static Widget ${methodName}({required bool isDark, double? size, Color? color}) {`,
+    );
     lines.push("    final variant = isDark ? 'dark' : 'light';");
 
     const firstVariant = [...variant.variants.values()][0];
@@ -204,7 +210,7 @@ function generateThemeVariantClass(
       const pathParts = entry.relativePath.split("/");
       const variantIdx = pathParts.findIndex((p) => p === "light" || p === "dark");
       if (variantIdx >= 0) {
-        pathParts[variantIdx] = "\$variant";
+        pathParts[variantIdx] = "$variant";
         const templatePath = pathParts.join("/");
         lines.push("    return SvgPicture.asset(");
         lines.push(`      'assets/${templatePath}',`);
@@ -228,10 +234,7 @@ function generateThemeVariantClass(
 /**
  * Generate the pubspec.yaml for the generated Dart assets package.
  */
-function generatePubspec(
-  packageName: string,
-  assetDirs: readonly string[],
-): string {
+function generatePubspec(packageName: string, assetDirs: readonly string[]): string {
   const lines: string[] = [
     "# GENERATED — DO NOT EDIT. Changes will be overwritten.",
     `name: ${packageName}`,
@@ -332,9 +335,7 @@ export async function executeDartAssetGeneration(
     if (existsSync(sourceDir)) {
       mkdirSync(destAssetsDir, { recursive: true });
       // Copy all subdirectories that contain assets (derive from manifest)
-      const sourceSubDirs = new Set(
-        manifest.assetDirectories.map((d) => d.split("/")[0] ?? ""),
-      );
+      const sourceSubDirs = new Set(manifest.assetDirectories.map((d) => d.split("/")[0] ?? ""));
       for (const dir of sourceSubDirs) {
         if (!dir) {
           continue;

@@ -83,7 +83,9 @@ export async function runOutdated(
 
   // ── Level 2: Static analysis ────────────────────────────────────────
   const shouldRunLevel2 =
-    options.verify || options.deep || (await confirmAction(`Run static analysis on ${outdated.length} outdated dep(s)?`, false));
+    options.verify ||
+    options.deep ||
+    (await confirmAction(`Run static analysis on ${outdated.length} outdated dep(s)?`, false));
 
   if (shouldRunLevel2) {
     console.log(
@@ -95,7 +97,8 @@ export async function runOutdated(
 
     // ── Level 3: Live validation ────────────────────────────────────
     const shouldRunLevel3 =
-      options.verify || (await confirmAction("Run live validation (install + typecheck + tests)?", false));
+      options.verify ||
+      (await confirmAction("Run live validation (install + typecheck + tests)?", false));
 
     if (shouldRunLevel3) {
       console.log(
@@ -111,9 +114,7 @@ export async function runOutdated(
     console.log(formatDiagnostics(diag));
   }
 
-  console.log(
-    `${DIM}Use ${BOLD}neutron upgrade${RESET} ${DIM}to update dependencies.${RESET}`,
-  );
+  console.log(`${DIM}Use ${BOLD}neutron upgrade${RESET} ${DIM}to update dependencies.${RESET}`);
   console.log(
     `${DIM}Run ${BOLD}neutron check${RESET} ${DIM}to verify version consistency.${RESET}\n`,
   );
@@ -126,9 +127,7 @@ export async function runOutdated(
  * Only checks the top shared deps (most impactful) via Level 1.
  * Returns a summary string or null if all up to date.
  */
-export async function quickOutdatedCheck(
-  parsers: ParserRegistry,
-): Promise<string | null> {
+export async function quickOutdatedCheck(parsers: ParserRegistry): Promise<string | null> {
   try {
     const { config, root } = await loadConfig();
     const graph = await buildWorkspaceGraph(config, root, parsers);

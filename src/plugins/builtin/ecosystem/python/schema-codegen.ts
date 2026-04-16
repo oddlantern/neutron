@@ -3,9 +3,14 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import type { SchemaDefinition, SchemaProperty, ValidatedSchema } from "@/plugins/builtin/domain/schema/types";
+import type {
+  SchemaDefinition,
+  SchemaProperty,
+  ValidatedSchema,
+} from "@/plugins/builtin/domain/schema/types";
 
-const HEADER = '"""GENERATED — DO NOT EDIT. Changes will be overwritten."""\n\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass\nfrom enum import Enum\nfrom typing import Optional\n';
+const HEADER =
+  '"""GENERATED — DO NOT EDIT. Changes will be overwritten."""\n\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass\nfrom enum import Enum\nfrom typing import Optional\n';
 
 function pyType(prop: SchemaProperty): string {
   if (prop.enumValues) {
@@ -16,24 +21,37 @@ function pyType(prop: SchemaProperty): string {
   }
 
   switch (prop.type) {
-    case "string": return "str";
-    case "number": return "float";
-    case "integer": return "int";
-    case "boolean": return "bool";
-    case "array": return `list[${pyItemType(prop.items)}]`;
-    case "object": return "dict[str, object]";
-    default: return "object";
+    case "string":
+      return "str";
+    case "number":
+      return "float";
+    case "integer":
+      return "int";
+    case "boolean":
+      return "bool";
+    case "array":
+      return `list[${pyItemType(prop.items)}]`;
+    case "object":
+      return "dict[str, object]";
+    default:
+      return "object";
   }
 }
 
 function pyItemType(items: string | undefined): string {
   switch (items) {
-    case "string": return "str";
-    case "number": return "float";
-    case "integer": return "int";
-    case "boolean": return "bool";
-    case undefined: return "object";
-    default: return items;
+    case "string":
+      return "str";
+    case "number":
+      return "float";
+    case "integer":
+      return "int";
+    case "boolean":
+      return "bool";
+    case undefined:
+      return "object";
+    default:
+      return items;
   }
 }
 
@@ -76,12 +94,7 @@ function generateDataclass(def: SchemaDefinition): string {
   const optional = lines.filter((l) => l.includes("= None"));
   const orderedFields = [...required, ...optional];
 
-  const classLines = [
-    ...enums,
-    "",
-    `@dataclass(frozen=True)`,
-    `class ${def.name}:`,
-  ];
+  const classLines = [...enums, "", `@dataclass(frozen=True)`, `class ${def.name}:`];
   if (def.description) {
     classLines.push(`    """${def.description}"""\n`);
   }

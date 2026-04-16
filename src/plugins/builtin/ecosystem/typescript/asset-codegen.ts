@@ -16,7 +16,7 @@ const MAX_INLINE_SIZE = 64 * 1024;
  * Keys starting with a digit get a `$` prefix.
  */
 function toCamelCase(str: string): string {
-  const parts = str.split(/[_\-]/).filter((p) => p.length > 0);
+  const parts = str.split(/[_-]/).filter((p) => p.length > 0);
   if (parts.length === 0) {
     return str;
   }
@@ -246,7 +246,8 @@ export async function executeTypescriptAssetGeneration(
 
   const duration = Math.round(performance.now() - start);
   const fileCount = 2 + (inlinedCount > 0 ? 1 : 0);
-  const skippedNote = skippedCount > 0 ? `, ${skippedCount} SVGs skipped (>${MAX_INLINE_SIZE / 1024}KB)` : "";
+  const skippedNote =
+    skippedCount > 0 ? `, ${skippedCount} SVGs skipped (>${MAX_INLINE_SIZE / 1024}KB)` : "";
   return {
     success: true,
     duration,

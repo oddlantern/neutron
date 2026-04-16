@@ -18,12 +18,7 @@ const DOMAIN_NAME = "assets";
  * If the artifact path points to a directory containing any of these,
  * the plugin claims the bridge.
  */
-const ASSET_DIRECTORY_MARKERS: readonly string[] = [
-  "svg",
-  "icons",
-  "images",
-  "assets",
-];
+const ASSET_DIRECTORY_MARKERS: readonly string[] = ["svg", "icons", "images", "assets"];
 
 /**
  * Check if a directory looks like an assets package.

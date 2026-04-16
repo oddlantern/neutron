@@ -53,7 +53,9 @@ export async function runWhy(
     return 0;
   }
 
-  console.log(`\n${BOLD}${depName}${RESET} ${DIM}— used in ${occurrences.length} package(s)${RESET}\n`);
+  console.log(
+    `\n${BOLD}${depName}${RESET} ${DIM}— used in ${occurrences.length} package(s)${RESET}\n`,
+  );
 
   // Group by ecosystem
   const byEcosystem = new Map<string, DepOccurrence[]>();
@@ -69,16 +71,16 @@ export async function runWhy(
   for (const [eco, occs] of byEcosystem) {
     console.log(`  ${ORANGE}${eco}${RESET}`);
     for (const occ of occs) {
-      console.log(
-        `    ${occ.package} ${DIM}${occ.range} [${occ.type}]${RESET}`,
-      );
+      console.log(`    ${occ.package} ${DIM}${occ.range} [${occ.type}]${RESET}`);
     }
   }
 
   // Check version consistency
   const ranges = new Set(occurrences.map((o) => o.range));
   if (ranges.size > 1) {
-    console.log(`\n  ${ORANGE}${BOLD}warning:${RESET} ${ranges.size} different version ranges detected`);
+    console.log(
+      `\n  ${ORANGE}${BOLD}warning:${RESET} ${ranges.size} different version ranges detected`,
+    );
     console.log(`  ${DIM}Run \`neutron check --fix\` to resolve${RESET}`);
   }
 

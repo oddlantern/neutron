@@ -3,9 +3,14 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import type { SchemaDefinition, SchemaProperty, ValidatedSchema } from "@/plugins/builtin/domain/schema/types";
+import type {
+  SchemaDefinition,
+  SchemaProperty,
+  ValidatedSchema,
+} from "@/plugins/builtin/domain/schema/types";
 
-const HEADER = "<?php\n\n// GENERATED — DO NOT EDIT. Changes will be overwritten.\n\ndeclare(strict_types=1);\n";
+const HEADER =
+  "<?php\n\n// GENERATED — DO NOT EDIT. Changes will be overwritten.\n\ndeclare(strict_types=1);\n";
 
 function phpType(prop: SchemaProperty): string {
   if (prop.ref) {
@@ -13,13 +18,19 @@ function phpType(prop: SchemaProperty): string {
   }
 
   switch (prop.type) {
-    case "string": return "string";
+    case "string":
+      return "string";
     case "number":
-    case "integer": return prop.type === "integer" ? "int" : "float";
-    case "boolean": return "bool";
-    case "array": return "array";
-    case "object": return "array";
-    default: return "mixed";
+    case "integer":
+      return prop.type === "integer" ? "int" : "float";
+    case "boolean":
+      return "bool";
+    case "array":
+      return "array";
+    case "object":
+      return "array";
+    default:
+      return "mixed";
   }
 }
 

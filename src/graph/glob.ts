@@ -8,10 +8,7 @@ import { join, resolve } from "node:path";
  *
  * @returns Deduplicated list of expanded paths.
  */
-export function expandPackageGlobs(
-  patterns: readonly string[],
-  root: string,
-): readonly string[] {
+export function expandPackageGlobs(patterns: readonly string[], root: string): readonly string[] {
   const results: string[] = [];
   const seen = new Set<string>();
 
@@ -39,15 +36,11 @@ export function expandPackageGlobs(
 
     // Build the parent directory path (segments before the star)
     const parentSegments = segments.slice(0, starIndex);
-    const parentDir = parentSegments.length > 0
-      ? resolve(root, parentSegments.join("/"))
-      : root;
+    const parentDir = parentSegments.length > 0 ? resolve(root, parentSegments.join("/")) : root;
 
     // Build regex from the star segment (e.g., "app-*" → /^app-[^/]+$/)
     const starSegment = segments[starIndex]!;
-    const regexSource = starSegment
-      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-      .replace(/\*/g, "[^/]+");
+    const regexSource = starSegment.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]+");
     const segmentRegex = new RegExp(`^${regexSource}$`);
 
     // Remaining segments after the star

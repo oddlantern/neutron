@@ -7,7 +7,7 @@ import { confirm, intro, isCancel, log, multiselect, select, spinner, text } fro
 import { scanRepo } from "@/discovery/scanner";
 import { detectBridges, detectEnvFiles } from "@/discovery/heuristics";
 import { printBanner } from "@/banner";
-import { BOLD, DIM, GREEN, ORANGE, RESET } from "@/output";
+import { BOLD, DIM, ORANGE, RESET } from "@/output";
 import type { ParserRegistry } from "@/graph/workspace";
 import { loadPlugins } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";

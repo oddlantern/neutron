@@ -53,12 +53,8 @@ function parseProperties(
     const oneOf = rawProp["oneOf"];
     const variants = Array.isArray(anyOf) ? anyOf : Array.isArray(oneOf) ? oneOf : null;
     if (variants) {
-      const nonNull = variants.filter(
-        (v) => isRecord(v) && v["type"] !== "null",
-      );
-      const hasNull = variants.some(
-        (v) => isRecord(v) && v["type"] === "null",
-      );
+      const nonNull = variants.filter((v) => isRecord(v) && v["type"] !== "null");
+      const hasNull = variants.some((v) => isRecord(v) && v["type"] === "null");
       if (hasNull && nonNull.length === 1 && isRecord(nonNull[0])) {
         nullable = true;
         actualProp = nonNull[0];
@@ -73,7 +69,8 @@ function parseProperties(
       : undefined;
 
     const format = typeof actualProp["format"] === "string" ? actualProp["format"] : undefined;
-    const description = typeof actualProp["description"] === "string" ? actualProp["description"] : undefined;
+    const description =
+      typeof actualProp["description"] === "string" ? actualProp["description"] : undefined;
 
     // Array items
     let items: string | undefined;
@@ -135,9 +132,11 @@ export function validateSchema(raw: unknown): SchemaValidationResult {
   const definitions: SchemaDefinition[] = [];
 
   // Extract $defs or definitions (JSON Schema draft-07 vs draft-2020-12)
-  const defs = isRecord(raw["$defs"]) ? raw["$defs"]
-    : isRecord(raw["definitions"]) ? raw["definitions"]
-    : null;
+  const defs = isRecord(raw["$defs"])
+    ? raw["$defs"]
+    : isRecord(raw["definitions"])
+      ? raw["definitions"]
+      : null;
 
   if (defs) {
     for (const [name, defRaw] of Object.entries(defs)) {
@@ -154,9 +153,12 @@ export function validateSchema(raw: unknown): SchemaValidationResult {
 
   // Also parse the root if it has properties (it's itself a type definition)
   if (isRecord(raw["properties"])) {
-    const rootName = typeof raw["title"] === "string" ? raw["title"]
-      : typeof raw["$id"] === "string" ? idToName(raw["$id"])
-      : "Root";
+    const rootName =
+      typeof raw["title"] === "string"
+        ? raw["title"]
+        : typeof raw["$id"] === "string"
+          ? idToName(raw["$id"])
+          : "Root";
     const def = parseDefinition(rootName, raw, errors);
     if (def) {
       definitions.push(def);
@@ -164,7 +166,10 @@ export function validateSchema(raw: unknown): SchemaValidationResult {
   }
 
   if (definitions.length === 0 && errors.length === 0) {
-    errors.push({ path: "$", message: "No type definitions found. Schema must have properties or $defs." });
+    errors.push({
+      path: "$",
+      message: "No type definitions found. Schema must have properties or $defs.",
+    });
   }
 
   return {
@@ -187,9 +192,7 @@ function parseDefinition(
 
   const requiredRaw = raw["required"];
   const requiredFields = new Set(
-    Array.isArray(requiredRaw)
-      ? requiredRaw.filter((r): r is string => typeof r === "string")
-      : [],
+    Array.isArray(requiredRaw) ? requiredRaw.filter((r): r is string => typeof r === "string") : [],
   );
 
   const description = typeof raw["description"] === "string" ? raw["description"] : undefined;
@@ -218,7 +221,10 @@ export const schemaPlugin: DomainPlugin = {
       const absPath = join(root, artifact);
       const content = await readFile(absPath, "utf-8");
       const raw: unknown = JSON.parse(content);
-      return isRecord(raw) && (isRecord(raw["properties"]) || isRecord(raw["$defs"]) || isRecord(raw["definitions"]));
+      return (
+        isRecord(raw) &&
+        (isRecord(raw["properties"]) || isRecord(raw["$defs"]) || isRecord(raw["definitions"]))
+      );
     } catch {
       return false;
     }
@@ -237,7 +243,9 @@ export const schemaPlugin: DomainPlugin = {
       const result = validateSchema(raw);
 
       if (!result.success) {
-        const output = result.errors.map((e) => `  ${RED}${e.path}: ${e.message}${RESET}`).join("\n");
+        const output = result.errors
+          .map((e) => `  ${RED}${e.path}: ${e.message}${RESET}`)
+          .join("\n");
         return {
           success: false,
           duration: Math.round(performance.now() - start),
@@ -273,11 +281,13 @@ export const schemaPlugin: DomainPlugin = {
     const validation = validateSchema(raw);
 
     if (!validation.success || !validation.data) {
-      return [{
-        success: false,
-        duration: 0,
-        summary: "Schema validation failed — cannot generate downstream",
-      }];
+      return [
+        {
+          success: false,
+          duration: 0,
+          summary: "Schema validation failed — cannot generate downstream",
+        },
+      ];
     }
 
     const handlers = await context.findEcosystemHandlers(DOMAIN_NAME, artifact);
@@ -342,7 +352,9 @@ export const schemaPlugin: DomainPlugin = {
           const result = validateSchema(raw);
 
           if (!result.success) {
-            const output = result.errors.map((e) => `  ${RED}${e.path}: ${e.message}${RESET}`).join("\n");
+            const output = result.errors
+              .map((e) => `  ${RED}${e.path}: ${e.message}${RESET}`)
+              .join("\n");
             return {
               success: false,
               duration: Math.round(performance.now() - start),

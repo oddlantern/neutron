@@ -3,7 +3,11 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import type { SchemaDefinition, SchemaProperty, ValidatedSchema } from "@/plugins/builtin/domain/schema/types";
+import type {
+  SchemaDefinition,
+  SchemaProperty,
+  ValidatedSchema,
+} from "@/plugins/builtin/domain/schema/types";
 
 const HEADER = "/* GENERATED — DO NOT EDIT. Changes will be overwritten. */\n";
 
@@ -16,13 +20,19 @@ function tsType(prop: SchemaProperty): string {
   }
 
   switch (prop.type) {
-    case "string": return "string";
+    case "string":
+      return "string";
     case "number":
-    case "integer": return "number";
-    case "boolean": return "boolean";
-    case "array": return `readonly ${prop.items ?? "unknown"}[]`;
-    case "object": return "Record<string, unknown>";
-    default: return "unknown";
+    case "integer":
+      return "number";
+    case "boolean":
+      return "boolean";
+    case "array":
+      return `readonly ${prop.items ?? "unknown"}[]`;
+    case "object":
+      return "Record<string, unknown>";
+    default:
+      return "unknown";
   }
 }
 

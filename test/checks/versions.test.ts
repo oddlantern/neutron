@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { WorkspaceGraph } from '../../src/graph/types.js';
-import type { MidoLock } from '../../src/lock.js';
+import type { NeutronLock } from '../../src/lock.js';
 import { checkVersionConsistency } from '../../src/checks/versions.js';
 
 function makeLockEntry(range: string): { readonly range: string; readonly integrity: string; readonly ecosystems: readonly string[]; readonly resolvedAt: string } {
@@ -10,7 +10,7 @@ function makeLockEntry(range: string): { readonly range: string; readonly integr
   return { range, integrity: `sha256-${hash}`, ecosystems: ['typescript'], resolvedAt: '2026-03-26T00:00:00.000Z' };
 }
 
-function makeLock(entries: Record<string, string>): MidoLock {
+function makeLock(entries: Record<string, string>): NeutronLock {
   const resolved: Record<string, ReturnType<typeof makeLockEntry>> = {};
   for (const [name, range] of Object.entries(entries)) {
     resolved[name] = makeLockEntry(range);
