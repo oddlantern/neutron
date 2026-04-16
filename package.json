@@ -95,6 +95,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
     "@elysiajs/openapi": "^1.4.14",
+    "@types/node": "^25.6.0",
     "elysia": "^1.4.28",
     "publint": "^0.3.12",
     "tsdown": "^0.14.1",
