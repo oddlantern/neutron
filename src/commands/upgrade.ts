@@ -23,7 +23,7 @@ const MAX_INSTALL_OUTPUT = 200;
  * Preserve the range prefix (^ ~ >= etc.) from the current range
  * and apply it to the new version.
  */
-function buildNewRange(currentRange: string, newVersion: string): string {
+export function buildNewRange(currentRange: string, newVersion: string): string {
   const prefixMatch = currentRange.match(/^[\^~>=<]+/);
   const prefix = prefixMatch ? prefixMatch[0] : "^";
   return `${prefix}${newVersion}`;
@@ -166,7 +166,9 @@ export async function runUpgrade(
       });
 
       if (success) {
-        console.log(`  ${GREEN}\u2713${RESET} ${dep.name} ${DIM}${stripRange(dep.workspaceRange)} \u2192 ${dep.latest}${RESET} ${DIM}in ${pkgPath}${RESET}`);
+        console.log(
+          `  ${GREEN}\u2713${RESET} ${dep.name} ${DIM}${stripRange(dep.workspaceRange)} \u2192 ${dep.latest}${RESET} ${DIM}in ${pkgPath}${RESET}`,
+        );
       } else {
         console.log(`  ${RED}\u2717${RESET} ${dep.name} ${DIM}not found in ${pkgPath}${RESET}`);
         diag.warn(`Manifest update skipped: ${dep.name} in ${pkgPath}`, {
@@ -235,7 +237,8 @@ export async function runUpgrade(
   }
 
   // ── Optional verification ───────────────────────────────────────────
-  const shouldVerify = options.verify || await confirmAction("Run typecheck + tests to verify?", false);
+  const shouldVerify =
+    options.verify || (await confirmAction("Run typecheck + tests to verify?", false));
 
   if (shouldVerify) {
     await runVerification(ecosystems, root, graph.packages, diag);

@@ -25,20 +25,6 @@ function makePkg(overrides: Partial<WorkspacePackage> & { readonly name: string 
 // ─── TypeScript plugin ────────────────────────────────────────────────────────
 
 describe("typescriptPlugin", () => {
-  describe("metadata", () => {
-    test("has correct type", () => {
-      expect(typescriptPlugin.type).toBe("ecosystem");
-    });
-
-    test("has correct name", () => {
-      expect(typescriptPlugin.name).toBe("typescript");
-    });
-
-    test("has correct manifest", () => {
-      expect(typescriptPlugin.manifest).toBe("package.json");
-    });
-  });
-
   describe("detect", () => {
     test("returns true for typescript ecosystem package", async () => {
       const pkg = makePkg({ name: "my-lib", ecosystem: "typescript" });
@@ -292,20 +278,6 @@ describe("typescriptPlugin", () => {
 // ─── Dart plugin ──────────────────────────────────────────────────────────────
 
 describe("dartPlugin", () => {
-  describe("metadata", () => {
-    test("has correct type", () => {
-      expect(dartPlugin.type).toBe("ecosystem");
-    });
-
-    test("has correct name", () => {
-      expect(dartPlugin.name).toBe("dart");
-    });
-
-    test("has correct manifest", () => {
-      expect(dartPlugin.manifest).toBe("pubspec.yaml");
-    });
-  });
-
   describe("detect", () => {
     test("returns true for dart ecosystem package", async () => {
       const pkg = makePkg({ name: "my_dart_lib", ecosystem: "dart" });

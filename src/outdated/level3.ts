@@ -19,7 +19,7 @@ const SAFE_NPM_NAME_RE = /^(@[a-z0-9\-~][a-z0-9\-._~]*\/)?[a-z0-9\-~][a-z0-9\-._
 const SAFE_DART_NAME_RE = /^[a-z_][a-z0-9_]*$/;
 
 /** Check if a dependency name is safe for code generation interpolation. */
-function isSafeDepName(name: string, ecosystem: string): boolean {
+export function isSafeDepName(name: string, ecosystem: string): boolean {
   if (ecosystem === "dart") {
     return SAFE_DART_NAME_RE.test(name);
   }
@@ -126,7 +126,9 @@ async function validateTypescriptDeps(
       dep,
       typecheckPassed: typecheckResult.success,
       testsPassed: true, // Tests require actual workspace sources — skip for now
-      typecheckOutput: typecheckResult.success ? undefined : (typecheckResult.output ?? "").slice(0, MAX_LONG_OUTPUT),
+      typecheckOutput: typecheckResult.success
+        ? undefined
+        : (typecheckResult.output ?? "").slice(0, MAX_LONG_OUTPUT),
       testOutput: undefined,
     }));
   } finally {
@@ -176,7 +178,7 @@ async function validateDartDeps(
       .join("\n");
 
     const pubspec = [
-      "name: mido_validate",
+      "name: neutron_validate",
       "version: 0.0.1",
       "environment:",
       '  sdk: ">=3.0.0 <4.0.0"',
@@ -221,7 +223,9 @@ async function validateDartDeps(
       dep,
       typecheckPassed: analyzeResult.success,
       testsPassed: true,
-      typecheckOutput: analyzeResult.success ? undefined : (analyzeResult.output ?? "").slice(0, MAX_LONG_OUTPUT),
+      typecheckOutput: analyzeResult.success
+        ? undefined
+        : (analyzeResult.output ?? "").slice(0, MAX_LONG_OUTPUT),
       testOutput: undefined,
     }));
   } finally {
@@ -286,7 +290,7 @@ export async function runLevel3(
  * not be installed. This is a placeholder that provides L3 compatibility
  * without blocking the pipeline.
  */
-async function validateGenericDeps(
+export async function validateGenericDeps(
   deps: readonly OutdatedDep[],
   ecosystem: string,
 ): Promise<readonly ValidationResult[]> {
