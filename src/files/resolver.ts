@@ -78,7 +78,7 @@ function isIgnored(filePath: string, patterns: readonly string[]): boolean {
  *
  * @param packageDir — absolute path to the package directory
  * @param extensions — file extensions to include (e.g. ['.ts', '.tsx'])
- * @param ignorePatterns — patterns from mido.yml lint.ignore / format.ignore
+ * @param ignorePatterns — patterns from neutron.yml lint.ignore / format.ignore
  * @returns relative paths from the package root
  */
 export function resolveFiles(

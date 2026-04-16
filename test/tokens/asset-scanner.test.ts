@@ -9,7 +9,7 @@ describe("asset scanner", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "mido-assets-test-"));
+    tmpDir = mkdtempSync(join(tmpdir(), "neutron-assets-test-"));
   });
 
   afterEach(() => {

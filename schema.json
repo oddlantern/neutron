@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "mido.yml",
-  "description": "mido workspace configuration — cross-ecosystem monorepo tool",
+  "title": "neutron.yml",
+  "description": "neutron workspace configuration — cross-ecosystem monorepo tool",
   "type": "object",
   "properties": {
     "workspace": {
@@ -161,7 +161,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Conventional commit validation, enforced by mido's commit-msg git hook."
+      "description": "Conventional commit validation, enforced by neutron's commit-msg git hook."
     },
     "lint": {
       "type": "object",
@@ -17189,7 +17189,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Per-ecosystem linting. mido picks the right linter: TypeScript → oxlint, Dart → dart analyze. Plugins auto-enabled based on dependencies."
+      "description": "Per-ecosystem linting. neutron picks the right linter: TypeScript → oxlint, Dart → dart analyze. Plugins auto-enabled based on dependencies."
     },
     "format": {
       "type": "object",
@@ -17353,7 +17353,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Per-ecosystem formatting. mido picks the right formatter: TypeScript → oxfmt, Dart → dart format."
+      "description": "Per-ecosystem formatting. neutron picks the right formatter: TypeScript → oxfmt, Dart → dart format."
     },
     "hooks": {
       "type": "object",
@@ -17416,7 +17416,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Git hooks installed by `mido install`. Each hook is a list of shell commands. Set to `false` to disable."
+      "description": "Git hooks installed by `neutron install`. Each hook is a list of shell commands. Set to `false` to disable."
     }
   },
   "required": [

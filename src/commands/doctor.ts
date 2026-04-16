@@ -37,13 +37,13 @@ function checkTool(name: string, cmd: string): DiagResult {
 }
 
 /**
- * Run workspace diagnostics — check health of mido installation,
+ * Run workspace diagnostics — check health of neutron installation,
  * tool availability, config validity, hooks, and generated output.
  *
  * @returns exit code (0 = all ok, 1 = issues found)
  */
 export async function runDoctor(parsers: ParserRegistry): Promise<number> {
-  console.log(`\n${BOLD}mido doctor${RESET} ${DIM}— v${VERSION}${RESET}\n`);
+  console.log(`\n${BOLD}neutron doctor${RESET} ${DIM}— v${VERSION}${RESET}\n`);
 
   const results: DiagResult[] = [];
 
@@ -57,13 +57,13 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
       0,
     );
     results.push({
-      label: "mido.yml",
+      label: "neutron.yml",
       status: "ok",
       detail: `${pkgCount} package(s), ${loaded.config.bridges?.length ?? 0} bridge(s)`,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    results.push({ label: "mido.yml", status: "fail", detail: msg });
+    results.push({ label: "neutron.yml", status: "fail", detail: msg });
   }
 
   // 2. Git hooks
@@ -81,9 +81,9 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
     if (installedCount === hookNames.length) {
       results.push({ label: "git hooks", status: "ok", detail: `${installedCount}/${hookNames.length} installed` });
     } else if (installedCount > 0) {
-      results.push({ label: "git hooks", status: "warn", detail: `${installedCount}/${hookNames.length} installed — run \`mido install\`` });
+      results.push({ label: "git hooks", status: "warn", detail: `${installedCount}/${hookNames.length} installed — run \`neutron install\`` });
     } else {
-      results.push({ label: "git hooks", status: "warn", detail: "none installed — run `mido install`" });
+      results.push({ label: "git hooks", status: "warn", detail: "none installed — run `neutron install`" });
     }
   }
 
@@ -114,7 +114,7 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
       if (missingCount === 0 && presentCount > 0) {
         results.push({ label: "generated output", status: "ok", detail: `${presentCount} output(s) present` });
       } else if (missingCount > 0) {
-        results.push({ label: "generated output", status: "warn", detail: `${missingCount} missing — run \`mido generate\`` });
+        results.push({ label: "generated output", status: "warn", detail: `${missingCount} missing — run \`neutron generate\`` });
       } else if (bridges.length === 0) {
         results.push({ label: "generated output", status: "ok", detail: "no bridges configured" });
       }

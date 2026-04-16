@@ -72,7 +72,7 @@ export async function runCheck(
     let header = formatHeader(graph.name, graph.packages.size);
     if (lock) {
       const count = Object.keys(lock.resolved).length;
-      header += `  lock: mido.lock (${count} resolved)\n`;
+      header += `  lock: neutron.lock (${count} resolved)\n`;
     }
     console.log(header);
 

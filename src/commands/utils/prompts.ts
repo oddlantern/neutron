@@ -11,7 +11,7 @@ import {
   text,
 } from "@clack/prompts";
 
-import type { MidoConfig } from "@/config/schema";
+import type { NeutronConfig } from "@/config/schema";
 import { BOLD, DIM, ORANGE, RESET } from "@/output";
 import type { PluginRegistry } from "@/plugins/registry";
 import type { WatchPathSuggestion } from "@/plugins/types";
@@ -106,7 +106,7 @@ export async function promptWatchPaths(
 
 export async function promptModifyBridge(
   root: string,
-  config: MidoConfig,
+  config: NeutronConfig,
   current: {
     readonly source: string;
     readonly consumers: readonly string[];

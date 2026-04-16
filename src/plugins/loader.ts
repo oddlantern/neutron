@@ -18,7 +18,7 @@ export interface LoadedPlugins {
 /**
  * Load all plugins — builtins are always present.
  *
- * External plugins from devDependencies (mido-plugin-*) will be loaded
+ * External plugins from devDependencies (neutron-plugin-*) will be loaded
  * on top of builtins when the external plugin system is implemented.
  */
 export function loadPlugins(): LoadedPlugins {

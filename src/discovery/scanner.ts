@@ -7,7 +7,7 @@ const SKIP_DIRS = new Set([
   ".git",
   ".husky",
   ".idea",
-  ".mido",
+  ".neutron",
   ".symlinks",
   ".vscode",
   "android",
@@ -33,7 +33,7 @@ const MANIFEST_MAP: ReadonlyMap<string, string> = new Map([
   ["composer.json", "php"],
 ]);
 
-/** Ecosystems that mido currently supports */
+/** Ecosystems that neutron currently supports */
 const SUPPORTED_ECOSYSTEMS = new Set(["typescript", "dart", "python", "rust", "go", "php"]);
 
 export interface DiscoveredPackage {

@@ -8,7 +8,7 @@ import { loadConfig } from '../../src/config/loader.js';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'mido-loader-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'neutron-loader-test-'));
 });
 
 afterEach(() => {
@@ -26,32 +26,32 @@ ecosystems:
 
 describe('loadConfig', () => {
   test('loads a valid minimal config', async () => {
-    writeFileSync(join(tmpDir, 'mido.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
+    writeFileSync(join(tmpDir, 'neutron.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
     const loaded = await loadConfig(tmpDir);
     expect(loaded.config.workspace).toBe('test-workspace');
     expect(loaded.root).toBe(tmpDir);
   });
 
-  test('throws when no mido.yml is found', async () => {
-    // Use a temp dir that definitely has no mido.yml up the tree
-    // We need an isolated directory — use /tmp itself (no mido.yml there)
-    const isolated = mkdtempSync(join('/tmp', 'mido-no-config-'));
+  test('throws when no neutron.yml is found', async () => {
+    // Use a temp dir that definitely has no neutron.yml up the tree
+    // We need an isolated directory — use /tmp itself (no neutron.yml there)
+    const isolated = mkdtempSync(join('/tmp', 'neutron-no-config-'));
     try {
-      await expect(loadConfig(isolated)).rejects.toThrow('No mido.yml found');
+      await expect(loadConfig(isolated)).rejects.toThrow('No neutron.yml found');
     } finally {
       rmSync(isolated, { recursive: true, force: true });
     }
   });
 
   test('throws on invalid YAML', async () => {
-    writeFileSync(join(tmpDir, 'mido.yml'), '{ invalid yaml: [unclosed', 'utf-8');
+    writeFileSync(join(tmpDir, 'neutron.yml'), '{ invalid yaml: [unclosed', 'utf-8');
     await expect(loadConfig(tmpDir)).rejects.toThrow();
   });
 
   test('throws on schema validation failure', async () => {
     // Valid YAML but missing required fields
-    writeFileSync(join(tmpDir, 'mido.yml'), 'workspace: test\n', 'utf-8');
-    await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid mido config');
+    writeFileSync(join(tmpDir, 'neutron.yml'), 'workspace: test\n', 'utf-8');
+    await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid neutron config');
   });
 
   describe('migration: bridge fields from/to/via → source/target/artifact', () => {
@@ -69,7 +69,7 @@ bridges:
     to: packages/api
     via: apps/server/openapi.json
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), oldConfig, 'utf-8');
       const loaded = await loadConfig(tmpDir);
       expect(loaded.config.bridges).toHaveLength(1);
       // from=consumer → target, to=producer → source
@@ -92,7 +92,7 @@ bridges:
       - packages/api
     artifact: apps/server/openapi.json
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), modernConfig, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), modernConfig, 'utf-8');
       const loaded = await loadConfig(tmpDir);
       expect(loaded.config.bridges).toHaveLength(1);
     });
@@ -113,7 +113,7 @@ lint:
   ignore:
     - dist
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), oldConfig, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), oldConfig, 'utf-8');
       const loaded = await loadConfig(tmpDir);
       expect(loaded.config.lint?.typescript).toBeDefined();
     });
@@ -131,7 +131,7 @@ lint:
     categories:
       correctness: error
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), modernConfig, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), modernConfig, 'utf-8');
       const first = await loadConfig(tmpDir);
       const second = await loadConfig(tmpDir);
 
@@ -141,8 +141,8 @@ lint:
     });
   });
 
-  test('walks up directory tree to find mido.yml', async () => {
-    writeFileSync(join(tmpDir, 'mido.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
+  test('walks up directory tree to find neutron.yml', async () => {
+    writeFileSync(join(tmpDir, 'neutron.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
     const subDir = join(tmpDir, 'apps', 'server');
     mkdtempSync(join(tmpDir, 'apps-'));
     // Create the subdir structure
@@ -152,8 +152,8 @@ lint:
     expect(loaded.root).toBe(tmpDir);
   });
 
-  test('finds mido.yaml as well as mido.yml', async () => {
-    writeFileSync(join(tmpDir, 'mido.yaml'), MINIMAL_VALID_CONFIG, 'utf-8');
+  test('finds neutron.yaml as well as neutron.yml', async () => {
+    writeFileSync(join(tmpDir, 'neutron.yaml'), MINIMAL_VALID_CONFIG, 'utf-8');
     const loaded = await loadConfig(tmpDir);
     expect(loaded.config.workspace).toBe('test-workspace');
   });
@@ -169,14 +169,14 @@ ecosystems:
       - apps/server
 hooks:
   pre-commit:
-    - mido pre-commit
+    - neutron pre-commit
   commit-msg:
-    - mido commit-msg "$1"
+    - neutron commit-msg "$1"
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), config, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), config, 'utf-8');
       const loaded = await loadConfig(tmpDir);
-      expect(loaded.config.hooks?.["pre-commit"]).toEqual(["mido pre-commit"]);
-      expect(loaded.config.hooks?.["commit-msg"]).toEqual(['mido commit-msg "$1"']);
+      expect(loaded.config.hooks?.["pre-commit"]).toEqual(["neutron pre-commit"]);
+      expect(loaded.config.hooks?.["commit-msg"]).toEqual(['neutron commit-msg "$1"']);
     });
 
     test('accepts false to disable a hook', async () => {
@@ -190,15 +190,15 @@ ecosystems:
 hooks:
   pre-commit: false
   commit-msg:
-    - mido commit-msg "$1"
+    - neutron commit-msg "$1"
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), config, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), config, 'utf-8');
       const loaded = await loadConfig(tmpDir);
       expect(loaded.config.hooks?.["pre-commit"]).toBe(false);
     });
 
     test('omitted hooks section loads fine', async () => {
-      writeFileSync(join(tmpDir, 'mido.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
+      writeFileSync(join(tmpDir, 'neutron.yml'), MINIMAL_VALID_CONFIG, 'utf-8');
       const loaded = await loadConfig(tmpDir);
       expect(loaded.config.hooks).toBeUndefined();
     });
@@ -214,8 +214,8 @@ ecosystems:
 hooks:
   pre-commit: []
 `;
-      writeFileSync(join(tmpDir, 'mido.yml'), config, 'utf-8');
-      await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid mido config');
+      writeFileSync(join(tmpDir, 'neutron.yml'), config, 'utf-8');
+      await expect(loadConfig(tmpDir)).rejects.toThrow('Invalid neutron config');
     });
   });
 });

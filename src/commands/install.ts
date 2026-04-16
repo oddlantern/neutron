@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import type { MidoConfig } from "@/config/schema";
+import type { NeutronConfig } from "@/config/schema";
 import { writeHooks } from "@/hooks";
 
 export type { WriteHooksResult } from "@/hooks";
@@ -19,7 +19,7 @@ export { writeHooks } from "@/hooks";
 export async function runInstall(
   root: string,
   options?: { readonly dryRun?: boolean },
-  config?: MidoConfig,
+  config?: NeutronConfig,
 ): Promise<number> {
   const gitDir = join(root, ".git");
   if (!existsSync(gitDir)) {
@@ -35,7 +35,7 @@ export async function runInstall(
       const loaded = await loadConfig();
       resolvedConfig = loaded.config;
     } catch {
-      // No mido.yml yet — install with defaults
+      // No neutron.yml yet — install with defaults
     }
   }
 

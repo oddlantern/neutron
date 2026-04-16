@@ -44,7 +44,7 @@ export async function runOutdated(
   }
 
   console.log(
-    `\n${BOLD}mido outdated${RESET} ${DIM}\u2014 checking ${deps.length} dependencies...${RESET}\n`,
+    `\n${BOLD}neutron outdated${RESET} ${DIM}\u2014 checking ${deps.length} dependencies...${RESET}\n`,
   );
 
   // ── Level 1: Registry scan ──────────────────────────────────────────
@@ -54,7 +54,7 @@ export async function runOutdated(
 
   if (skipped > 0) {
     diag.warn(`${skipped} dep(s) could not be checked (registry timeout or error)`, {
-      fix: "Re-run mido outdated or check your network connection",
+      fix: "Re-run neutron outdated or check your network connection",
     });
   }
 
@@ -87,7 +87,7 @@ export async function runOutdated(
 
   if (shouldRunLevel2) {
     console.log(
-      `\n${BOLD}mido outdated${RESET} ${DIM}\u2014 running static analysis...${RESET}\n`,
+      `\n${BOLD}neutron outdated${RESET} ${DIM}\u2014 running static analysis...${RESET}\n`,
     );
 
     const level2Results = await runLevel2(outdated, root, graph.packages);
@@ -99,7 +99,7 @@ export async function runOutdated(
 
     if (shouldRunLevel3) {
       console.log(
-        `\n${BOLD}mido outdated${RESET} ${DIM}\u2014 running live validation...${RESET}\n`,
+        `\n${BOLD}neutron outdated${RESET} ${DIM}\u2014 running live validation...${RESET}\n`,
       );
 
       const level3Results = await runLevel3(outdated, root, graph.packages);
@@ -112,17 +112,17 @@ export async function runOutdated(
   }
 
   console.log(
-    `${DIM}Use ${BOLD}mido upgrade${RESET} ${DIM}to update dependencies.${RESET}`,
+    `${DIM}Use ${BOLD}neutron upgrade${RESET} ${DIM}to update dependencies.${RESET}`,
   );
   console.log(
-    `${DIM}Run ${BOLD}mido check${RESET} ${DIM}to verify version consistency.${RESET}\n`,
+    `${DIM}Run ${BOLD}neutron check${RESET} ${DIM}to verify version consistency.${RESET}\n`,
   );
 
   return 0;
 }
 
 /**
- * Quick one-liner check for mido dev startup.
+ * Quick one-liner check for neutron dev startup.
  * Only checks the top shared deps (most impactful) via Level 1.
  * Returns a summary string or null if all up to date.
  */
@@ -146,7 +146,7 @@ export async function quickOutdatedCheck(
       return null;
     }
 
-    return `${outdated.length} shared dep(s) have updates. Run \`mido outdated\` for details.`;
+    return `${outdated.length} shared dep(s) have updates. Run \`neutron outdated\` for details.`;
   } catch {
     return null;
   }

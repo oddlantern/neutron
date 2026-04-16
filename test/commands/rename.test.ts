@@ -20,11 +20,11 @@ function run(args: readonly string[], cwd: string): { status: number; stdout: st
   };
 }
 
-describe("mido rename", () => {
+describe("neutron rename", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "mido-rename-test-"));
+    tmpDir = mkdtempSync(join(tmpdir(), "neutron-rename-test-"));
   });
 
   afterEach(() => {
@@ -32,9 +32,9 @@ describe("mido rename", () => {
   });
 
   function setupWorkspace(name: string): void {
-    // mido.yml
+    // neutron.yml
     writeFileSync(
-      join(tmpDir, "mido.yml"),
+      join(tmpDir, "neutron.yml"),
       [
         `workspace: ${name}`,
         "ecosystems:",
@@ -92,10 +92,10 @@ describe("mido rename", () => {
     );
   }
 
-  test("exits 1 with no mido.yml", () => {
+  test("exits 1 with no neutron.yml", () => {
     const { status, stderr } = run(["rename", "newname"], tmpDir);
     expect(status).toBe(1);
-    expect(stderr).toContain("No mido.yml found");
+    expect(stderr).toContain("No neutron.yml found");
   });
 
   test("exits 1 with no name argument", () => {
@@ -111,12 +111,12 @@ describe("mido rename", () => {
     expect(stdout).toContain("already named");
   });
 
-  test("updates mido.yml workspace name", () => {
+  test("updates neutron.yml workspace name", () => {
     setupWorkspace("oldname");
     const { status } = run(["rename", "newname"], tmpDir);
     expect(status).toBe(0);
 
-    const content = readFileSync(join(tmpDir, "mido.yml"), "utf-8");
+    const content = readFileSync(join(tmpDir, "neutron.yml"), "utf-8");
     expect(content).toContain("workspace: newname");
     expect(content).not.toContain("workspace: oldname");
   });
@@ -159,16 +159,16 @@ describe("mido rename", () => {
     const { status } = run(["rename", "newproject"], tmpDir);
     expect(status).toBe(0);
 
-    const content = readFileSync(join(tmpDir, "mido.yml"), "utf-8");
+    const content = readFileSync(join(tmpDir, "neutron.yml"), "utf-8");
     expect(content).toContain("workspace: newproject");
   });
 
-  test("preserves other mido.yml content", () => {
+  test("preserves other neutron.yml content", () => {
     setupWorkspace("oldname");
     const { status } = run(["rename", "newname"], tmpDir);
     expect(status).toBe(0);
 
-    const content = readFileSync(join(tmpDir, "mido.yml"), "utf-8");
+    const content = readFileSync(join(tmpDir, "neutron.yml"), "utf-8");
     expect(content).toContain("ecosystems:");
     expect(content).toContain("apps/server");
     expect(content).toContain("apps/flutter");
@@ -216,10 +216,10 @@ describe("mido rename", () => {
     expect(pbxproj).not.toContain("com.oldname.app");
   });
 
-  test("reminds to run mido generate", () => {
+  test("reminds to run neutron generate", () => {
     setupWorkspace("oldname");
     const { status, stdout } = run(["rename", "newname"], tmpDir);
     expect(status).toBe(0);
-    expect(stdout).toContain("mido generate");
+    expect(stdout).toContain("neutron generate");
   });
 });

@@ -201,7 +201,7 @@ export async function runAffected(
   }
 
   console.log(
-    `\n${BOLD}mido affected${RESET} ${DIM}— ${sorted.length} package(s) affected since ${base}${RESET}\n`,
+    `\n${BOLD}neutron affected${RESET} ${DIM}— ${sorted.length} package(s) affected since ${base}${RESET}\n`,
   );
 
   for (const path of sorted) {

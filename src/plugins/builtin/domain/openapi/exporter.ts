@@ -88,7 +88,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     return {
       success: false,
       duration: Math.round(performance.now() - start),
-      summary: "Port allocation failed. Check if another mido dev instance is running.",
+      summary: "Port allocation failed. Check if another neutron dev instance is running.",
     };
   }
 

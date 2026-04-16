@@ -63,7 +63,7 @@ export async function runGenerate(
 
   if (!quiet) {
     console.log(
-      `\n${BOLD}mido generate${RESET} ${DIM}— ${resolved.length} bridge(s)${RESET}\n`,
+      `\n${BOLD}neutron generate${RESET} ${DIM}— ${resolved.length} bridge(s)${RESET}\n`,
     );
   }
 
@@ -116,7 +116,7 @@ export async function runGenerate(
       const msg = err instanceof Error ? err.message : String(err);
       diag.error(`Bridge failed: ${bridgeKey}`, {
         detail: msg,
-        fix: "Check bridge source files and re-run mido generate --force",
+        fix: "Check bridge source files and re-run neutron generate --force",
       });
     }
   }

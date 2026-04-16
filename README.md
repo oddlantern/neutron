@@ -1,72 +1,72 @@
-# mido
+# neutron
 
 Cross-ecosystem monorepo workspace tool. One config, every language, all bridges generated.
 
-**mido** scans your monorepo, builds a unified dependency graph across TypeScript and Dart, orchestrates code generation between ecosystems, and enforces consistency — versions, formatting, linting, commits, and environment parity.
+**neutron** scans your monorepo, builds a unified dependency graph across TypeScript and Dart, orchestrates code generation between ecosystems, and enforces consistency — versions, formatting, linting, commits, and environment parity.
 
 ## The problem
 
 TypeScript monorepos have syncpack. Dart monorepos have melos. Neither sees the other. If your repo contains both — plus generated API clients and design tokens bridging them — version mismatches, stale artifacts, and env drift go undetected until something breaks at runtime.
 
-## What mido replaces
+## What neutron replaces
 
 ### Tools
 
-| Tool | What it does | mido equivalent |
+| Tool | What it does | neutron equivalent |
 |------|-------------|-----------------|
-| Husky | Git hooks | `mido install` + `hooks:` in mido.yml |
-| commitlint | Conventional commit validation | `mido commit-msg` + `commits:` config |
-| lint-staged | Run linters on staged files | `mido pre-commit` |
-| Prettier | Code formatting | `mido fmt` (oxfmt, bundled) |
-| ESLint | Linting | `mido lint` (oxlint, bundled) |
-| Biome | Lint + format | `mido lint` + `mido fmt` |
-| syncpack | Version consistency across packages | `mido check --fix` |
-| npm outdated / dart pub outdated | Dependency freshness (per ecosystem) | `mido outdated` (cross-ecosystem) |
+| Husky | Git hooks | `neutron install` + `hooks:` in neutron.yml |
+| commitlint | Conventional commit validation | `neutron commit-msg` + `commits:` config |
+| lint-staged | Run linters on staged files | `neutron pre-commit` |
+| Prettier | Code formatting | `neutron fmt` (oxfmt, bundled) |
+| ESLint | Linting | `neutron lint` (oxlint, bundled) |
+| Biome | Lint + format | `neutron lint` + `neutron fmt` |
+| syncpack | Version consistency across packages | `neutron check --fix` |
+| npm outdated / dart pub outdated | Dependency freshness (per ecosystem) | `neutron outdated` (cross-ecosystem) |
 
 ### Scripts and workflows
 
-| Manual workflow | What it does | mido equivalent |
+| Manual workflow | What it does | neutron equivalent |
 |----------------|-------------|-----------------|
-| Per-package `generate` scripts | API codegen, design tokens | `mido generate` (all bridges, cached) |
-| `bun test` / `dart test` per package | Running tests | `mido test` (cross-ecosystem, parallel) |
-| Bespoke CI pipeline steps | Build + lint + test + check | `mido ci` (single command) |
-| Figuring out what changed | Deciding what to rebuild | `mido affected --base origin/main` |
-| Checking dependency versions manually | Finding outdated deps | `mido outdated` (shared deps highlighted) |
+| Per-package `generate` scripts | API codegen, design tokens | `neutron generate` (all bridges, cached) |
+| `bun test` / `dart test` per package | Running tests | `neutron test` (cross-ecosystem, parallel) |
+| Bespoke CI pipeline steps | Build + lint + test + check | `neutron ci` (single command) |
+| Figuring out what changed | Deciding what to rebuild | `neutron affected --base origin/main` |
+| Checking dependency versions manually | Finding outdated deps | `neutron outdated` (shared deps highlighted) |
 
-### What mido does NOT replace
+### What neutron does NOT replace
 
-- **Package managers** — bun, npm, yarn, dart, flutter (mido calls them, doesn't replace them)
-- **Compilers** — TypeScript, Dart (mido orchestrates, doesn't compile)
-- **App builds** — `flutter build`, Docker, deploy scripts (mido builds library packages, not apps)
-- **Infrastructure** — CI/CD config, Docker, k8s (mido provides `mido ci` but doesn't own your pipeline)
+- **Package managers** — bun, npm, yarn, dart, flutter (neutron calls them, doesn't replace them)
+- **Compilers** — TypeScript, Dart (neutron orchestrates, doesn't compile)
+- **App builds** — `flutter build`, Docker, deploy scripts (neutron builds library packages, not apps)
+- **Infrastructure** — CI/CD config, Docker, k8s (neutron provides `neutron ci` but doesn't own your pipeline)
 
 ## Install
 
 ```bash
-bun add -D @oddlantern/mido-cli   # or npm/pnpm/yarn
+bun add -D @oddlantern/neutron   # or npm/pnpm/yarn
 ```
 
 ## Getting started
 
 ```bash
-mido init       # Scan repo, generate mido.yml, install hooks, wire prepare script
-mido dev        # Start watching — you're ready to develop
+neutron init       # Scan repo, generate neutron.yml, install hooks, wire prepare script
+neutron dev        # Start watching — you're ready to develop
 ```
 
-That's it. `mido init` handles everything:
+That's it. `neutron init` handles everything:
 
 - Detects ecosystems and packages
 - Discovers bridges between them
-- Generates `mido.yml` with sensible defaults
+- Generates `neutron.yml` with sensible defaults
 - Installs git hooks (pre-commit, commit-msg, post-merge, post-checkout)
-- Adds `"prepare": "mido generate"` to your root `package.json`
+- Adds `"prepare": "neutron generate"` to your root `package.json`
 - Adds `generated/` entries to `.gitignore` for bridge sources
 
-After init, every `bun install` on a fresh clone automatically runs `mido generate` to produce all generated code. No manual steps.
+After init, every `bun install` on a fresh clone automatically runs `neutron generate` to produce all generated code. No manual steps.
 
 ## Config
 
-`mido init` generates a `mido.yml`. Example:
+`neutron init` generates a `neutron.yml`. Example:
 
 ```yaml
 workspace: my-project
@@ -118,8 +118,8 @@ commits:
   header_max_length: 100
 
 hooks:
-  pre-commit: [mido pre-commit]
-  commit-msg: ['mido commit-msg "$1"']
+  pre-commit: [neutron pre-commit]
+  commit-msg: ['neutron commit-msg "$1"']
 ```
 
 ## Commands
@@ -128,46 +128,46 @@ hooks:
 
 | Command | Description |
 |---------|-------------|
-| `mido init` | Scan repo, generate mido.yml, install hooks |
-| `mido install [--dry-run]` | Write git hooks to `.git/hooks/` |
-| `mido add` | Scaffold a new package in the workspace |
+| `neutron init` | Scan repo, generate neutron.yml, install hooks |
+| `neutron install [--dry-run]` | Write git hooks to `.git/hooks/` |
+| `neutron add` | Scaffold a new package in the workspace |
 
 ### Development
 
 | Command | Description |
 |---------|-------------|
-| `mido dev [--verbose]` | Watch bridges and regenerate on changes |
-| `mido generate [--force] [--quiet] [--verbose] [--dry-run]` | Run all bridge pipelines (uses cache, `--force` to skip) |
-| `mido lint [--fix]` | Run linters across all packages |
-| `mido fmt [--check]` | Format all packages |
-| `mido test` | Run tests across all packages |
-| `mido build [--all]` | Build library packages (`--all` includes apps) |
+| `neutron dev [--verbose]` | Watch bridges and regenerate on changes |
+| `neutron generate [--force] [--quiet] [--verbose] [--dry-run]` | Run all bridge pipelines (uses cache, `--force` to skip) |
+| `neutron lint [--fix]` | Run linters across all packages |
+| `neutron fmt [--check]` | Format all packages |
+| `neutron test` | Run tests across all packages |
+| `neutron build [--all]` | Build library packages (`--all` includes apps) |
 
 ### Workspace health
 
 | Command | Description |
 |---------|-------------|
-| `mido check [--fix] [--quiet] [--hook]` | Version consistency, bridge validation, env parity, staleness |
-| `mido doctor` | Diagnostic: config, hooks, tools, generated output |
-| `mido outdated [--json] [--deep] [--verify] [--ci]` | Check for newer dependency versions across ecosystems |
-| `mido upgrade [--all] [--verify] [--dry-run]` | Interactive dependency upgrade with lock and manifest sync |
-| `mido why <dep> [--json]` | Show which packages use a dependency |
-| `mido rename <name> [--include-platform-ids] [--dry-run]` | Rename workspace across all manifests |
+| `neutron check [--fix] [--quiet] [--hook]` | Version consistency, bridge validation, env parity, staleness |
+| `neutron doctor` | Diagnostic: config, hooks, tools, generated output |
+| `neutron outdated [--json] [--deep] [--verify] [--ci]` | Check for newer dependency versions across ecosystems |
+| `neutron upgrade [--all] [--verify] [--dry-run]` | Interactive dependency upgrade with lock and manifest sync |
+| `neutron why <dep> [--json]` | Show which packages use a dependency |
+| `neutron rename <name> [--include-platform-ids] [--dry-run]` | Rename workspace across all manifests |
 
 ### CI / automation
 
 | Command | Description |
 |---------|-------------|
-| `mido ci [--verbose]` | Full pipeline: generate, build, lint, test, check |
-| `mido affected [--base ref] [--json]` | Packages affected by changes (follows dependency + bridge edges) |
-| `mido graph [--dot] [--ascii] [--no-open]` | Interactive D3.js dependency graph |
+| `neutron ci [--verbose]` | Full pipeline: generate, build, lint, test, check |
+| `neutron affected [--base ref] [--json]` | Packages affected by changes (follows dependency + bridge edges) |
+| `neutron graph [--dot] [--ascii] [--no-open]` | Interactive D3.js dependency graph |
 
 ### Git hooks
 
 | Command | Description |
 |---------|-------------|
-| `mido pre-commit` | Format check + lint + workspace check |
-| `mido commit-msg <file>` | Validate conventional commit message |
+| `neutron pre-commit` | Format check + lint + workspace check |
+| `neutron commit-msg <file>` | Validate conventional commit message |
 
 ### Common flags
 
@@ -209,11 +209,11 @@ packages/assets/generated/typescript/  # typed asset paths + inlined SVGs
 packages/assets/generated/dart/        # typed asset wrappers
 ```
 
-The `generated/` directories are gitignored — `mido generate` runs automatically via the `prepare` script on `bun install`.
+The `generated/` directories are gitignored — `neutron generate` runs automatically via the `prepare` script on `bun install`.
 
 ### Pipeline caching
 
-`mido generate` hashes bridge inputs (artifact + watched files) and skips unchanged bridges. Use `--force` to regenerate everything.
+`neutron generate` hashes bridge inputs (artifact + watched files) and skips unchanged bridges. Use `--force` to regenerate everything.
 
 ### Domain plugins
 
@@ -223,7 +223,7 @@ The `generated/` directories are gitignored — `mido generate` runs automatical
 
 #### OpenAPI framework adapters
 
-mido auto-detects your server framework from dependencies, spawns it to export the spec, and shuts it down. Supported frameworks:
+neutron auto-detects your server framework from dependencies, spawns it to export the spec, and shuts it down. Supported frameworks:
 
 | Framework | Spec endpoint |
 |-----------|--------------|
@@ -261,7 +261,7 @@ Oxlint plugins are auto-enabled based on your dependencies: always `typescript`,
 
 ### Outdated analysis
 
-`mido outdated` provides three-level progressive dependency analysis:
+`neutron outdated` provides three-level progressive dependency analysis:
 
 **Level 1 — Registry scan** (always runs): checks npm/pub registries for newer versions, detects deprecations, peer conflicts, and computes a risk score (0–100) per dependency.
 
@@ -269,19 +269,19 @@ Oxlint plugins are auto-enabled based on your dependencies: always `typescript`,
 
 **Level 3 — Live validation** (`--verify`): installs updates in a temp directory, runs typecheck and tests per ecosystem to confirm compatibility.
 
-In interactive mode, mido prompts to escalate levels after each pass. In CI, use `--ci` for Level 1 only with exit code 1 if outdated.
+In interactive mode, neutron prompts to escalate levels after each pass. In CI, use `--ci` for Level 1 only with exit code 1 if outdated.
 
 ### Upgrade
 
-`mido upgrade` provides interactive dependency upgrades with automatic lock file and manifest sync. Use `--all` to upgrade everything, `--verify` to run Level 3 validation before applying, and `--dry-run` to preview changes.
+`neutron upgrade` provides interactive dependency upgrades with automatic lock file and manifest sync. Use `--all` to upgrade everything, `--verify` to run Level 3 validation before applying, and `--dry-run` to preview changes.
 
 ### Version policy
 
-`mido check --fix` generates a `mido.lock` file that records resolved version ranges, ensuring consistent versions across all packages in the workspace.
+`neutron check --fix` generates a `neutron.lock` file that records resolved version ranges, ensuring consistent versions across all packages in the workspace.
 
 ## Workspace rename
 
-`mido rename <name>` cascades the workspace name across all manifests (package.json, pubspec.yaml). Use `--include-platform-ids` to also update iOS bundle IDs, Android application IDs, and Firebase config. Use `--dry-run` to preview changes.
+`neutron rename <name>` cascades the workspace name across all manifests (package.json, pubspec.yaml). Use `--include-platform-ids` to also update iOS bundle IDs, Android application IDs, and Firebase config. Use `--dry-run` to preview changes.
 
 ## CI integration
 
@@ -289,20 +289,20 @@ Single command replaces bespoke CI configs:
 
 ```yaml
 # GitHub Actions example
-- run: bun install      # triggers mido generate via prepare script
-- run: bunx mido ci     # generate → build → lint → test → check
+- run: bun install      # triggers neutron generate via prepare script
+- run: bunx neutron ci     # generate → build → lint → test → check
 ```
 
 For monorepos with conditional builds:
 
 ```yaml
-- run: bunx mido affected --base origin/main --json > affected.json
+- run: bunx neutron affected --base origin/main --json > affected.json
 # Use affected.json to conditionally trigger app-specific builds
 ```
 
 ## Checks
 
-`mido check` validates workspace consistency:
+`neutron check` validates workspace consistency:
 
 - **versions** — flags dependencies with different version ranges across packages
 - **bridges** — validates cross-ecosystem edges and artifact presence
@@ -313,9 +313,9 @@ All checks support `--fix` for automatic remediation and `--quiet` for failure-o
 
 ## Lint and format
 
-mido picks the right tool per ecosystem. All config lives in `mido.yml`:
+neutron picks the right tool per ecosystem. All config lives in `neutron.yml`:
 
-- **TypeScript** — oxlint + oxfmt (bundled with mido, zero config). Falls back to eslint/prettier if installed.
+- **TypeScript** — oxlint + oxfmt (bundled with neutron, zero config). Falls back to eslint/prettier if installed.
 - **Dart** — `dart analyze` + `dart format` from PATH.
 
 Oxlint plugins are auto-enabled based on your dependencies (react, vitest, jest, nextjs, etc.).
@@ -324,17 +324,17 @@ Lint and format run packages within the same ecosystem in parallel. Build runs s
 
 ## Git hooks
 
-`mido install` writes hooks configured in the `hooks` section of `mido.yml`:
+`neutron install` writes hooks configured in the `hooks` section of `neutron.yml`:
 
-- **pre-commit** — `mido pre-commit` (format check + lint + workspace check)
+- **pre-commit** — `neutron pre-commit` (format check + lint + workspace check)
 - **commit-msg** — conventional commit validation
 - **post-merge** / **post-checkout** — workspace drift detection
 
-Set a hook to `false` to disable it. mido detects conflicts with existing hooks and warns before overwriting.
+Set a hook to `false` to disable it. neutron detects conflicts with existing hooks and warns before overwriting.
 
 ## Adding ecosystem support
 
-mido is built around a parser plugin boundary. Adding a new ecosystem = one file implementing `ManifestParser`:
+neutron is built around a parser plugin boundary. Adding a new ecosystem = one file implementing `ManifestParser`:
 
 ```typescript
 interface ManifestParser {

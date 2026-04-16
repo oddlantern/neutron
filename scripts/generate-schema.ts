@@ -1,5 +1,5 @@
 /**
- * Generates schema.json for mido.yml — provides VS Code autocomplete
+ * Generates schema.json for neutron.yml — provides VS Code autocomplete
  * via yaml-language-server.
  *
  * Derives the schema structure from the Zod config schema (single source of truth),
@@ -24,7 +24,7 @@ type JsonSchema = Record<string, unknown>;
 
 /**
  * Convert a Zod schema to a JSON Schema object.
- * Handles the subset of Zod types used in mido's config.
+ * Handles the subset of Zod types used in neutron's config.
  */
 function zodToJsonSchema(schema: z.ZodTypeAny): JsonSchema {
   const def = schema._def;
@@ -198,10 +198,10 @@ const DESCRIPTIONS: Record<string, string> = {
   ecosystems: 'Language ecosystems and their packages.',
   bridges: 'Cross-ecosystem dependencies linked by a shared artifact.',
   env: 'Environment variable parity across packages.',
-  format: 'Per-ecosystem formatting. mido picks the right formatter: TypeScript → oxfmt, Dart → dart format.',
-  lint: 'Per-ecosystem linting. mido picks the right linter: TypeScript → oxlint, Dart → dart analyze. Plugins auto-enabled based on dependencies.',
-  hooks: 'Git hooks installed by `mido install`. Each hook is a list of shell commands. Set to `false` to disable.',
-  commits: 'Conventional commit validation, enforced by mido\'s commit-msg git hook.',
+  format: 'Per-ecosystem formatting. neutron picks the right formatter: TypeScript → oxfmt, Dart → dart format.',
+  lint: 'Per-ecosystem linting. neutron picks the right linter: TypeScript → oxlint, Dart → dart analyze. Plugins auto-enabled based on dependencies.',
+  hooks: 'Git hooks installed by `neutron install`. Each hook is a list of shell commands. Set to `false` to disable.',
+  commits: 'Conventional commit validation, enforced by neutron\'s commit-msg git hook.',
 };
 
 // Apply descriptions to top-level properties
@@ -256,8 +256,8 @@ if (lintProp) {
 
 const midoSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
-  title: 'mido.yml',
-  description: 'mido workspace configuration — cross-ecosystem monorepo tool',
+  title: 'neutron.yml',
+  description: 'neutron workspace configuration — cross-ecosystem monorepo tool',
   ...baseSchema,
 };
 

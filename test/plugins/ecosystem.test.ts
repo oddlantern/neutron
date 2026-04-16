@@ -69,7 +69,7 @@ describe("typescriptPlugin", () => {
   });
 
   describe("getActions", () => {
-    const root = join(tmpdir(), `mido-ts-actions-${Date.now()}`);
+    const root = join(tmpdir(), `neutron-ts-actions-${Date.now()}`);
     const pkgDir = join(root, "packages", "test-pkg");
 
     beforeAll(() => {
@@ -157,7 +157,7 @@ describe("typescriptPlugin", () => {
   });
 
   describe("canHandleDomainArtifact", () => {
-    const root = join(tmpdir(), `mido-ts-domain-${Date.now()}`);
+    const root = join(tmpdir(), `neutron-ts-domain-${Date.now()}`);
     const pkgDir = join(root, "packages", "test-pkg");
 
     beforeAll(() => {
@@ -254,7 +254,7 @@ describe("typescriptPlugin", () => {
   });
 
   describe("suggestWatchPaths", () => {
-    const root = join(tmpdir(), `mido-ts-watch-${Date.now()}`);
+    const root = join(tmpdir(), `neutron-ts-watch-${Date.now()}`);
     const pkgDir = join(root, "packages", "test-pkg");
 
     beforeAll(() => {
@@ -275,7 +275,7 @@ describe("typescriptPlugin", () => {
     });
 
     test("suggests package root when no src dir", async () => {
-      const noSrcRoot = join(tmpdir(), `mido-ts-nosrc-${Date.now()}`);
+      const noSrcRoot = join(tmpdir(), `neutron-ts-nosrc-${Date.now()}`);
       const noSrcPkgDir = join(noSrcRoot, "packages", "flat-pkg");
       mkdirSync(noSrcPkgDir, { recursive: true });
 
@@ -336,7 +336,7 @@ describe("dartPlugin", () => {
   });
 
   describe("getActions", () => {
-    const root = join(tmpdir(), `mido-dart-actions-${Date.now()}`);
+    const root = join(tmpdir(), `neutron-dart-actions-${Date.now()}`);
     const pkgDir = join(root, "packages", "test-pkg");
 
     beforeAll(() => {
@@ -404,7 +404,7 @@ describe("dartPlugin", () => {
   });
 
   describe("canHandleDomainArtifact", () => {
-    const root = join(tmpdir(), `mido-dart-domain-${Date.now()}`);
+    const root = join(tmpdir(), `neutron-dart-domain-${Date.now()}`);
     const pkgDir = join(root, "packages", "test-pkg");
 
     beforeAll(() => {
@@ -528,7 +528,7 @@ describe("dartPlugin", () => {
   });
 
   describe("suggestWatchPaths", () => {
-    const root = join(tmpdir(), `mido-dart-watch-${Date.now()}`);
+    const root = join(tmpdir(), `neutron-dart-watch-${Date.now()}`);
     const pkgDir = join(root, "packages", "test-pkg");
 
     beforeAll(() => {
@@ -549,7 +549,7 @@ describe("dartPlugin", () => {
     });
 
     test("suggests package root when no lib dir", async () => {
-      const noLibRoot = join(tmpdir(), `mido-dart-nolib-${Date.now()}`);
+      const noLibRoot = join(tmpdir(), `neutron-dart-nolib-${Date.now()}`);
       const noLibPkgDir = join(noLibRoot, "packages", "flat-pkg");
       mkdirSync(noLibPkgDir, { recursive: true });
 

@@ -8,7 +8,7 @@ export const RED = "\x1b[31m";
 export const GREEN = "\x1b[32m";
 export const YELLOW = "\x1b[33m";
 export const CYAN = "\x1b[36m";
-/** mido brand orange — ANSI 256-color 208 */
+/** neutron brand orange — ANSI 256-color 208 */
 export const ORANGE = "\x1b[38;5;208m";
 export const MAGENTA = "\x1b[35m";
 
@@ -60,5 +60,5 @@ export function formatSummary(results: readonly CheckResult[]): string {
 }
 
 export function formatHeader(workspaceName: string, packageCount: number): string {
-  return `\n${CYAN}${BOLD}mido${RESET} ${DIM}— workspace: ${workspaceName} (${packageCount} packages)${RESET}\n`;
+  return `\n${CYAN}${BOLD}neutron${RESET} ${DIM}— workspace: ${workspaceName} (${packageCount} packages)${RESET}\n`;
 }

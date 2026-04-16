@@ -8,7 +8,7 @@ import { applyManifestUpdate } from '../src/manifest-writer.js';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'mido-manifest-writer-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'neutron-manifest-writer-test-'));
 });
 
 afterEach(() => {

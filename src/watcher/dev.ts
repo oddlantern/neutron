@@ -29,7 +29,7 @@ import type { ResolvedBridge } from "@/bridges/runner";
 import { createDebouncer } from "@/watcher/debouncer";
 import type { Debouncer } from "@/watcher/debouncer";
 
-const CONFIG_FILENAME = "mido.yml";
+const CONFIG_FILENAME = "neutron.yml";
 const CONFIG_RELOAD_DEBOUNCE_MS = 500;
 const CHOKIDAR_STABILITY_THRESHOLD_MS = 300;
 const CHOKIDAR_POLL_INTERVAL_MS = 100;
@@ -72,10 +72,10 @@ function teardownSession(session: WatcherSession): void {
 }
 
 /**
- * Run the mido dev watcher daemon.
+ * Run the neutron dev watcher daemon.
  *
  * Loads config, builds graph, discovers plugins, watches files,
- * and re-runs bridge pipelines on changes. Watches mido.yml and
+ * and re-runs bridge pipelines on changes. Watches neutron.yml and
  * reloads everything when the config changes.
  */
 export async function runDev(parsers: ParserRegistry, options: DevOptions = {}): Promise<number> {
@@ -98,7 +98,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
     const registry = new PluginRegistry(ecosystem, domain);
 
     if (graph.bridges.length === 0) {
-      console.error(`${YELLOW}warn:${RESET} No bridges defined in mido.yml. Nothing to watch.`);
+      console.error(`${YELLOW}warn:${RESET} No bridges defined in neutron.yml. Nothing to watch.`);
       return undefined;
     }
 
@@ -108,7 +108,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       return undefined;
     }
 
-    // Resolve watch dirs for bridges + mido.yml itself
+    // Resolve watch dirs for bridges + neutron.yml itself
     const bridgeWatchDirs = resolveWatchDirs(resolved, root);
     const configPath = join(root, CONFIG_FILENAME);
     const allWatchPaths = [...bridgeWatchDirs, configPath];
@@ -159,9 +159,9 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       bridgeDebouncers.set(r, debouncer);
     }
 
-    // Config reload debouncer — fires when mido.yml changes
+    // Config reload debouncer — fires when neutron.yml changes
     const configDebouncer = createDebouncer(async () => {
-      logStep("mido.yml changed \u2014 validating...");
+      logStep("neutron.yml changed \u2014 validating...");
 
       // Validate config before tearing down the current session
       try {
@@ -192,7 +192,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
           printBridgeSummary(newSession.resolved, newSession.registry);
           console.log(`  ${DIM}Waiting for changes...${RESET}\n`);
         } else {
-          logFail("Config reload failed \u2014 no valid bridges. Fix mido.yml and save again.");
+          logFail("Config reload failed \u2014 no valid bridges. Fix neutron.yml and save again.");
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

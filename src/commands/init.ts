@@ -33,8 +33,8 @@ import { isRecord } from "@/guards";
 // ─── Prepare / gitignore wiring ──────────────────────────────────────────────
 
 /**
- * Add "mido generate" to the prepare script in root package.json.
- * If prepare already exists and doesn't mention mido, chains with &&.
+ * Add "neutron generate" to the prepare script in root package.json.
+ * If prepare already exists and doesn't mention neutron, chains with &&.
  */
 async function wirePrepareScript(root: string): Promise<void> {
   const pkgPath = join(root, "package.json");
@@ -51,16 +51,16 @@ async function wirePrepareScript(root: string): Promise<void> {
   const scripts = isRecord(pkg["scripts"]) ? pkg["scripts"] : {};
   const current = typeof scripts["prepare"] === "string" ? scripts["prepare"] : "";
 
-  if (current.includes("mido generate")) {
+  if (current.includes("neutron generate")) {
     return; // Already wired
   }
 
-  const newPrepare = current ? `${current} && mido generate` : "mido generate";
+  const newPrepare = current ? `${current} && neutron generate` : "neutron generate";
   scripts["prepare"] = newPrepare;
   pkg["scripts"] = scripts;
 
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf-8");
-  log.step(`Added ${BOLD}"prepare": "mido generate"${RESET} to package.json`);
+  log.step(`Added ${BOLD}"prepare": "neutron generate"${RESET} to package.json`);
 }
 
 /**
@@ -92,14 +92,14 @@ async function wireGitignore(
     return;
   }
 
-  const section = "\n# mido generated output\n" + linesToAdd.join("\n") + "\n";
+  const section = "\n# neutron generated output\n" + linesToAdd.join("\n") + "\n";
   await writeFile(gitignorePath, content.trimEnd() + "\n" + section, "utf-8");
   log.step(`Added ${linesToAdd.length} generated path(s) to .gitignore`);
 }
 
 /**
- * Interactive setup that scans the repo and generates mido.yml.
- * If mido.yml already exists, runs reconciliation mode instead.
+ * Interactive setup that scans the repo and generates neutron.yml.
+ * If neutron.yml already exists, runs reconciliation mode instead.
  *
  * @returns exit code (0 = success, 1 = error)
  */
@@ -121,7 +121,7 @@ async function runFirstTime(
   parsers: ParserRegistry,
 ): Promise<number> {
   printBanner();
-  intro("mido init");
+  intro("neutron init");
 
   const s = spinner();
   s.start("Scanning repo...");

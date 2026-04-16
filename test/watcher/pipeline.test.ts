@@ -8,7 +8,7 @@ import type { ExecutablePipelineStep, ExecuteResult } from '../../src/plugins/ty
 import { runPipeline } from '../../src/bridges/pipeline.js';
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-pipeline-')));
+  return realpathSync(mkdtempSync(join(tmpdir(), 'neutron-test-pipeline-')));
 }
 
 function makeStep(overrides: {

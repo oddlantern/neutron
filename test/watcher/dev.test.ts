@@ -10,7 +10,7 @@ const TIMEOUT_MS = 10_000;
 
 function makeTempWorkspace(): string {
   // realpathSync resolves macOS /var → /private/var symlink
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-dev-')));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'neutron-test-dev-')));
 
   // Create a package that has a "generate" script
   const pkgDir = join(root, 'packages', 'source');
@@ -45,7 +45,7 @@ function makeTempWorkspace(): string {
   // Create a bridge artifact placeholder
   writeFileSync(join(pkgDir, 'artifact.json'), '{}');
 
-  // Create mido.yml
+  // Create neutron.yml
   const config = [
     'workspace: test-workspace',
     'ecosystems:',
@@ -64,12 +64,12 @@ function makeTempWorkspace(): string {
     '      - packages/source/src/**',
   ].join('\n');
 
-  writeFileSync(join(root, 'mido.yml'), config);
+  writeFileSync(join(root, 'neutron.yml'), config);
 
   return root;
 }
 
-describe('mido dev integration', () => {
+describe('neutron dev integration', () => {
   let child: ReturnType<typeof spawn> | undefined;
 
   afterEach(() => {
@@ -84,7 +84,7 @@ describe('mido dev integration', () => {
       const root = makeTempWorkspace();
       const outputFile = join(root, 'packages', 'source', 'output.txt');
 
-      // Start mido dev
+      // Start neutron dev
       child = spawn('node', [MIDO_BIN, 'dev', '--verbose'], {
         cwd: root,
         stdio: ['ignore', 'pipe', 'pipe'],

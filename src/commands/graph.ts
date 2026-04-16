@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { STATE_DIR } from "@/branding";
 import { loadConfig } from "@/config/loader";
 import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
@@ -330,13 +331,13 @@ export async function runGraph(
     return 0;
   }
 
-  // HTML — write to .mido/graph.html and open
+  // HTML — write to .neutron/graph.html and open
   const html = generateHtml(nodes, edges, graph.name);
-  const midoDir = join(root, ".mido");
+  const midoDir = join(root, ".neutron");
   mkdirSync(midoDir, { recursive: true });
   const outputPath = join(midoDir, "graph.html");
   writeFileSync(outputPath, html, "utf-8");
-  console.log(`${BOLD}mido graph${RESET} ${DIM}\u2192 ${outputPath}${RESET}`);
+  console.log(`${BOLD}neutron graph${RESET} ${DIM}\u2192 ${outputPath}${RESET}`);
 
   if (options.open !== false) {
     try {

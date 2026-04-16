@@ -36,17 +36,18 @@ const SERVER_FRAMEWORKS: ReadonlyMap<string, readonly string[]> = new Map([
 /**
  * Find which package in the workspace has the server framework that
  * actually produces the routes. Returns the package and its adapter.
- * Only scans TypeScript packages — other ecosystems are not yet supported.
+ *
+ * Adapter detection is ecosystem-agnostic at this layer: `detectFrameworkAdapter`
+ * gates itself by manifest presence (today: package.json). Non-matching
+ * ecosystems simply return null and we move on. New ecosystems gain support by
+ * teaching the adapter registry about their manifest format — not by editing
+ * this function.
  */
 async function findServerPackage(
   packages: ReadonlyMap<string, WorkspacePackage>,
   root: string,
 ): Promise<{ readonly path: string; readonly adapter: FrameworkAdapter } | null> {
   for (const [, pkg] of packages) {
-    if (pkg.ecosystem !== "typescript") {
-      continue;
-    }
-
     const adapter = await detectFrameworkAdapter(pkg.path, root);
     if (adapter) {
       return { path: pkg.path, adapter };
@@ -64,11 +65,11 @@ async function findRouteSource(
   packages: ReadonlyMap<string, WorkspacePackage>,
   root: string,
 ): Promise<WatchPathSuggestion | null> {
+  // Ecosystem-agnostic iteration: readPackageJson throws for non-TS packages
+  // and the catch below skips them. New ecosystems add their own detection by
+  // extending SERVER_FRAMEWORKS and teaching the resolver how to read their
+  // manifest — no hardcoded ecosystem list here.
   for (const [, pkg] of packages) {
-    if (pkg.ecosystem !== "typescript") {
-      continue;
-    }
-
     try {
       const manifest = await readPackageJson(pkg.path, root);
 

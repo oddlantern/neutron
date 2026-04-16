@@ -8,7 +8,7 @@ import { resolveFiles } from '../../src/files/resolver.js';
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'mido-resolver-test-'));
+  tmpDir = mkdtempSync(join(tmpdir(), 'neutron-resolver-test-'));
 });
 
 afterEach(() => {

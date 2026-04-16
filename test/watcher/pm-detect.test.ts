@@ -7,7 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { detectPackageManager } from '../../src/pm-detect.js';
 
 function makeTempDir(): string {
-  return mkdtempSync(join(tmpdir(), 'mido-test-pm-'));
+  return mkdtempSync(join(tmpdir(), 'neutron-test-pm-'));
 }
 
 describe('detectPackageManager', () => {

@@ -12,14 +12,13 @@ import {
   parseDocument,
 } from "yaml";
 
+import { CONFIG_FILENAMES } from "@/branding";
 import { YELLOW, BOLD, RESET, DIM } from "@/output";
 import { VERSION } from "@/version";
-import { configSchema, type MidoConfig } from "@/config/schema";
-
-const CONFIG_FILENAMES = ["mido.yml", "mido.yaml"] as const;
+import { configSchema, type NeutronConfig } from "@/config/schema";
 
 /**
- * Walk upward from `startDir` until we find a mido.yml/mido.yaml.
+ * Walk upward from `startDir` until we find a neutron.yml/neutron.yaml.
  * Returns the absolute path to the config file, or null if not found.
  */
 function findConfigFile(startDir: string): string | null {
@@ -72,7 +71,7 @@ function semverGte(a: string, b: string): boolean {
 //    with a warning telling users the old format will be removed.
 //  - `removedAt` — version where auto-migration stops. If the old format is
 //    still detected, the loader errors out and tells users to migrate manually
-//    (or update from an intermediate mido version that still auto-migrates).
+//    (or update from an intermediate neutron version that still auto-migrates).
 //
 // Policy: `removedAt` is always the next minor version after `deprecatedAt`.
 // Everything must be cleaned up before 1.0.0 — no deprecated formats ship at v1.
@@ -280,9 +279,9 @@ function runMigrations(doc: Document): MigrationResult {
       const probe = doc.clone();
       if (migration.run(probe)) {
         throw new Error(
-          `mido.yml uses a config format that was removed in v${migration.removedAt}: ${migration.label}\n\n` +
-            `Auto-migration is no longer available. Please update your mido.yml manually.\n` +
-            `If you're upgrading from a much older version, first install mido@${previousMinor(migration.removedAt)} ` +
+          `neutron.yml uses a config format that was removed in v${migration.removedAt}: ${migration.label}\n\n` +
+            `Auto-migration is no longer available. Please update your neutron.yml manually.\n` +
+            `If you're upgrading from a much older version, first install neutron@${previousMinor(migration.removedAt)} ` +
             `which still auto-migrates, then upgrade to the latest.`,
         );
       }
@@ -293,7 +292,7 @@ function runMigrations(doc: Document): MigrationResult {
       applied.push(migration.label);
       warnings.push(
         `${YELLOW}⚠${RESET} ${BOLD}Deprecated config format:${RESET} ${migration.label}. Auto-migration will be removed in v${migration.removedAt}.\n` +
-          `  ${DIM}Your mido.yml has been auto-migrated. Please review the changes.${RESET}`,
+          `  ${DIM}Your neutron.yml has been auto-migrated. Please review the changes.${RESET}`,
       );
     }
   }
@@ -330,7 +329,7 @@ async function migrateConfig(
     const newContent = doc.toString();
     await writeFile(configPath, newContent, "utf-8");
     for (const label of applied) {
-      console.log(`migrated mido.yml: ${label}`);
+      console.log(`migrated neutron.yml: ${label}`);
     }
     return { applied, content: newContent };
   }
@@ -341,15 +340,15 @@ async function migrateConfig(
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export interface LoadedConfig {
-  readonly config: MidoConfig;
-  /** Absolute path to the workspace root (directory containing mido.yml) */
+  readonly config: NeutronConfig;
+  /** Absolute path to the workspace root (directory containing neutron.yml) */
   readonly root: string;
   /** Absolute path to the config file itself */
   readonly configPath: string;
 }
 
 /**
- * Locate and parse the mido config file.
+ * Locate and parse the neutron config file.
  * Searches upward from the given directory (defaults to cwd).
  *
  * @throws {Error} if no config file is found or validation fails
@@ -360,8 +359,8 @@ export async function loadConfig(startDir?: string): Promise<LoadedConfig> {
 
   if (!configPath) {
     throw new Error(
-      `No mido.yml found. Searched upward from ${searchFrom}\n` +
-        'Create a mido.yml in your workspace root, or run "mido init" to generate one.',
+      `No neutron.yml found. Searched upward from ${searchFrom}\n` +
+        'Create a neutron.yml in your workspace root, or run "neutron init" to generate one.',
     );
   }
 
@@ -385,7 +384,7 @@ export async function loadConfig(startDir?: string): Promise<LoadedConfig> {
       .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
       .join("\n");
 
-    throw new Error(`Invalid mido config at ${configPath}:\n${issues}`);
+    throw new Error(`Invalid neutron config at ${configPath}:\n${issues}`);
   }
 
   const root = dirname(configPath);

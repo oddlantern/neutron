@@ -7,7 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { packageJsonParser } from '../../src/parsers/package-json.js';
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), 'mido-test-pkgjson-')));
+  return realpathSync(mkdtempSync(join(tmpdir(), 'neutron-test-pkgjson-')));
 }
 
 function writeManifest(dir: string, content: Record<string, unknown>): string {

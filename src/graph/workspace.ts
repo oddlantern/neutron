@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
-import type { MidoConfig } from "@/config/schema";
+import type { NeutronConfig } from "@/config/schema";
 import type { ManifestParser } from "@/parsers/types";
 import type { Bridge, BridgeConsumer, WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 import { expandPackageGlobs } from "@/graph/glob";
@@ -20,7 +20,7 @@ export type ParserRegistry = ReadonlyMap<string, ManifestParser>;
  * 4. Assemble bridges from config
  */
 export async function buildWorkspaceGraph(
-  config: MidoConfig,
+  config: NeutronConfig,
   root: string,
   parsers: ParserRegistry,
 ): Promise<WorkspaceGraph> {
@@ -133,7 +133,7 @@ export async function buildWorkspaceGraph(
 }
 
 /** Check if a relative path is declared in any ecosystem's package list */
-function isInPackageList(config: MidoConfig, relPath: string): boolean {
+function isInPackageList(config: NeutronConfig, relPath: string): boolean {
   for (const eco of Object.values(config.ecosystems)) {
     if (eco.packages.includes(relPath)) {
       return true;

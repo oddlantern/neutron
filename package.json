@@ -1,24 +1,65 @@
 {
-  "name": "@oddlantern/mido-cli",
-  "version": "1.6.1",
-  "description": "Cross-ecosystem monorepo workspace tool",
+  "name": "@oddlantern/neutron",
+  "version": "0.1.0",
+  "description": "Dense workspace synchronization across ecosystems",
   "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    },
+    "./graph": {
+      "types": "./dist/graph.d.ts",
+      "import": "./dist/graph.js"
+    },
+    "./parsers": {
+      "types": "./dist/parsers.d.ts",
+      "import": "./dist/parsers.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins.d.ts",
+      "import": "./dist/plugins.js"
+    },
+    "./checks": {
+      "types": "./dist/checks.d.ts",
+      "import": "./dist/checks.js"
+    },
+    "./schema.json": "./schema.json",
+    "./package.json": "./package.json"
+  },
   "bin": {
-    "mido": "dist/bin.js"
+    "neutron": "dist/bin.js"
   },
   "files": [
     "dist",
-    "schema.json"
+    "schema.json",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "generate:schema": "tsx scripts/generate-schema.ts",
-    "build": "tsx scripts/generate-schema.ts && tsdown",
+    "build": "tsx scripts/generate-schema.ts && tsdown && tsx scripts/post-build.ts",
     "dev": "tsdown --watch",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src/",
     "format": "oxfmt src/",
     "format:check": "oxfmt --check src/",
-    "prepare": "node dist/bin.js install"
+    "test": "bun test",
+    "lint:publish": "publint && attw --pack . --profile esm-only",
+    "prepublishOnly": "bun run build && bun test && bun run lint:publish"
   },
   "keywords": [
     "monorepo",
@@ -33,11 +74,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oddlantern/mido-cli.git"
+    "url": "git+https://github.com/oddlantern/neutron.git"
   },
-  "homepage": "https://github.com/oddlantern/mido-cli#readme",
+  "homepage": "https://github.com/oddlantern/neutron#readme",
   "bugs": {
-    "url": "https://github.com/oddlantern/mido-cli/issues"
+    "url": "https://github.com/oddlantern/neutron/issues"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -52,8 +93,10 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@elysiajs/openapi": "^1.4.14",
     "elysia": "^1.4.28",
+    "publint": "^0.3.12",
     "tsdown": "^0.14.1",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3"

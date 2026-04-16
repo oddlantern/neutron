@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { expandPackageGlobs } from "../../src/graph/glob.js";
 
 function makeTempDir(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), "mido-test-glob-")));
+  return realpathSync(mkdtempSync(join(tmpdir(), "neutron-test-glob-")));
 }
 
 describe("expandPackageGlobs", () => {

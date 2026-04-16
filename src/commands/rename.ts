@@ -54,10 +54,10 @@ function escapeRegex(str: string): string {
 }
 
 /**
- * Update the workspace name in mido.yml.
+ * Update the workspace name in neutron.yml.
  */
 function updateMidoYml(root: string, oldName: string, newName: string, fs: DryFs): boolean {
-  const configPath = join(root, "mido.yml");
+  const configPath = join(root, "neutron.yml");
   if (!existsSync(configPath)) {
     return false;
   }
@@ -261,7 +261,7 @@ function renamePlatformIdentifiers(
 /**
  * Run the rename command.
  *
- * Updates workspace name in mido.yml, cascades to all package.json and
+ * Updates workspace name in neutron.yml, cascades to all package.json and
  * pubspec.yaml files, warns about platform identifiers.
  */
 export async function runRename(
@@ -273,7 +273,7 @@ export async function runRename(
   try {
     config = await loadConfig(process.cwd());
   } catch {
-    console.error(`${RED}✗${RESET} No mido.yml found — run mido init first`);
+    console.error(`${RED}✗${RESET} No neutron.yml found — run neutron init first`);
     return 1;
   }
 
@@ -296,10 +296,10 @@ export async function runRename(
 
   const updatedFiles: string[] = [];
 
-  // 1. Update mido.yml
+  // 1. Update neutron.yml
   if (updateMidoYml(root, oldName, newName, fs)) {
-    updatedFiles.push("mido.yml");
-    console.log(`  ${GREEN}✓${RESET} mido.yml`);
+    updatedFiles.push("neutron.yml");
+    console.log(`  ${GREEN}✓${RESET} neutron.yml`);
   }
 
   // 2. Collect all ecosystem package paths
@@ -364,7 +364,7 @@ export async function runRename(
         console.log(warning);
       }
       console.log(
-        `\n  Use ${GREEN}mido rename ${newName} --include-platform-ids${RESET} to rename these too.`,
+        `\n  Use ${GREEN}neutron rename ${newName} --include-platform-ids${RESET} to rename these too.`,
       );
       console.log(
         `  ${YELLOW}Warning:${RESET} Renaming platform IDs creates a new app identity — users lose the install.`,
@@ -374,7 +374,7 @@ export async function runRename(
 
   // 6. Remind about regeneration
   console.log(`\n${GREEN}✓${RESET} Renamed ${updatedFiles.length} file(s).`);
-  console.log(`  Run ${GREEN}mido generate${RESET} to regenerate bridges with the new name.`);
+  console.log(`  Run ${GREEN}neutron generate${RESET} to regenerate bridges with the new name.`);
 
   return 0;
 }

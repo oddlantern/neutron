@@ -1,16 +1,19 @@
 import { Document, isMap, isScalar } from "yaml";
 
+import { BINARY_NAME, DISPLAY_NAME, PACKAGE_NAME, REPO_URL } from "@/branding";
 import {
   DART_FORMAT_DEFAULTS,
   DEFAULT_IGNORE,
   LINT_CATEGORY_DEFAULTS,
   OXFMT_DEFAULTS,
 } from "@/config/defaults";
-import type { MidoConfig } from "@/config/schema";
+import type { NeutronConfig } from "@/config/schema";
 import type { BridgeWithWatch, EcosystemGroup } from "@/commands/utils/shared";
 import { MIN_ENV_FILES_FOR_PARITY } from "@/commands/utils/shared";
 
-export function configToObject(config: MidoConfig): Record<string, unknown> {
+const DRIFT_HOOK_CMD = `${BINARY_NAME} check --quiet || echo "\u26A0 ${BINARY_NAME}: workspace drift detected \u2014 run ${BINARY_NAME} check --fix"`;
+
+export function configToObject(config: NeutronConfig): Record<string, unknown> {
   const obj: Record<string, unknown> = {
     workspace: config.workspace,
     ecosystems: config.ecosystems,
@@ -123,14 +126,10 @@ export function buildConfigObject(
 
   // Hooks defaults
   config["hooks"] = {
-    "pre-commit": ["mido pre-commit"],
-    "commit-msg": ['mido commit-msg "$1"'],
-    "post-merge": [
-      'mido check --quiet || echo "\u26A0 mido: workspace drift detected \u2014 run mido check --fix"',
-    ],
-    "post-checkout": [
-      'mido check --quiet || echo "\u26A0 mido: workspace drift detected \u2014 run mido check --fix"',
-    ],
+    "pre-commit": [`${BINARY_NAME} pre-commit`],
+    "commit-msg": [`${BINARY_NAME} commit-msg "$1"`],
+    "post-merge": [DRIFT_HOOK_CMD],
+    "post-checkout": [DRIFT_HOOK_CMD],
   };
 
   return config;
@@ -143,11 +142,11 @@ const YAML_COMMENTS: ReadonlyMap<string, string> = new Map([
   ],
   [
     "ecosystems",
-    " \u2500\u2500\u2500 Ecosystems \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Declare which languages your workspace uses and where\n packages live. mido auto-detects these during init.",
+    " \u2500\u2500\u2500 Ecosystems \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Declare which languages your workspace uses and where\n packages live. neutron auto-detects these during init.",
   ],
   [
     "bridges",
-    " \u2500\u2500\u2500 Bridges \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Cross-ecosystem dependencies linked by a shared artifact.\n\n source:    package that produces the artifact\n consumers: packages that consume the artifact\n artifact:  the file that connects them\n watch:    files to monitor for changes (used by mido dev)",
+    " \u2500\u2500\u2500 Bridges \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Cross-ecosystem dependencies linked by a shared artifact.\n\n source:    package that produces the artifact\n consumers: packages that consume the artifact\n artifact:  the file that connects them\n watch:    files to monitor for changes (used by neutron dev)",
   ],
   [
     "env",
@@ -155,26 +154,26 @@ const YAML_COMMENTS: ReadonlyMap<string, string> = new Map([
   ],
   [
     "format",
-    " \u2500\u2500\u2500 Formatting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Per-ecosystem formatting. mido picks the right tool:\n   TypeScript \u2192 oxfmt (bundled with mido)\n   Dart       \u2192 dart format\n\n All tool defaults are shown. Change any value to override.",
+    " \u2500\u2500\u2500 Formatting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Per-ecosystem formatting. neutron picks the right tool:\n   TypeScript \u2192 oxfmt (bundled with neutron)\n   Dart       \u2192 dart format\n\n All tool defaults are shown. Change any value to override.",
   ],
   [
     "lint",
-    " \u2500\u2500\u2500 Linting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Per-ecosystem linting. mido picks the right tool:\n   TypeScript \u2192 oxlint (bundled with mido)\n   Dart       \u2192 dart analyze\n\n mido auto-enables appropriate oxlint plugins based on\n your dependencies (typescript, unicorn, oxc, import by\n default \u2014 react, jsx-a11y, react-perf if React detected).",
+    " \u2500\u2500\u2500 Linting \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Per-ecosystem linting. neutron picks the right tool:\n   TypeScript \u2192 oxlint (bundled with neutron)\n   Dart       \u2192 dart analyze\n\n neutron auto-enables appropriate oxlint plugins based on\n your dependencies (typescript, unicorn, oxc, import by\n default \u2014 react, jsx-a11y, react-perf if React detected).",
   ],
   [
     "commits",
-    " \u2500\u2500\u2500 Commits \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Conventional commit validation, enforced by mido's\n commit-msg git hook. Run `mido install` to set up hooks.",
+    " \u2500\u2500\u2500 Commits \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Conventional commit validation, enforced by neutron's\n commit-msg git hook. Run `neutron install` to set up hooks.",
   ],
   [
     "hooks",
-    " \u2500\u2500\u2500 Hooks \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Git hooks installed by `mido install`. Each hook is a\n list of shell commands run sequentially (stops on first\n failure). Set a hook to `false` to disable it.\n Changes are applied on `mido install` or when mido.yml\n is saved during `mido dev`.",
+    " \u2500\u2500\u2500 Hooks \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n Git hooks installed by `neutron install`. Each hook is a\n list of shell commands run sequentially (stops on first\n failure). Set a hook to `false` to disable it.\n Changes are applied on `neutron install` or when neutron.yml\n is saved during `neutron dev`.",
   ],
 ]);
 
 export function renderYaml(config: Record<string, unknown>): string {
   const doc = new Document(config);
-  doc.commentBefore =
-    " yaml-language-server: $schema=node_modules/@oddlantern/mido-cli/schema.json\n\n \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n mido \u2014 Cross-ecosystem workspace configuration\n Docs: https://github.com/oddlantern/mido-cli\n \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500";
+  const rule = "\u2500".repeat(60);
+  doc.commentBefore = ` yaml-language-server: $schema=node_modules/${PACKAGE_NAME}/schema.json\n\n ${rule}\n ${DISPLAY_NAME} \u2014 Cross-ecosystem workspace configuration\n Docs: ${REPO_URL}\n ${rule}`;
 
   if (isMap(doc.contents)) {
     for (const pair of doc.contents.items) {

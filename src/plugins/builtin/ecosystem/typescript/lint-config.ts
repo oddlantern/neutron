@@ -1,11 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { CACHE_DIR as CACHE_DIR_NAME } from "@/branding";
 import type { FormatTypescriptConfig, LintTypescriptConfig } from "@/config/schema";
 import type { WorkspacePackage } from "@/graph/types";
 import { hasDep, isRecord } from "@/plugins/builtin/shared/exec";
-
-const CACHE_DIR_NAME = "node_modules/.cache/mido";
 
 /** Ensure the cache directory exists and return its absolute path */
 function ensureCacheDir(root: string): string {
@@ -85,7 +84,7 @@ const ALL_CATEGORIES: readonly OxlintCategory[] = [
 ];
 
 /**
- * Generate a temporary oxlintrc.json from the mido lint.typescript config.
+ * Generate a temporary oxlintrc.json from the neutron lint.typescript config.
  * Includes categories, rules, and auto-detected plugins.
  * Returns the path to the file, or null if no config is needed.
  */
@@ -132,7 +131,7 @@ export function writeOxlintConfig(
 }
 
 /**
- * Generate a temporary oxfmtrc.json from the mido format.typescript config.
+ * Generate a temporary oxfmtrc.json from the neutron format.typescript config.
  * Returns the config path, or null if no config is needed.
  */
 export function writeOxfmtConfig(root: string, format: FormatTypescriptConfig): string | null {

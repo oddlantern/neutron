@@ -109,7 +109,7 @@ export async function runUpgrade(
   }
 
   console.log(
-    `\n${BOLD}mido upgrade${RESET} ${DIM}\u2014 checking ${deps.length} dependencies...${RESET}\n`,
+    `\n${BOLD}neutron upgrade${RESET} ${DIM}\u2014 checking ${deps.length} dependencies...${RESET}\n`,
   );
 
   const workspaceDeps = buildWorkspaceDepsMap(graph.packages);
@@ -170,7 +170,7 @@ export async function runUpgrade(
       } else {
         console.log(`  ${RED}\u2717${RESET} ${dep.name} ${DIM}not found in ${pkgPath}${RESET}`);
         diag.warn(`Manifest update skipped: ${dep.name} in ${pkgPath}`, {
-          fix: "Check package paths in mido.yml",
+          fix: "Check package paths in neutron.yml",
         });
       }
     }
@@ -209,7 +209,7 @@ export async function runUpgrade(
     }
   }
 
-  // ── Update mido.lock ────────────────────────────────────────────────
+  // ── Update neutron.lock ────────────────────────────────────────────────
   const existingLock = await loadLock(root);
   const lockUpdates: LockUpdate[] = selected.map((dep) => ({
     depName: dep.name,
@@ -218,7 +218,7 @@ export async function runUpgrade(
   }));
   const newLock = mergeLock(existingLock, lockUpdates);
   await writeLock(root, newLock);
-  console.log(`\n  ${GREEN}\u2713${RESET} ${DIM}mido.lock updated${RESET}`);
+  console.log(`\n  ${GREEN}\u2713${RESET} ${DIM}neutron.lock updated${RESET}`);
 
   // ── Consistency check ───────────────────────────────────────────────
   console.log(`\n${DIM}Verifying version consistency...${RESET}\n`);
@@ -230,7 +230,7 @@ export async function runUpgrade(
     console.log(`  ${GREEN}\u2713${RESET} ${DIM}All checks passed${RESET}`);
   } else {
     diag.warn("Version consistency issues detected", {
-      fix: "Run mido check --fix to resolve",
+      fix: "Run neutron check --fix to resolve",
     });
   }
 

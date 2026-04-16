@@ -6,7 +6,7 @@ import type { CommitsConfig } from "@/config/schema";
 import { validateCommitMessage } from "@/commit/validator";
 import { BOLD, DIM, FAIL, RESET, WARN, YELLOW } from "@/output";
 
-/** Default config used when no mido.yml commits section exists */
+/** Default config used when no neutron.yml commits section exists */
 const FALLBACK_CONFIG: CommitsConfig = {
   types: [...DEFAULT_COMMIT_TYPES],
   header_max_length: 100,
@@ -27,7 +27,7 @@ export async function runCommitMsg(filePath: string): Promise<number> {
     return 1;
   }
 
-  // Load config — fall back to defaults if no mido.yml found
+  // Load config — fall back to defaults if no neutron.yml found
   let commitsConfig: CommitsConfig;
   try {
     const { config } = await loadConfig();

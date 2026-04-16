@@ -4,7 +4,7 @@ import { describe, expect, test } from 'bun:test';
 import { buildWorkspaceGraph } from '../../src/graph/workspace.js';
 import { packageJsonParser } from '../../src/parsers/package-json.js';
 import { pubspecParser } from '../../src/parsers/pubspec.js';
-import type { MidoConfig } from '../../src/config/schema.js';
+import type { NeutronConfig } from '../../src/config/schema.js';
 
 const FIXTURE_CLEAN = join(import.meta.dir, '..', 'fixture-clean');
 
@@ -13,7 +13,7 @@ const parsers = new Map([
   ['pubspec.yaml', pubspecParser],
 ]);
 
-const fixtureConfig: MidoConfig = {
+const fixtureConfig: NeutronConfig = {
   workspace: 'nextsaga',
   ecosystems: {
     typescript: {
@@ -86,7 +86,7 @@ describe('buildWorkspaceGraph', () => {
   });
 
   test('throws when no parser registered for manifest type', async () => {
-    const configWithUnknown: MidoConfig = {
+    const configWithUnknown: NeutronConfig = {
       workspace: 'test',
       ecosystems: {
         rust: {
@@ -101,7 +101,7 @@ describe('buildWorkspaceGraph', () => {
   });
 
   test('throws when manifest file does not exist', async () => {
-    const configBadPath: MidoConfig = {
+    const configBadPath: NeutronConfig = {
       workspace: 'test',
       ecosystems: {
         typescript: {
