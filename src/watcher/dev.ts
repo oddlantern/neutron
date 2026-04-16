@@ -237,7 +237,9 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       const relPath = relative(root, filePath);
 
       // Skip generated output and other non-source paths
-      if (IGNORED_SEGMENTS.some((seg) => relPath.includes(seg.slice(1)) || filePath.includes(seg))) {
+      if (
+        IGNORED_SEGMENTS.some((seg) => relPath.includes(seg.slice(1)) || filePath.includes(seg))
+      ) {
         return;
       }
 

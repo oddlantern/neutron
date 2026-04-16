@@ -45,15 +45,24 @@ export const phpPlugin: EcosystemPlugin = {
     const actions: string[] = [];
     const pkgDir = join(root, pkg.path);
 
-    if (existsSync(join(pkgDir, "vendor", "bin", "phpstan")) || existsSync(join(pkgDir, "vendor", "bin", "psalm"))) {
+    if (
+      existsSync(join(pkgDir, "vendor", "bin", "phpstan")) ||
+      existsSync(join(pkgDir, "vendor", "bin", "psalm"))
+    ) {
       actions.push(STANDARD_ACTIONS.LINT);
     }
 
-    if (existsSync(join(pkgDir, "vendor", "bin", "php-cs-fixer")) || existsSync(join(pkgDir, "vendor", "bin", "pint"))) {
+    if (
+      existsSync(join(pkgDir, "vendor", "bin", "php-cs-fixer")) ||
+      existsSync(join(pkgDir, "vendor", "bin", "pint"))
+    ) {
       actions.push(STANDARD_ACTIONS.FORMAT, STANDARD_ACTIONS.FORMAT_CHECK);
     }
 
-    if (existsSync(join(pkgDir, "vendor", "bin", "phpunit")) || existsSync(join(pkgDir, "vendor", "bin", "pest"))) {
+    if (
+      existsSync(join(pkgDir, "vendor", "bin", "phpunit")) ||
+      existsSync(join(pkgDir, "vendor", "bin", "pest"))
+    ) {
       actions.push(STANDARD_ACTIONS.TEST);
     }
 
@@ -96,9 +105,7 @@ export const phpPlugin: EcosystemPlugin = {
         const bin = existsSync(join(cwd, "vendor", "bin", "php-cs-fixer"))
           ? resolveVendorBin("php-cs-fixer", cwd)
           : resolveVendorBin("pint", cwd);
-        const args = bin.includes("php-cs-fixer")
-          ? ["fix", "--dry-run", "--diff"]
-          : ["--test"];
+        const args = bin.includes("php-cs-fixer") ? ["fix", "--dry-run", "--diff"] : ["--test"];
         return runCommand(bin, args, cwd);
       }
 

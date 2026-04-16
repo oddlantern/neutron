@@ -10,7 +10,8 @@ import type { TypeDiff } from "@/outdated/types";
  * Covers: export function, export const, export class, export interface,
  * export type, export enum, and export { name } re-exports.
  */
-const TS_EXPORT_DECL_RE = /export\s+(?:declare\s+)?(?:function|const|let|var|class|interface|type|enum|abstract\s+class)\s+(\w+)/g;
+const TS_EXPORT_DECL_RE =
+  /export\s+(?:declare\s+)?(?:function|const|let|var|class|interface|type|enum|abstract\s+class)\s+(\w+)/g;
 const TS_EXPORT_LIST_RE = /export\s*\{([^}]+)\}/g;
 const TS_DEFAULT_EXPORT_RE = /export\s+default\s+(?:function|class|abstract\s+class)\s+(\w+)/g;
 
@@ -59,7 +60,8 @@ export function extractTypescriptExports(dtsContent: string): readonly string[] 
  * Regex patterns for extracting public API surface from Dart source files.
  * Excludes private names (prefixed with _).
  */
-const DART_CLASS_RE = /^(?:abstract\s+)?(?:final\s+)?(?:sealed\s+)?(?:base\s+)?(?:mixin\s+)?class\s+(\w+)/gm;
+const DART_CLASS_RE =
+  /^(?:abstract\s+)?(?:final\s+)?(?:sealed\s+)?(?:base\s+)?(?:mixin\s+)?class\s+(\w+)/gm;
 const DART_MIXIN_RE = /^mixin\s+(\w+)/gm;
 const DART_ENUM_RE = /^enum\s+(\w+)/gm;
 const DART_TYPEDEF_RE = /^typedef\s+(\w+)/gm;
@@ -134,7 +136,8 @@ export function extractPythonExports(pyContent: string): readonly string[] {
 
 // ── Rust export extraction ──────────────────────────────────────────
 
-const RUST_PUB_RE = /^pub\s+(?:async\s+)?(?:unsafe\s+)?(?:extern\s+"[^"]*"\s+)?(?:fn|struct|enum|trait|type|mod|const|static)\s+(\w+)/gm;
+const RUST_PUB_RE =
+  /^pub\s+(?:async\s+)?(?:unsafe\s+)?(?:extern\s+"[^"]*"\s+)?(?:fn|struct|enum|trait|type|mod|const|static)\s+(\w+)/gm;
 
 /**
  * Extract public symbol names from Rust source content.
@@ -208,10 +211,7 @@ export function extractPhpExports(phpContent: string): readonly string[] {
  * signature-level analysis — we report all common names as potentially changed
  * only if the file content differs.
  */
-export function diffExports(
-  current: readonly string[],
-  latest: readonly string[],
-): TypeDiff {
+export function diffExports(current: readonly string[], latest: readonly string[]): TypeDiff {
   const currentSet = new Set(current);
   const latestSet = new Set(latest);
 
@@ -244,10 +244,7 @@ export function diffExports(
  */
 function buildTsImportRegex(depName: string): RegExp {
   const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(
-    `import\\s*\\{([^}]+)\\}\\s*from\\s*["']${escaped}(?:\\/[^"']*)?["']`,
-    "g",
-  );
+  return new RegExp(`import\\s*\\{([^}]+)\\}\\s*from\\s*["']${escaped}(?:\\/[^"']*)?["']`, "g");
 }
 
 /**
@@ -256,31 +253,24 @@ function buildTsImportRegex(depName: string): RegExp {
  */
 function buildDartImportRegex(depName: string): RegExp {
   const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(
-    `import\\s+['"]package:${escaped}\\/[^'"]*['"]\\s*(?:show\\s+([^;]+))?;`,
-    "g",
-  );
+  return new RegExp(`import\\s+['"]package:${escaped}\\/[^'"]*['"]\\s*(?:show\\s+([^;]+))?;`, "g");
 }
 
 function buildPythonImportRegex(depName: string): RegExp {
   const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(
-    `from\\s+${escaped}(?:\\.\\w+)*\\s+import\\s+([^\\n]+)`,
-    "g",
-  );
+  return new RegExp(`from\\s+${escaped}(?:\\.\\w+)*\\s+import\\s+([^\\n]+)`, "g");
 }
 
 function buildRustImportRegex(depName: string): RegExp {
   const escaped = depName.replace(/-/g, "_").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(
-    `use\\s+${escaped}(?:::\\{([^}]+)\\}|::(\\w+))`,
-    "g",
-  );
+  return new RegExp(`use\\s+${escaped}(?:::\\{([^}]+)\\}|::(\\w+))`, "g");
 }
 
 function buildGoImportRegex(depName: string): RegExp {
-  const escaped = depName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const alias = depName.split("/").pop() ?? depName;
+  // Go imports reference symbols by the last path segment (the alias).
+  // Escape regex metacharacters in case the segment contains dots, etc.
+  const rawAlias = depName.split("/").pop() ?? depName;
+  const alias = rawAlias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`${alias}\\.([A-Z]\\w*)`, "g");
 }
 

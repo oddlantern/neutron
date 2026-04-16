@@ -57,7 +57,9 @@ export function createDryFs(dryRun: boolean, root: string): DryFs {
       console.log(`  ${YELLOW}dry-run${RESET} mkdir ${GREEN}${displayPath(path, root)}${RESET}`);
     },
     cp(src: string, dest: string): void {
-      console.log(`  ${YELLOW}dry-run${RESET} copy  ${GREEN}${displayPath(src, root)}${RESET} → ${GREEN}${displayPath(dest, root)}${RESET}`);
+      console.log(
+        `  ${YELLOW}dry-run${RESET} copy  ${GREEN}${displayPath(src, root)}${RESET} → ${GREEN}${displayPath(dest, root)}${RESET}`,
+      );
     },
   };
 }

@@ -11,7 +11,11 @@ export function detectDesignFormat(pkg: WorkspacePackage): string {
   if (depNames.has("tailwindcss")) {
     return "tailwind";
   }
-  if (depNames.has("bootstrap") || depNames.has("react-bootstrap") || depNames.has("@ng-bootstrap/ng-bootstrap")) {
+  if (
+    depNames.has("bootstrap") ||
+    depNames.has("react-bootstrap") ||
+    depNames.has("@ng-bootstrap/ng-bootstrap")
+  ) {
     return "bootstrap";
   }
 

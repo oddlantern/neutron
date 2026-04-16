@@ -1,7 +1,7 @@
 import type { WorkspaceGraph } from "@/graph/types";
 import type { CheckIssue, CheckResult } from "@/checks/types";
 import { getLockedRange } from "@/lock";
-import type { MidoLock } from "@/lock";
+import type { NeutronLock } from "@/lock";
 
 export interface DepOccurrence {
   readonly packagePath: string;
@@ -54,7 +54,7 @@ export function collectDeps(graph: WorkspaceGraph): Map<string, DepOccurrence[]>
  */
 export function findVersionMismatches(
   graph: WorkspaceGraph,
-  lock: MidoLock | null,
+  lock: NeutronLock | null,
 ): VersionMismatch[] {
   const depMap = collectDeps(graph);
   const mismatches: VersionMismatch[] = [];
@@ -95,7 +95,7 @@ export function findVersionMismatches(
  */
 export function checkVersionConsistency(
   graph: WorkspaceGraph,
-  lock: MidoLock | null = null,
+  lock: NeutronLock | null = null,
 ): CheckResult {
   const depMap = collectDeps(graph);
   const mismatches = findVersionMismatches(graph, lock);

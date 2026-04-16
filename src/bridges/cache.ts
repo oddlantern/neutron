@@ -118,7 +118,13 @@ function collectFiles(dir: string): string[] {
     const entries = readdirSync(dir);
     for (const entry of entries) {
       // Skip common non-source directories
-      if (entry === "node_modules" || entry === ".dart_tool" || entry === "build" || entry === "dist" || entry === ".git") {
+      if (
+        entry === "node_modules" ||
+        entry === ".dart_tool" ||
+        entry === "build" ||
+        entry === "dist" ||
+        entry === ".git"
+      ) {
         continue;
       }
       const fullPath = join(dir, entry);

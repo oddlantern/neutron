@@ -6,9 +6,7 @@ import type { DepUsage } from "@/outdated/types";
  * Group workspace dependencies by name + ecosystem.
  * Returns the workspace-resolved range (first wins) and which packages use it.
  */
-export function collectDeps(
-  packages: ReadonlyMap<string, WorkspacePackage>,
-): readonly DepUsage[] {
+export function collectDeps(packages: ReadonlyMap<string, WorkspacePackage>): readonly DepUsage[] {
   const map = new Map<string, { range: string; packages: string[]; ecosystem: string }>();
 
   for (const [, pkg] of packages) {
@@ -47,11 +45,19 @@ export function stripRange(range: string): string {
 /**
  * Compare two semver strings and determine the severity of the update.
  */
-export function classifyUpdate(current: string, latest: string): "major" | "minor" | "patch" | null {
+export function classifyUpdate(
+  current: string,
+  latest: string,
+): "major" | "minor" | "patch" | null {
   const [cMajor, cMinor] = current.split(".").map(Number);
   const [lMajor, lMinor] = latest.split(".").map(Number);
 
-  if (cMajor === undefined || cMinor === undefined || lMajor === undefined || lMinor === undefined) {
+  if (
+    cMajor === undefined ||
+    cMinor === undefined ||
+    lMajor === undefined ||
+    lMinor === undefined
+  ) {
     return null;
   }
 
@@ -88,9 +94,7 @@ export function buildWorkspaceDepsMap(
 /**
  * Check if any Dart package in the workspace has a Flutter dependency.
  */
-export function hasFlutterDeps(
-  packages: ReadonlyMap<string, WorkspacePackage>,
-): boolean {
+export function hasFlutterDeps(packages: ReadonlyMap<string, WorkspacePackage>): boolean {
   for (const [, pkg] of packages) {
     if (pkg.ecosystem !== "dart") {
       continue;

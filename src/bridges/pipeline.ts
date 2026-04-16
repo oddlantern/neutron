@@ -2,11 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type {
-  ExecutablePipelineStep,
-  PipelineResult,
-  PipelineStepResult,
-} from "@/plugins/types";
+import type { ExecutablePipelineStep, PipelineResult, PipelineStepResult } from "@/plugins/types";
 
 /**
  * Hash a file's contents. Returns empty string if the file doesn't exist.

@@ -9,7 +9,9 @@ type DepType = Dependency["type"];
 
 /** Platform requirements that are not actual packages */
 function isPlatformRequirement(name: string): boolean {
-  return name === "php" || name.startsWith("ext-") || name.startsWith("lib-") || name === "composer";
+  return (
+    name === "php" || name.startsWith("ext-") || name.startsWith("lib-") || name === "composer"
+  );
 }
 
 function extractDeps(

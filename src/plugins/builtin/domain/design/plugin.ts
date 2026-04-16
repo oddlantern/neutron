@@ -13,7 +13,10 @@ import type {
   ExecutionContext,
 } from "@/plugins/types";
 import { validateTokens } from "@/plugins/builtin/domain/design/token-schema";
-import type { TokenValidationError, TokenValidationWarning } from "@/plugins/builtin/domain/design/token-schema";
+import type {
+  TokenValidationError,
+  TokenValidationWarning,
+} from "@/plugins/builtin/domain/design/token-schema";
 import type { ValidatedTokens } from "@/plugins/builtin/domain/design/types";
 import { detectDesignFormat } from "@/plugins/builtin/domain/design/formats";
 import { wireGeneratedDependency } from "@/plugins/builtin/shared/wire-dep";
@@ -259,8 +262,8 @@ export const designPlugin: DomainPlugin = {
       const outputDir = join(root, _source.path, "generated", handler.plugin.name);
 
       // Resolve format for this handler's package
-      const resolvedFormat = consumerFormats.get(handler.pkg.path)
-        ?? detectDesignFormat(handler.pkg);
+      const resolvedFormat =
+        consumerFormats.get(handler.pkg.path) ?? detectDesignFormat(handler.pkg);
 
       steps.push({
         name: `generate-${handler.plugin.name}`,

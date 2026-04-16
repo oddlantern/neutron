@@ -341,7 +341,10 @@ export function spawnServer(
   child.stderr?.on("data", collectOutput);
 
   // Handle early exit (e.g., syntax error, missing dependency)
-  const earlyExitRef: { earlyExit: boolean; exitCode: number | null } = { earlyExit: false, exitCode: null };
+  const earlyExitRef: { earlyExit: boolean; exitCode: number | null } = {
+    earlyExit: false,
+    exitCode: null,
+  };
   child.on("exit", (code) => {
     earlyExitRef.earlyExit = true;
     earlyExitRef.exitCode = code;

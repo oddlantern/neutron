@@ -11,7 +11,7 @@ import {
   verifyIntegrity,
   writeLock,
 } from "../src/lock";
-import type { LockEntry, LockUpdate, MidoLock } from "../src/lock";
+import type { LockEntry, LockUpdate, NeutronLock } from "../src/lock";
 
 let tmpDir: string;
 
@@ -27,7 +27,7 @@ function makeEntry(range: string, ecosystems: readonly string[] = ["typescript"]
   };
 }
 
-function makeLock(entries: Record<string, string>): MidoLock {
+function makeLock(entries: Record<string, string>): NeutronLock {
   const resolved: Record<string, LockEntry> = {};
   for (const [name, range] of Object.entries(entries)) {
     resolved[name] = makeEntry(range);

@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { confirm, intro, isCancel, log, outro, select, text } from "@clack/prompts";
-import { Document, isMap, isSeq, parseDocument } from "yaml";
+import { isMap, isSeq, parseDocument } from "yaml";
 
 import { loadConfig } from "@/config/loader";
 import { BOLD, DIM, GREEN, ORANGE, RESET } from "@/output";
@@ -121,9 +121,10 @@ export async function runAdd(): Promise<number> {
   log.success(`Added to ${ORANGE}${CONFIG_FILENAME}${RESET}`);
 
   // Suggest next steps
-  const installCmd = ecosystem === "typescript"
-    ? "bun install (or npm/yarn/pnpm install)"
-    : "dart pub get (or flutter pub get)";
+  const installCmd =
+    ecosystem === "typescript"
+      ? "bun install (or npm/yarn/pnpm install)"
+      : "dart pub get (or flutter pub get)";
 
   outro(
     `${GREEN}${BOLD}${pkgPath}${RESET} ${DIM}ready. Run${RESET} ${BOLD}${installCmd}${RESET} ${DIM}to install dependencies.${RESET}`,
@@ -149,7 +150,11 @@ function scaffoldTypeScript(dir: string, name: string, isLibrary: boolean): void
   }
 
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkgJson, null, 2) + "\n", "utf-8");
-  writeFileSync(join(srcDir, "index.ts"), isLibrary ? "export {};\n" : "console.log('hello');\n", "utf-8");
+  writeFileSync(
+    join(srcDir, "index.ts"),
+    isLibrary ? "export {};\n" : "console.log('hello');\n",
+    "utf-8",
+  );
 }
 
 function scaffoldDart(dir: string, name: string, isLibrary: boolean): void {

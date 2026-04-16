@@ -55,11 +55,15 @@ export const pyPiPackageSchema = z.object({
     home_page: z.string().nullable().optional(),
     project_url: z.string().nullable().optional(),
   }),
-  urls: z.array(z.object({
-    filename: z.string(),
-    url: z.string(),
-    packagetype: z.string().optional(),
-  })).optional(),
+  urls: z
+    .array(
+      z.object({
+        filename: z.string(),
+        url: z.string(),
+        packagetype: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type PyPiPackageResponse = z.infer<typeof pyPiPackageSchema>;
@@ -77,11 +81,15 @@ export const cratesIoSchema = z.object({
     max_version: z.string(),
     repository: z.string().nullable().optional(),
   }),
-  versions: z.array(z.object({
-    num: z.string(),
-    yanked: z.boolean().optional(),
-    dl_path: z.string().optional(),
-  })).optional(),
+  versions: z
+    .array(
+      z.object({
+        num: z.string(),
+        yanked: z.boolean().optional(),
+        dl_path: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type CratesIoResponse = z.infer<typeof cratesIoSchema>;

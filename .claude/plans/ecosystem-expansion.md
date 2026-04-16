@@ -1,8 +1,8 @@
-# mido-cli Ecosystem Expansion Plan
+# neutron Ecosystem Expansion Plan
 
 ## Goal
 
-Make mido work for any project — not just TS + Dart. Fix foundation issues, add parsers/plugins for Python/Rust/Go/PHP, and implement universal type synchronization across all ecosystems.
+Make neutron work for any project — not just TS + Dart. Fix foundation issues, add parsers/plugins for Python/Rust/Go/PHP, and implement universal type synchronization across all ecosystems.
 
 ---
 

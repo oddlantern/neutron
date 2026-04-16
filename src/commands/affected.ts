@@ -89,7 +89,10 @@ export function buildReverseDeps(
  * Build a reverse bridge map: for each source, which packages consume its artifacts.
  */
 export function buildReverseBridges(
-  bridges: readonly { readonly source: string; readonly consumers: readonly { readonly path: string }[] }[],
+  bridges: readonly {
+    readonly source: string;
+    readonly consumers: readonly { readonly path: string }[];
+  }[],
 ): ReadonlyMap<string, readonly string[]> {
   const reverse = new Map<string, string[]>();
 
@@ -214,9 +217,7 @@ export async function runAffected(
 
   const directCount = [...sorted].filter((p) => directlyChanged.has(p)).length;
   const transitiveCount = sorted.length - directCount;
-  console.log(
-    `\n${DIM}${directCount} direct, ${transitiveCount} transitive${RESET}\n`,
-  );
+  console.log(`\n${DIM}${directCount} direct, ${transitiveCount} transitive${RESET}\n`);
 
   return 0;
 }

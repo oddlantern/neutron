@@ -284,10 +284,7 @@ export async function cleanupReplacedTooling(root: string): Promise<void> {
     return `  ${ORANGE}${f.tool.name}${RESET} ${DIM}→ ${f.tool.replacement}${RESET}\n    ${DIM}found: ${items.join(", ")}${RESET}`;
   });
 
-  note(
-    tableLines.join("\n\n"),
-    `${ORANGE}${BOLD}neutron replaces ${found.length} tool(s)${RESET}`,
-  );
+  note(tableLines.join("\n\n"), `${ORANGE}${BOLD}neutron replaces ${found.length} tool(s)${RESET}`);
 
   const cleanup = await confirm({
     message: "Remove replaced tools? (configs, devDependencies, directories)",
@@ -373,7 +370,9 @@ export async function cleanupReplacedTooling(root: string): Promise<void> {
     }
   }
 
-  log.success(`Removed ${allConfigs.length + allDirs.length} config(s) and ${allDeps.length} dep(s)`);
+  log.success(
+    `Removed ${allConfigs.length + allDirs.length} config(s) and ${allDeps.length} dep(s)`,
+  );
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

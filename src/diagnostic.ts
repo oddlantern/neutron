@@ -91,9 +91,8 @@ export function formatDiagnostics(
   const items = collector.items;
 
   if (items.length === 0) {
-    const stepNote = totalSteps !== undefined
-      ? ` ${totalSteps} ${totalSteps === 1 ? "step" : "steps"}`
-      : "";
+    const stepNote =
+      totalSteps !== undefined ? ` ${totalSteps} ${totalSteps === 1 ? "step" : "steps"}` : "";
     return `\n${separator}\n${PASS} ${GREEN}${BOLD}All${stepNote} passed${RESET}\n${separator}\n`;
   }
 

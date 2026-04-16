@@ -11,13 +11,26 @@ import type {
   WatchPathSuggestion,
 } from "@/plugins/types";
 import { STANDARD_ACTIONS } from "@/plugins/types";
-import { getScripts, hasDep, hasResolvedFiles, readPackageJson, runCommand } from "@/plugins/builtin/shared/exec";
+import {
+  getScripts,
+  hasDep,
+  hasResolvedFiles,
+  readPackageJson,
+  runCommand,
+} from "@/plugins/builtin/shared/exec";
 import { executeTypescriptAssetGeneration } from "@/plugins/builtin/ecosystem/typescript/asset-codegen";
-import { executeDesignTokenGeneration, executeOpenAPICodegen } from "@/plugins/builtin/ecosystem/typescript/openapi-codegen";
+import {
+  executeDesignTokenGeneration,
+  executeOpenAPICodegen,
+} from "@/plugins/builtin/ecosystem/typescript/openapi-codegen";
 import { executeTailwindGeneration } from "@/plugins/builtin/ecosystem/typescript/tailwind-codegen";
 import { executeBootstrapGeneration } from "@/plugins/builtin/ecosystem/typescript/bootstrap-codegen";
 import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/typescript/schema-codegen";
-import { detectOxlintPlugins, writeOxfmtConfig, writeOxlintConfig } from "@/plugins/builtin/ecosystem/typescript/lint-config";
+import {
+  detectOxlintPlugins,
+  writeOxfmtConfig,
+  writeOxlintConfig,
+} from "@/plugins/builtin/ecosystem/typescript/lint-config";
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.ts", "src/**/*.tsx"];
 
@@ -117,7 +130,11 @@ function executeFormat(
     return runCommand(prettier, [flag, dir], cwd);
   }
 
-  return { success: true, duration: 0, summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.` };
+  return {
+    success: true,
+    duration: 0,
+    summary: `No formatter found for ${pkg.path}. Install oxfmt or prettier.`,
+  };
 }
 
 export const typescriptPlugin: EcosystemPlugin = {

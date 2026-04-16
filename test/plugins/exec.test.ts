@@ -38,7 +38,7 @@ describe("runCommand", () => {
 
   test("nonexistent command", async () => {
     const result = await runCommand(
-      "__mido_nonexistent_cmd_12345",
+      "__neutron_nonexistent_cmd_12345",
       [],
       process.cwd(),
     );

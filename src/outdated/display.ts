@@ -1,10 +1,23 @@
 import { BOLD, DIM, GREEN, ORANGE, RED, RESET, YELLOW } from "@/output";
 
 import { stripRange } from "@/outdated/collect";
-import type { OutdatedDep, RiskScore, StaticAnalysisResult, ValidationResult } from "@/outdated/types";
+import type {
+  OutdatedDep,
+  RiskScore,
+  StaticAnalysisResult,
+  ValidationResult,
+} from "@/outdated/types";
 
-export const SEVERITY_COLOR: Readonly<Record<string, string>> = { major: RED, minor: YELLOW, patch: DIM };
-const SEVERITY_LABEL: Readonly<Record<string, string>> = { major: "MAJOR", minor: "MINOR", patch: "PATCH" };
+export const SEVERITY_COLOR: Readonly<Record<string, string>> = {
+  major: RED,
+  minor: YELLOW,
+  patch: DIM,
+};
+const SEVERITY_LABEL: Readonly<Record<string, string>> = {
+  major: "MAJOR",
+  minor: "MINOR",
+  patch: "PATCH",
+};
 
 const RISK_CRITICAL_THRESHOLD = 76;
 const RISK_HIGH_THRESHOLD = 51;
@@ -66,7 +79,9 @@ export function formatLevel1Results(outdated: readonly OutdatedDep[]): void {
   }
 
   if (shared.length > 0) {
-    console.log(`${ORANGE}${BOLD}Shared dependencies${RESET} ${DIM}(used across multiple packages)${RESET}`);
+    console.log(
+      `${ORANGE}${BOLD}Shared dependencies${RESET} ${DIM}(used across multiple packages)${RESET}`,
+    );
     for (const dep of shared) {
       printDep(dep);
     }
@@ -115,13 +130,17 @@ export function formatLevel2Results(results: readonly StaticAnalysisResult[]): v
     return;
   }
 
-  console.log(`\n${BOLD}Static analysis${RESET} ${DIM}\u2014 approximate API surface diff${RESET}\n`);
+  console.log(
+    `\n${BOLD}Static analysis${RESET} ${DIM}\u2014 approximate API surface diff${RESET}\n`,
+  );
 
   for (const result of results) {
     const dep = result.dep;
     const color = SEVERITY_COLOR[dep.severity] ?? DIM;
 
-    console.log(`  ${color}${BOLD}${dep.name}${RESET} ${DIM}${stripRange(dep.workspaceRange)} \u2192 ${dep.latest}${RESET}`);
+    console.log(
+      `  ${color}${BOLD}${dep.name}${RESET} ${DIM}${stripRange(dep.workspaceRange)} \u2192 ${dep.latest}${RESET}`,
+    );
 
     if (!result.typeDiff) {
       console.log(`    ${DIM}Could not diff API surface${RESET}`);
@@ -146,14 +165,18 @@ export function formatLevel2Results(results: readonly StaticAnalysisResult[]): v
     }
 
     if (result.usedRemovedExports.length > 0) {
-      console.log(`    ${RED}\u26A0 ${result.usedRemovedExports.length} removed export(s) used in codebase:${RESET}`);
+      console.log(
+        `    ${RED}\u26A0 ${result.usedRemovedExports.length} removed export(s) used in codebase:${RESET}`,
+      );
       for (const name of result.usedRemovedExports) {
         console.log(`      ${RED}\u2022 ${name}${RESET}`);
       }
     }
 
     if (result.usedChangedExports.length > 0) {
-      console.log(`    ${YELLOW}\u26A0 ${result.usedChangedExports.length} changed export(s) used in codebase:${RESET}`);
+      console.log(
+        `    ${YELLOW}\u26A0 ${result.usedChangedExports.length} changed export(s) used in codebase:${RESET}`,
+      );
       for (const name of result.usedChangedExports) {
         console.log(`      ${YELLOW}\u2022 ${name}${RESET}`);
       }
@@ -173,7 +196,9 @@ export function formatLevel3Results(results: readonly ValidationResult[]): void 
     return;
   }
 
-  console.log(`\n${BOLD}Live validation${RESET} ${DIM}\u2014 typecheck + tests with updated deps${RESET}\n`);
+  console.log(
+    `\n${BOLD}Live validation${RESET} ${DIM}\u2014 typecheck + tests with updated deps${RESET}\n`,
+  );
 
   for (const result of results) {
     const dep = result.dep;

@@ -254,7 +254,7 @@ if (lintProp) {
 
 // ─── Assemble and write ──────────────────────────────────────────────────────
 
-const midoSchema = {
+const neutronSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   title: 'neutron.yml',
   description: 'neutron workspace configuration — cross-ecosystem monorepo tool',
@@ -262,7 +262,7 @@ const midoSchema = {
 };
 
 const outputPath = join(ROOT, 'schema.json');
-writeFileSync(outputPath, JSON.stringify(midoSchema, null, 2) + '\n', 'utf-8');
+writeFileSync(outputPath, JSON.stringify(neutronSchema, null, 2) + '\n', 'utf-8');
 
 const size = (readFileSync(outputPath).length / 1024).toFixed(1);
 console.log(`schema.json generated (${size} KB)`);

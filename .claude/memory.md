@@ -1,12 +1,12 @@
-# mido-cli — Development Memory
+# neutron — Development Memory
 
 ## What was done (2026-04-06) — ALL THREE PHASES COMPLETE
 
 ### Competitive Analysis
-Performed a full competitive analysis of mido-cli against the monorepo/workspace tooling landscape (Nx, Turborepo, Moon, Melos, Bazel, Biome, Oxlint, Syncpack, Changesets, Husky, Lefthook).
+Performed a full competitive analysis of neutron against the monorepo/workspace tooling landscape (Nx, Turborepo, Moon, Melos, Bazel, Biome, Oxlint, Syncpack, Changesets, Husky, Lefthook).
 
 **Key findings:**
-- mido's unique advantage is the bridge pipeline (cross-ecosystem code generation) — no other tool models this
+- neutron's unique advantage is the bridge pipeline (cross-ecosystem code generation) — no other tool models this
 - First-class TS + Dart in one graph is unique — no single competitor covers both
 - Ecosystem-centric config and bundled lint/format (oxlint + oxfmt) are real DX wins
 
@@ -23,7 +23,7 @@ Performed a full competitive analysis of mido-cli against the monorepo/workspace
 10. No version/release management
 
 ### Expansion Plan Created
-Three-phase plan to make mido work for any project:
+Three-phase plan to make neutron work for any project:
 - **Phase 1:** Foundation fixes (topo sort, cycles, globs) — prerequisite for everything
 - **Phase 2:** Ecosystem plugins for Python, Rust, Go, PHP — broadens language support
 - **Phase 3:** Universal type sync via schema domain plugin — types/structs/classes stay in sync across all languages
@@ -31,7 +31,7 @@ Three-phase plan to make mido work for any project:
 Plan file: `.claude/plans/ecosystem-expansion.md`
 
 ## Why
-The bridge pipeline moat only matters if mido speaks more than two languages. The user builds multiple projects across different language combinations and needs mido as a drop-in tool for any monorepo.
+The bridge pipeline moat only matters if neutron speaks more than two languages. The user builds multiple projects across different language combinations and needs neutron as a drop-in tool for any monorepo.
 
 ## How
 All three phases implemented in one session:

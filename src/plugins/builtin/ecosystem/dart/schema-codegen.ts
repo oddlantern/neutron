@@ -3,7 +3,11 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ExecuteResult, ExecutionContext } from "@/plugins/types";
-import type { SchemaDefinition, SchemaProperty, ValidatedSchema } from "@/plugins/builtin/domain/schema/types";
+import type {
+  SchemaDefinition,
+  SchemaProperty,
+  ValidatedSchema,
+} from "@/plugins/builtin/domain/schema/types";
 
 const HEADER = "// GENERATED — DO NOT EDIT. Changes will be overwritten.\n";
 
@@ -17,24 +21,37 @@ function dartType(prop: SchemaProperty): string {
   }
 
   switch (prop.type) {
-    case "string": return "String";
-    case "number": return "double";
-    case "integer": return "int";
-    case "boolean": return "bool";
-    case "array": return `List<${dartItemType(prop.items)}>`;
-    case "object": return "Map<String, dynamic>";
-    default: return "dynamic";
+    case "string":
+      return "String";
+    case "number":
+      return "double";
+    case "integer":
+      return "int";
+    case "boolean":
+      return "bool";
+    case "array":
+      return `List<${dartItemType(prop.items)}>`;
+    case "object":
+      return "Map<String, dynamic>";
+    default:
+      return "dynamic";
   }
 }
 
 function dartItemType(items: string | undefined): string {
   switch (items) {
-    case "string": return "String";
-    case "number": return "double";
-    case "integer": return "int";
-    case "boolean": return "bool";
-    case undefined: return "dynamic";
-    default: return items;
+    case "string":
+      return "String";
+    case "number":
+      return "double";
+    case "integer":
+      return "int";
+    case "boolean":
+      return "bool";
+    case undefined:
+      return "dynamic";
+    default:
+      return items;
   }
 }
 

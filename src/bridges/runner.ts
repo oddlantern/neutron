@@ -331,9 +331,10 @@ export function groupBridgesByArtifact(
     // Only group bridges that have a domain plugin with buildPipeline
     if (!bridge.domain?.buildPipeline) {
       // Each non-groupable bridge is its own group of 1
-      groups.set(`__single__${bridge.bridge.source}__${bridge.bridge.consumers.map((c) => c.path).join(",")}`, [
-        bridge,
-      ]);
+      groups.set(
+        `__single__${bridge.bridge.source}__${bridge.bridge.consumers.map((c) => c.path).join(",")}`,
+        [bridge],
+      );
       continue;
     }
 

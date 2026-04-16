@@ -25,7 +25,10 @@ const bridgeSchema = z
     consumers: z.array(consumerSchema).min(1).optional(),
     /** @deprecated since v0.4.0. Use `consumers` instead. Auto-migrated on load. */
     target: z.string().optional(),
-    run: z.string().regex(/^[a-zA-Z0-9_:. /-]+$/, "bridge.run must not contain shell metacharacters").optional(),
+    run: z
+      .string()
+      .regex(/^[a-zA-Z0-9_:. /-]+$/, "bridge.run must not contain shell metacharacters")
+      .optional(),
     watch: z.array(z.string()).optional(),
     entryFile: z.string().optional(),
     specPath: z.string().optional(),

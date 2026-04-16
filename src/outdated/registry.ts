@@ -49,7 +49,9 @@ function deriveChangelogUrl(repoUrl: string | undefined): string | undefined {
 /**
  * Extract the repository URL string from an npm version response.
  */
-function extractRepoUrl(parsed: { repository?: string | { type?: string | undefined; url: string } | undefined }): string | undefined {
+function extractRepoUrl(parsed: {
+  repository?: string | { type?: string | undefined; url: string } | undefined;
+}): string | undefined {
   const repo = parsed.repository;
   if (!repo) {
     return undefined;
@@ -204,9 +206,7 @@ export async function fetchCratesMetadata(name: string): Promise<RegistryMetadat
       deprecated: latestVersion?.yanked ? "yanked" : undefined,
       peerDependencies: undefined,
       repositoryUrl: repoUrl,
-      tarballUrl: latestVersion?.dl_path
-        ? `https://crates.io${latestVersion.dl_path}`
-        : undefined,
+      tarballUrl: latestVersion?.dl_path ? `https://crates.io${latestVersion.dl_path}` : undefined,
       changelogUrl: deriveChangelogUrl(repoUrl),
     };
   } catch {

@@ -123,7 +123,10 @@ function extractNestedSchemas(
     if (propSchema["type"] === "array") {
       const items = propSchema["items"];
       if (isJsonObject(items) && items["type"] === "object" && items["properties"]) {
-        const childName = registerName(`${parentName}${toPascalCase(propName)}Item`, registeredNames);
+        const childName = registerName(
+          `${parentName}${toPascalCase(propName)}Item`,
+          registeredNames,
+        );
         extractNestedSchemas(items, childName, components, registeredNames);
         components[childName] = items;
         propSchema["items"] = { $ref: `#/components/schemas/${childName}` };

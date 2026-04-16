@@ -1,3 +1,4 @@
+import { LOCK_FILENAME } from "@/branding";
 import { loadConfig } from "@/config/loader";
 import type { CheckResult } from "@/checks/types";
 import { checkBridges } from "@/checks/bridges";
@@ -150,7 +151,7 @@ export async function runCheck(
       const newLock = mergeLock(lock, lockUpdates);
       await writeLock(root, newLock);
       const total = Object.keys(newLock.resolved).length;
-      console.log(`\nmido.lock updated (${total} resolved)\n`);
+      console.log(`\n${LOCK_FILENAME} updated (${total} resolved)\n`);
     }
   }
 

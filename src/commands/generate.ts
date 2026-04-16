@@ -62,9 +62,7 @@ export async function runGenerate(
   }
 
   if (!quiet) {
-    console.log(
-      `\n${BOLD}neutron generate${RESET} ${DIM}— ${resolved.length} bridge(s)${RESET}\n`,
-    );
+    console.log(`\n${BOLD}neutron generate${RESET} ${DIM}— ${resolved.length} bridge(s)${RESET}\n`);
   }
 
   const groups = groupBridgesByArtifact(resolved);
@@ -82,12 +80,7 @@ export async function runGenerate(
 
     // Check cache unless --force
     if (!force) {
-      const cached = await isCacheHit(
-        root,
-        bridgeKey,
-        first.bridge.artifact,
-        first.watchPatterns,
-      );
+      const cached = await isCacheHit(root, bridgeKey, first.bridge.artifact, first.watchPatterns);
       // Verify output dirs exist — if missing, cache is stale
       const outputMissing = first.targets.some((t) => {
         const genDir = join(root, first.bridge.source, "generated", t.ecosystem);

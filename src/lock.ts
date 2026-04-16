@@ -40,7 +40,7 @@ const lockSchemaV1 = z.object({
 });
 
 export type LockEntry = z.infer<typeof lockEntrySchema>;
-export type MidoLock = z.infer<typeof lockSchemaV2>;
+export type NeutronLock = z.infer<typeof lockSchemaV2>;
 
 // ─── Integrity ─────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ export function verifyIntegrity(entry: LockEntry): boolean {
 // ─── Migration ─────────────────────────────────────────────────────────────
 
 /** Migrate a V1 lock (flat ranges) to V2 (structured entries) */
-function migrateV1toV2(v1: z.infer<typeof lockSchemaV1>): MidoLock {
+function migrateV1toV2(v1: z.infer<typeof lockSchemaV1>): NeutronLock {
   const now = new Date().toISOString();
   const resolved: Record<string, LockEntry> = {};
 
@@ -75,7 +75,7 @@ function migrateV1toV2(v1: z.infer<typeof lockSchemaV1>): MidoLock {
 
 // ─── Read / Write ──────────────────────────────────────────────────────────
 
-export async function loadLock(root: string): Promise<MidoLock | null> {
+export async function loadLock(root: string): Promise<NeutronLock | null> {
   const lockPath = join(root, LOCK_FILENAME);
   if (!existsSync(lockPath)) {
     return null;
@@ -106,7 +106,7 @@ export async function loadLock(root: string): Promise<MidoLock | null> {
   }
 }
 
-export async function writeLock(root: string, lock: MidoLock): Promise<void> {
+export async function writeLock(root: string, lock: NeutronLock): Promise<void> {
   const lockPath = join(root, LOCK_FILENAME);
 
   // Sort keys alphabetically for stable diffs
@@ -131,7 +131,10 @@ export interface LockUpdate {
   readonly ecosystems: readonly string[];
 }
 
-export function mergeLock(existing: MidoLock | null, updates: readonly LockUpdate[]): MidoLock {
+export function mergeLock(
+  existing: NeutronLock | null,
+  updates: readonly LockUpdate[],
+): NeutronLock {
   const resolved: Record<string, LockEntry> = { ...existing?.resolved };
   const now = new Date().toISOString();
 
@@ -155,7 +158,7 @@ export function mergeLock(existing: MidoLock | null, updates: readonly LockUpdat
 // ─── Query ─────────────────────────────────────────────────────────────────
 
 /** Get the locked range for a dependency, or undefined if not locked */
-export function getLockedRange(lock: MidoLock, depName: string): string | undefined {
+export function getLockedRange(lock: NeutronLock, depName: string): string | undefined {
   return lock.resolved[depName]?.range;
 }
 
@@ -165,9 +168,9 @@ export function getLockedRange(lock: MidoLock, depName: string): string | undefi
  * from the actual dependency data in the workspace.
  */
 export function enrichEcosystems(
-  lock: MidoLock,
+  lock: NeutronLock,
   depEcosystems: ReadonlyMap<string, readonly string[]>,
-): MidoLock {
+): NeutronLock {
   let changed = false;
   const resolved: Record<string, LockEntry> = {};
 
@@ -187,7 +190,7 @@ export function enrichEcosystems(
 }
 
 /** Check all entries for integrity violations */
-export function checkIntegrity(lock: MidoLock): readonly string[] {
+export function checkIntegrity(lock: NeutronLock): readonly string[] {
   const violations: string[] = [];
   for (const [name, entry] of Object.entries(lock.resolved)) {
     if (!verifyIntegrity(entry)) {

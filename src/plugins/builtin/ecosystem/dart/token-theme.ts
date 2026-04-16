@@ -36,9 +36,7 @@ function colorToDart(value: string): string {
 
   // hsla() / hsl() — parse into HSLColor then convert
   const hslMatch =
-    /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?\s*(?:,\s*([\d.]+))?\s*\)$/.exec(
-      value,
-    );
+    /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?\s*(?:,\s*([\d.]+))?\s*\)$/.exec(value);
   if (hslMatch) {
     const h = hslMatch[1];
     const s = hslMatch[2];
@@ -236,7 +234,11 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   const provider = typo?.provider ?? "asset";
 
   // Resolve the "UI" font (sans/body font) for widget theme text styles
-  const uiFontFamily = typo?.fontFamily["sans"] ?? typo?.fontFamily["body"] ?? Object.values(typo?.fontFamily ?? {})[0] ?? "sans-serif";
+  const uiFontFamily =
+    typo?.fontFamily["sans"] ??
+    typo?.fontFamily["body"] ??
+    Object.values(typo?.fontFamily ?? {})[0] ??
+    "sans-serif";
   const hasSpacing = Object.keys(tokens.standard.spacing).length > 0;
   const hasRadius = Object.keys(tokens.standard.radius).length > 0;
   const hasElevation = Object.keys(tokens.standard.elevation).length > 0;
@@ -280,7 +282,7 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("    final r = (this.r * 255).round().toRadixString(16).padLeft(2, '0');");
   lines.push("    final g = (this.g * 255).round().toRadixString(16).padLeft(2, '0');");
   lines.push("    final b = (this.b * 255).round().toRadixString(16).padLeft(2, '0');");
-  lines.push("    return '#\$r\$g\$b';");
+  lines.push("    return '#$r$g$b';");
   lines.push("  }");
   lines.push("}");
   lines.push("");
@@ -346,7 +348,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("        foregroundColor: scheme.onSurface,");
   lines.push("        surfaceTintColor: scheme.surfaceTint,");
   lines.push("        centerTitle: true,");
-  lines.push(`        titleTextStyle: ${fontStyleExpr(provider, uiFontFamily, { size: 22, weight: 600, color: "scheme.onSurface" })},`);
+  lines.push(
+    `        titleTextStyle: ${fontStyleExpr(provider, uiFontFamily, { size: 22, weight: 600, color: "scheme.onSurface" })},`,
+  );
   if (hasIconSize) {
     lines.push("        iconTheme: IconThemeData(size: DSIconSize.md),");
   }
@@ -418,7 +422,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
     lines.push("          shape: RoundedRectangleBorder(borderRadius: DSRadius.mdAll),");
   }
   if (hasSpacing) {
-    lines.push("          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.lg, vertical: DSSpacing.md),");
+    lines.push(
+      "          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.lg, vertical: DSSpacing.md),",
+    );
   }
   lines.push("          minimumSize: const Size(64, 48),");
   lines.push(`          textStyle: ${btnTextStyle},`);
@@ -437,7 +443,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("          backgroundColor: scheme.surfaceContainerLow,");
   lines.push("          foregroundColor: scheme.primary,");
   if (hasSpacing) {
-    lines.push("          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.lg, vertical: DSSpacing.md),");
+    lines.push(
+      "          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.lg, vertical: DSSpacing.md),",
+    );
   }
   lines.push("          minimumSize: const Size(64, 48),");
   lines.push(`          textStyle: ${btnTextStyle},`);
@@ -455,7 +463,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   }
   lines.push("          side: BorderSide(color: scheme.outline),");
   if (hasSpacing) {
-    lines.push("          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.lg, vertical: DSSpacing.md),");
+    lines.push(
+      "          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.lg, vertical: DSSpacing.md),",
+    );
   }
   lines.push("          minimumSize: const Size(64, 48),");
   lines.push(`          textStyle: ${btnTextStyle},`);
@@ -469,7 +479,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
     lines.push("          shape: RoundedRectangleBorder(borderRadius: DSRadius.mdAll),");
   }
   if (hasSpacing) {
-    lines.push("          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.base, vertical: DSSpacing.md),");
+    lines.push(
+      "          padding: const EdgeInsets.symmetric(horizontal: DSSpacing.base, vertical: DSSpacing.md),",
+    );
   }
   lines.push("          minimumSize: const Size(64, 48),");
   lines.push(`          textStyle: ${btnTextStyle},`);
@@ -508,14 +520,26 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("        filled: true,");
   lines.push("        fillColor: scheme.surfaceContainerHighest,");
   if (hasRadius) {
-    lines.push("        border: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.outline)),");
-    lines.push("        enabledBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.outline)),");
-    lines.push("        focusedBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.primary, width: 2)),");
-    lines.push("        errorBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.error)),");
-    lines.push("        focusedErrorBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.error, width: 2)),");
+    lines.push(
+      "        border: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.outline)),",
+    );
+    lines.push(
+      "        enabledBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.outline)),",
+    );
+    lines.push(
+      "        focusedBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.primary, width: 2)),",
+    );
+    lines.push(
+      "        errorBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.error)),",
+    );
+    lines.push(
+      "        focusedErrorBorder: OutlineInputBorder(borderRadius: DSRadius.mdAll, borderSide: BorderSide(color: scheme.error, width: 2)),",
+    );
   }
   if (hasSpacing) {
-    lines.push("        contentPadding: const EdgeInsets.symmetric(horizontal: DSSpacing.base, vertical: DSSpacing.md),");
+    lines.push(
+      "        contentPadding: const EdgeInsets.symmetric(horizontal: DSSpacing.base, vertical: DSSpacing.md),",
+    );
   }
   lines.push("      ),");
   lines.push("");
@@ -551,7 +575,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   }
   lines.push("        behavior: SnackBarBehavior.floating,");
   if (hasSpacing) {
-    lines.push("        insetPadding: const EdgeInsets.symmetric(horizontal: DSSpacing.base, vertical: DSSpacing.sm),");
+    lines.push(
+      "        insetPadding: const EdgeInsets.symmetric(horizontal: DSSpacing.base, vertical: DSSpacing.sm),",
+    );
   }
   lines.push("      ),");
   lines.push("");
@@ -560,10 +586,14 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("      // Tooltip");
   lines.push("      tooltipTheme: TooltipThemeData(");
   if (hasRadius) {
-    lines.push("        decoration: BoxDecoration(color: scheme.inverseSurface, borderRadius: DSRadius.mdAll),");
+    lines.push(
+      "        decoration: BoxDecoration(color: scheme.inverseSurface, borderRadius: DSRadius.mdAll),",
+    );
   }
   if (hasSpacing) {
-    lines.push("        padding: const EdgeInsets.symmetric(horizontal: DSSpacing.sm, vertical: DSSpacing.xs),");
+    lines.push(
+      "        padding: const EdgeInsets.symmetric(horizontal: DSSpacing.sm, vertical: DSSpacing.xs),",
+    );
   }
   lines.push("      ),");
   lines.push("");
@@ -606,14 +636,20 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("        unselectedLabelColor: scheme.onSurfaceVariant,");
   lines.push("        indicatorColor: scheme.primary,");
   lines.push("        indicatorSize: TabBarIndicatorSize.label,");
-  lines.push(`        labelStyle: ${fontStyleExprNoColor(provider, uiFontFamily, { size: 14, weight: 600 })},`);
-  lines.push(`        unselectedLabelStyle: ${fontStyleExprNoColor(provider, uiFontFamily, { size: 14, weight: 400 })},`);
+  lines.push(
+    `        labelStyle: ${fontStyleExprNoColor(provider, uiFontFamily, { size: 14, weight: 600 })},`,
+  );
+  lines.push(
+    `        unselectedLabelStyle: ${fontStyleExprNoColor(provider, uiFontFamily, { size: 14, weight: 400 })},`,
+  );
   lines.push("      ),");
   lines.push("");
 
   // Divider
   lines.push("      // Divider");
-  lines.push("      dividerTheme: DividerThemeData(color: scheme.outlineVariant, thickness: 1, space: 0),");
+  lines.push(
+    "      dividerTheme: DividerThemeData(color: scheme.outlineVariant, thickness: 1, space: 0),",
+  );
   lines.push("");
 
   // Progress
@@ -703,7 +739,9 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   // Scrollbar
   lines.push("      // Scrollbar");
   lines.push("      scrollbarTheme: ScrollbarThemeData(");
-  lines.push("        thumbColor: WidgetStateProperty.all(scheme.onSurface.withValues(alpha: 0.3)),");
+  lines.push(
+    "        thumbColor: WidgetStateProperty.all(scheme.onSurface.withValues(alpha: 0.3)),",
+  );
   if (hasRadius) {
     lines.push("        radius: const Radius.circular(DSRadius.full),");
   }
@@ -728,10 +766,14 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
   lines.push("        backgroundColor: WidgetStateProperty.all(scheme.surfaceContainerHigh),");
   lines.push("        surfaceTintColor: WidgetStateProperty.all(scheme.surfaceTint),");
   if (hasRadius) {
-    lines.push("        shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: DSRadius.fullAll)),");
+    lines.push(
+      "        shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: DSRadius.fullAll)),",
+    );
   }
   if (hasSpacing) {
-    lines.push("        padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: DSSpacing.base)),");
+    lines.push(
+      "        padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: DSSpacing.base)),",
+    );
   }
   lines.push("      ),");
   lines.push("");
@@ -761,8 +803,15 @@ export function generateTheme(tokens: ValidatedTokens, packageName: string): str
       const familyName = typo.fontFamily[entry.family] ?? entry.family;
       const weightValue = typo.fontWeight[entry.weight] ?? 400;
       // bodySmall and labelSmall use onSurfaceVariant in M3
-      const color = key === "bodySmall" || key === "labelSmall" ? "scheme.onSurfaceVariant" : "scheme.onSurface";
-      const expr = fontStyleExpr(provider, familyName, { size: entry.size, weight: weightValue, color });
+      const color =
+        key === "bodySmall" || key === "labelSmall"
+          ? "scheme.onSurfaceVariant"
+          : "scheme.onSurface";
+      const expr = fontStyleExpr(provider, familyName, {
+        size: entry.size,
+        weight: weightValue,
+        color,
+      });
       lines.push(`      ${key}: ${expr},`);
     }
   }

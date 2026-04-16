@@ -97,12 +97,8 @@ export async function buildWorkspaceGraph(
   // Detect dependency cycles before proceeding
   const cycles = detectCycles(resolvedPackages);
   if (cycles.length > 0) {
-    const formatted = cycles
-      .map((cycle) => `  ${cycle.join(" → ")}`)
-      .join("\n");
-    throw new Error(
-      `Dependency cycle(s) detected in workspace graph:\n${formatted}`,
-    );
+    const formatted = cycles.map((cycle) => `  ${cycle.join(" → ")}`).join("\n");
+    throw new Error(`Dependency cycle(s) detected in workspace graph:\n${formatted}`);
   }
 
   const bridges: Bridge[] = (config.bridges ?? []).map((b) => {

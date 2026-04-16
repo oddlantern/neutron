@@ -1,7 +1,10 @@
 import type { ValidatedTokens } from "@/plugins/builtin/domain/design/types";
 
 // Re-export theme functions so existing imports from this module still work
-export { generateThemeExtensions, generateTheme } from "@/plugins/builtin/ecosystem/dart/token-theme";
+export {
+  generateThemeExtensions,
+  generateTheme,
+} from "@/plugins/builtin/ecosystem/dart/token-theme";
 
 const HEADER = `// GENERATED — DO NOT EDIT. Changes will be overwritten.`;
 
@@ -50,9 +53,7 @@ function colorToDart(value: string): string {
 
   // hsla() / hsl() — parse into HSLColor then convert
   const hslMatch =
-    /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?\s*(?:,\s*([\d.]+))?\s*\)$/.exec(
-      value,
-    );
+    /^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?\s*(?:,\s*([\d.]+))?\s*\)$/.exec(value);
   if (hslMatch) {
     const h = hslMatch[1];
     const s = hslMatch[2];

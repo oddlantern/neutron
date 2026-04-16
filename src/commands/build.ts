@@ -25,9 +25,7 @@ export interface BuildOptions {
  * Build a set of package paths that have at least one workspace dependent.
  * Packages with dependents are libraries — packages without are apps (leaf nodes).
  */
-function findLibraryPaths(
-  packages: ReadonlyMap<string, WorkspacePackage>,
-): ReadonlySet<string> {
+function findLibraryPaths(packages: ReadonlyMap<string, WorkspacePackage>): ReadonlySet<string> {
   const hasDependent = new Set<string>();
 
   for (const pkg of packages.values()) {
@@ -120,7 +118,9 @@ export async function runBuild(
 
       const icon = result.success ? PASS : FAIL;
       const timing =
-        result.duration > 0 ? ` ${DIM}(${(result.duration / MS_PER_SECOND).toFixed(1)}s)${RESET}` : "";
+        result.duration > 0
+          ? ` ${DIM}(${(result.duration / MS_PER_SECOND).toFixed(1)}s)${RESET}`
+          : "";
       console.log(`  ${icon} ${pkg.path}${timing}`);
 
       if (!result.success && result.output) {
