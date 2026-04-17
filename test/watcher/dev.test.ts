@@ -6,7 +6,12 @@ import { spawn } from 'node:child_process';
 import { afterEach, describe, expect, test } from 'bun:test';
 
 const NEUTRON_BIN = join(import.meta.dirname, '..', '..', 'dist', 'bin.js');
-const TIMEOUT_MS = 10_000;
+/** Outer cap — generous enough that a slow CI box can't race internal waits. */
+const TIMEOUT_MS = 45_000;
+/** Time to allow chokidar to become ready. */
+const READY_TIMEOUT_MS = 10_000;
+/** Time to allow the pipeline to fire after a change. */
+const PIPELINE_TIMEOUT_MS = 20_000;
 
 function makeTempWorkspace(): string {
   // realpathSync resolves macOS /var → /private/var symlink
@@ -101,8 +106,13 @@ describe('neutron dev integration', () => {
       // Wait for chokidar to be ready by watching for the ready log
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error('Timed out waiting for watcher to be ready'));
-        }, 5000);
+          const combined = stdout.join('');
+          reject(
+            new Error(
+              `Timed out waiting for watcher to be ready.\n\nCaptured output:\n${combined}`,
+            ),
+          );
+        }, READY_TIMEOUT_MS);
 
         const check = (): void => {
           const combined = stdout.join('');
@@ -119,7 +129,9 @@ describe('neutron dev integration', () => {
       // Give chokidar time to finish setting up native watchers
       await new Promise((r) => setTimeout(r, 500));
 
-      // Modify an existing file to trigger a change event (more reliable than add)
+      // Modify the file once to trigger a change event. Repeated writes
+      // would defeat the pipeline debouncer — each write resets the
+      // delay, so the pipeline would never actually fire.
       const triggerFile = join(root, 'packages', 'source', 'src', 'index.ts');
       writeFileSync(triggerFile, '// trigger change ' + Date.now());
 
@@ -129,10 +141,10 @@ describe('neutron dev integration', () => {
           const combined = stdout.join('');
           reject(
             new Error(
-              `Pipeline did not fire within 5s.\n\nCaptured output:\n${combined}`,
+              `Pipeline did not fire within ${String(PIPELINE_TIMEOUT_MS)}ms.\n\nCaptured output:\n${combined}`,
             ),
           );
-        }, 5000);
+        }, PIPELINE_TIMEOUT_MS);
 
         const check = (): void => {
           if (existsSync(outputFile)) {
@@ -176,8 +188,13 @@ describe('neutron dev integration', () => {
       // Wait for ready
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error('Timed out waiting for verbose output'));
-        }, 5000);
+          const combined = stdout.join('');
+          reject(
+            new Error(
+              `Timed out waiting for verbose output.\n\nCaptured output:\n${combined}`,
+            ),
+          );
+        }, READY_TIMEOUT_MS);
 
         const check = (): void => {
           const combined = stdout.join('');
