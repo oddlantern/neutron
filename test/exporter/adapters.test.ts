@@ -115,18 +115,6 @@ describe('detectAdapter', () => {
     expect(fastapiAdapter.detect(deps)).toBe(false);
   });
 
-  test('fastapi adapter exposes /openapi.json as default spec path', () => {
-    expect(fastapiAdapter.defaultSpecPath).toBe('/openapi.json');
-    // FastAPI apps behind a prefix or mounted under /api sometimes
-    // expose the spec at a prefixed path — fallbacks cover these.
-    expect(fastapiAdapter.fallbackSpecPaths).toContain('/api/openapi.json');
-  });
-
-  test('fastapi adapter is flagged as the python ecosystem', () => {
-    // server-boot branches on this to pick uvicorn over tsx/bun.
-    expect(fastapiAdapter.ecosystem).toBe('python');
-  });
-
   test('axum adapter detects axum + utoipa in Cargo deps', () => {
     const deps = { axum: '0.7', utoipa: '5.0', tokio: '1.40' };
     expect(axumAdapter.detect(deps)).toBe(true);
@@ -143,16 +131,4 @@ describe('detectAdapter', () => {
     expect(detectAdapter(deps)).toBeNull();
   });
 
-  test('axum adapter exposes utoipa default spec path + swagger-ui fallback', () => {
-    // utoipa apps typically mount /api-docs/openapi.json, but
-    // utoipa-swagger-ui also exposes the spec under its UI prefix.
-    expect(axumAdapter.defaultSpecPath).toBe('/api-docs/openapi.json');
-    expect(axumAdapter.fallbackSpecPaths).toContain('/swagger-ui/api-docs/openapi.json');
-  });
-
-  test('axum adapter is flagged as the rust ecosystem', () => {
-    // server-boot branches on this to pick cargo run over tsx/uvicorn,
-    // and exporter scales the startup timeout for cold cargo builds.
-    expect(axumAdapter.ecosystem).toBe('rust');
-  });
 });

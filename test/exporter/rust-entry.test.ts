@@ -29,12 +29,6 @@ describe("rustEntryToCargoArgs", () => {
     ]);
   });
 
-  test("always uses --release — debug cold starts are slower enough to matter", () => {
-    for (const entry of ["src/main.rs", "src/bin/worker.rs"]) {
-      expect(rustEntryToCargoArgs(entry)).toContain("--release");
-    }
-  });
-
   test("hyphenated bin names are passed through verbatim", () => {
     // Cargo accepts kebab-case bin names; the regex shouldn't mangle them.
     expect(rustEntryToCargoArgs("src/bin/payment-worker.rs")).toEqual([

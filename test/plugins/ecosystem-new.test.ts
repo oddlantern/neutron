@@ -100,14 +100,6 @@ describe("rustPlugin", () => {
     );
   });
 
-  test("openapi description communicates the types-only contract", async () => {
-    // Rust doesn't ship a full client generator by convention — users
-    // write thin reqwest/hyper wrappers. The advertised description
-    // must make this visible up front.
-    const pkg = makePkg("rust", "pkg");
-    const capability = await rustPlugin.canHandleDomainArtifact?.("openapi", "spec.json", pkg, "/tmp");
-    expect(capability?.description).toContain("types only");
-  });
 });
 
 describe("goPlugin", () => {

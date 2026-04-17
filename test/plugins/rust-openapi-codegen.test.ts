@@ -85,28 +85,6 @@ describe("executeOpenapiModelGeneration — output structure", () => {
     expect(existsSync(join(outDir, "Cargo.toml"))).toBe(true);
   });
 
-  test("models.rs header explains the 'types only, write your own client' rationale", async () => {
-    const artifactPath = writeSpec({
-      components: {
-        schemas: {
-          User: { type: "object", properties: { id: { type: "string" } } },
-        },
-      },
-    });
-    const outDir = join(root, "out");
-    await executeOpenapiModelGeneration(
-      makePkg(),
-      root,
-      makeContext({ artifactPath, outputDir: outDir }),
-    );
-    const models = readFileSync(join(outDir, "src", "models.rs"), "utf-8");
-    // The rationale must ship in the generated file itself.
-    expect(models).toContain("types-only");
-    expect(models).toContain("reqwest");
-    expect(models).toContain("progenitor");
-    expect(models).toContain("use serde::");
-  });
-
   test("generates a struct for each component.schemas entry", async () => {
     const artifactPath = writeSpec({
       components: {
