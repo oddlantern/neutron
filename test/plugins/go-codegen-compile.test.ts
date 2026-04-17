@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import type { WorkspacePackage } from "@/graph/types";
 import type { ValidatedTokens } from "@/plugins/builtin/domain/design/types";
+import { executeOpenapiModelGeneration } from "@/plugins/builtin/ecosystem/go/openapi-codegen";
 import { executeTokenGeneration } from "@/plugins/builtin/ecosystem/go/token-codegen";
 import type { ExecutionContext } from "@/plugins/types";
 
@@ -65,7 +66,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function makeContext(outputDir: string): ExecutionContext {
+function makeContext(outputDir: string, overrides?: Partial<ExecutionContext>): ExecutionContext {
   return {
     graph: { name: "ws", root, packages: new Map(), bridges: [] },
     packageManager: "bun",
@@ -74,6 +75,7 @@ function makeContext(outputDir: string): ExecutionContext {
     outputDir,
     sourceName: "compile-check",
     domainData: makeTokens(),
+    ...overrides,
   };
 }
 
@@ -119,4 +121,60 @@ describe("go codegen compile-check — tokens", () => {
     }
     expect(vet.status).toBe(0);
   }, 60_000);
+});
+
+describe("go codegen compile-check — openapi models", () => {
+  test.skipIf(!goAvailable)("generated openapi models crate compiles under `go build`", async () => {
+    // Spec with a handful of types to exercise primitives + arrays +
+    // required fields. generated models use stdlib only.
+    const artifactPath = "openapi.json";
+    writeFileSync(
+      join(root, artifactPath),
+      JSON.stringify({
+        openapi: "3.1.0",
+        components: {
+          schemas: {
+            User: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                age: { type: "integer" },
+                active: { type: "boolean" },
+              },
+              required: ["id"],
+            },
+            Order: {
+              type: "object",
+              properties: {
+                total: { type: "number" },
+                items: { type: "array", items: { type: "string" } },
+              },
+            },
+          },
+        },
+      }),
+      "utf-8",
+    );
+
+    const outDir = join(root, "out");
+    const result = await executeOpenapiModelGeneration(
+      makePkg(),
+      root,
+      makeContext(outDir, { artifactPath }),
+    );
+    expect(result.success).toBe(true);
+
+    const build = spawnSync("go", ["build", "./..."], {
+      cwd: outDir,
+      encoding: "utf-8",
+      timeout: 60_000,
+      env: { ...process.env, GOFLAGS: "-mod=mod" },
+    });
+    if (build.status !== 0) {
+      throw new Error(
+        `go build failed (exit ${String(build.status)}):\n${build.stdout ?? ""}\n${build.stderr ?? ""}`,
+      );
+    }
+    expect(build.status).toBe(0);
+  }, 90_000);
 });
