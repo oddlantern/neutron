@@ -7,6 +7,7 @@ import type {
 } from "@/plugins/types";
 import { STANDARD_ACTIONS } from "@/plugins/types";
 import { runCommand } from "@/process";
+import { executeOpenapiModelGeneration } from "@/plugins/builtin/ecosystem/rust/openapi-codegen";
 import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/rust/schema-codegen";
 import { executeTokenGeneration } from "@/plugins/builtin/ecosystem/rust/token-codegen";
 
@@ -73,6 +74,9 @@ export const rustPlugin: EcosystemPlugin = {
 
       case STANDARD_ACTIONS.BUILD:
         return runCommand("cargo", ["build"], cwd);
+
+      case "generate-openapi-rust":
+        return executeOpenapiModelGeneration(pkg, root, _context);
 
       case "generate-design-tokens-rust":
         return executeTokenGeneration(pkg, root, _context);
