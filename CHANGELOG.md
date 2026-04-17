@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/oddlantern/neutron/compare/v0.1.7...v0.2.0) (2026-04-17)
+
+
+### Features
+
+* **plugins:** external plugin loading via neutron.yml plugins field ([03bf9de](https://github.com/oddlantern/neutron/commit/03bf9dea90203776ff2d1d21f5f903a8c83e6dd6))
+
+
+### Maintenance
+
+* **repo:** add GitHub templates, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY ([ddae2c5](https://github.com/oddlantern/neutron/commit/ddae2c525e0bc4c79458e214f389773632144a04))
+
 ## [0.1.7](https://github.com/oddlantern/neutron/compare/v0.1.6...v0.1.7) (2026-04-17)
 
 ### Features
