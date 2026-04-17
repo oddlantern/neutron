@@ -18,6 +18,13 @@ export const DEFAULT_STARTUP_TIMEOUT = 15_000;
  */
 export const RUST_STARTUP_TIMEOUT = 120_000;
 
+/**
+ * Startup timeout for go-run-based servers. Go compile+link is fast
+ * but still measurable on cold module caches — bump from the TS/Python
+ * default without going full Rust-level.
+ */
+export const GO_STARTUP_TIMEOUT = 30_000;
+
 /** How often to poll the server during startup (ms) */
 const POLL_INTERVAL = 500;
 
@@ -48,7 +55,7 @@ export async function findFreePort(): Promise<number> {
   });
 }
 
-/** Well-known entry files checked in order. TS, Python, then Rust. */
+/** Well-known entry files checked in order. TS, Python, Rust, Go. */
 const ENTRY_CANDIDATES: readonly string[] = [
   "src/index.ts",
   "src/main.ts",
@@ -64,6 +71,10 @@ const ENTRY_CANDIDATES: readonly string[] = [
   "src/bin/main.rs",
   "src/bin/server.rs",
   "src/bin/api.rs",
+  "main.go",
+  "cmd/server/main.go",
+  "cmd/api/main.go",
+  "cmd/main/main.go",
 ];
 
 /**
@@ -386,6 +397,17 @@ function buildSpawnCommand(
     return {
       runner: "cargo",
       args: rustEntryToCargoArgs(entryFile),
+    };
+  }
+
+  // Go (huma via go run).
+  if (entryFile.endsWith(".go")) {
+    return {
+      runner: "go",
+      // `go run <file>` works for single-file mains; `go run ./cmd/foo`
+      // is the idiomatic form for module-based projects. Both accept
+      // the path as-is.
+      args: ["run", entryFile],
     };
   }
 
