@@ -6,6 +6,7 @@ import { loadConfig } from "@/config/loader";
 import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
 import { BOLD, DIM, FAIL, GREEN, PASS, RED, RESET, YELLOW } from "@/output";
+import { findExperimentalEcosystems, loadPlugins } from "@/plugins/loader";
 import { VERSION } from "@/version";
 
 const WARN = `${YELLOW}!${RESET}`;
@@ -143,7 +144,27 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
     }
   }
 
-  // 4. Tool versions
+  // 4. Experimental plugins in use
+  if (root) {
+    try {
+      const loaded = await loadConfig();
+      const ecosystemNames = Object.keys(loaded.config.ecosystems);
+      const plugins = loadPlugins();
+      const experimental = findExperimentalEcosystems(ecosystemNames, plugins.ecosystem);
+      if (experimental.length > 0) {
+        const names = experimental.map((p) => p.name).join(", ");
+        results.push({
+          label: "experimental plugins",
+          status: "warn",
+          detail: `${names} — feature parity in progress`,
+        });
+      }
+    } catch {
+      // Config failure already reported in section 1
+    }
+  }
+
+  // 5. Tool versions
   results.push(checkTool("node", "node"));
 
   const dartVersion = getVersion("dart");
@@ -162,7 +183,7 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
     });
   }
 
-  // 5. Package manager
+  // 6. Package manager
   if (root) {
     const lockfiles: ReadonlyArray<{ readonly file: string; readonly pm: string }> = [
       { file: "bun.lock", pm: "bun" },

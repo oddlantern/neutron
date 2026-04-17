@@ -9,7 +9,7 @@ import { detectBridges, detectEnvFiles } from "@/discovery/heuristics";
 import { printBanner } from "@/banner";
 import { BOLD, DIM, ORANGE, RESET } from "@/output";
 import type { ParserRegistry } from "@/graph/workspace";
-import { loadPlugins } from "@/plugins/loader";
+import { findExperimentalEcosystems, loadPlugins } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
 import { mergeMigratedConfig, migrateLintFormatConfig } from "@/commands/migrate";
 import { buildConfigObject, renderYaml } from "@/commands/utils/config-render";
@@ -153,6 +153,17 @@ async function runFirstTime(
   log.info(
     `Found ${supported.length} packages across ${Object.keys(ecosystems).length} ecosystems:\n${packageLines}`,
   );
+
+  // Warn about experimental ecosystem plugins in use so users know
+  // before committing to the config that feature parity isn't there yet.
+  const experimentalEcosystems = findExperimentalEcosystems(
+    Object.keys(ecosystems),
+    loadPlugins().ecosystem,
+  );
+  if (experimentalEcosystems.length > 0) {
+    const names = experimentalEcosystems.map((p) => p.name).join(", ");
+    log.warn(`Experimental ecosystem support: ${names}. Feature parity is in progress.`);
+  }
 
   // Confirm or adjust packages
   const adjustPackages = await select({

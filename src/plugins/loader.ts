@@ -27,3 +27,17 @@ export function loadPlugins(): LoadedPlugins {
     domain: [designPlugin, openapiPlugin, assetsPlugin, schemaPlugin],
   };
 }
+
+/**
+ * Return the experimental ecosystem plugins that are actually used in
+ * the workspace (i.e. have matching ecosystem entries in the config).
+ * Callers render warnings so users know which parts of the tool haven't
+ * reached feature parity yet.
+ */
+export function findExperimentalEcosystems(
+  usedEcosystems: readonly string[],
+  plugins: readonly EcosystemPlugin[],
+): readonly EcosystemPlugin[] {
+  const used = new Set(usedEcosystems);
+  return plugins.filter((p) => p.experimental === true && used.has(p.name));
+}
