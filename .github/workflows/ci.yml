@@ -20,6 +20,13 @@ jobs:
           channel: stable
           cache: true
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python tooling (ruff)
+        run: pip install ruff
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
