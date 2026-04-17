@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.7](https://github.com/oddlantern/neutron/compare/v0.1.6...v0.1.7) (2026-04-17)
+
+
+### Features
+
+* **plugins:** PHP design token codegen ([4a72a0d](https://github.com/oddlantern/neutron/commit/4a72a0d3ff60a27e86d71fc3276165cbeee0726a))
+* **plugins:** PHP OpenAPI models codegen — types only by convention ([c96bd18](https://github.com/oddlantern/neutron/commit/c96bd18a4e3a85c08afc585fd526c402e1279b9c))
+* **plugins:** symfony + nelmio adapter for PHP OpenAPI export ([6e19314](https://github.com/oddlantern/neutron/commit/6e193148fb9026bc5e53493d90df5f4416e9ee23))
+
 ## [0.1.6](https://github.com/oddlantern/neutron/compare/v0.1.5...v0.1.6) (2026-04-17)
 
 ### Features
