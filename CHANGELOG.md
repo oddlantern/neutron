@@ -2,10 +2,9 @@
 
 ## [0.1.2](https://github.com/oddlantern/neutron/compare/v0.1.1...v0.1.2) (2026-04-17)
 
-
 ### Bug Fixes
 
-* **ci:** skip npm lifecycle scripts on publish — CI already ran them ([93901e6](https://github.com/oddlantern/neutron/commit/93901e6aadf85561b5a465631b92f8ea13e4e100))
+- **ci:** skip npm lifecycle scripts on publish — CI already ran them ([93901e6](https://github.com/oddlantern/neutron/commit/93901e6aadf85561b5a465631b92f8ea13e4e100))
 
 ## [0.1.1](https://github.com/oddlantern/neutron/compare/v0.1.0...v0.1.1) (2026-04-17)
 
