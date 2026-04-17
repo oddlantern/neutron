@@ -3,7 +3,7 @@ dist/
 *.tsbuildinfo
 .neutron
 .claude/
-CLAUDE.md
+CLAUDE.local.md
 .env
 .env.*
 !.env.example
