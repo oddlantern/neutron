@@ -86,7 +86,7 @@
   "dependencies": {
     "@clack/prompts": "^1.1.0",
     "chokidar": "^4.0.3",
-    "oxfmt": "^0.42.0",
+    "oxfmt": "^0.45.0",
     "oxlint": "^1.57.0",
     "smol-toml": "^1.6.1",
     "yaml": "^2.7.1",
@@ -98,7 +98,7 @@
     "@types/node": "^25.6.0",
     "elysia": "^1.4.28",
     "publint": "^0.3.12",
-    "tsdown": "^0.14.1",
+    "tsdown": "^0.21.9",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   }
