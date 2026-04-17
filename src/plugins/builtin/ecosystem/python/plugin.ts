@@ -10,6 +10,7 @@ import type {
 } from "@/plugins/types";
 import { STANDARD_ACTIONS } from "@/plugins/types";
 import { runCommand } from "@/process";
+import { executeOpenapiClientGeneration } from "@/plugins/builtin/ecosystem/python/openapi-codegen";
 import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/python/schema-codegen";
 
 const WATCH_PATTERNS: readonly string[] = ["**/*.py", "pyproject.toml"];
@@ -153,6 +154,9 @@ export const pythonPlugin: EcosystemPlugin = {
         }
         return runCommand(resolvePythonTool("pyright", pkgDir, root), ["."], pkgDir);
       }
+
+      case "generate-openapi-python":
+        return executeOpenapiClientGeneration(pkg, root, context);
 
       case "generate-schema-python":
         return executeSchemaGeneration(pkg, root, context);
