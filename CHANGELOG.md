@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/oddlantern/neutron/compare/v0.1.4...v0.1.5) (2026-04-17)
+
+
+### Documentation
+
+* rewrite CLAUDE.md as principles, drop file-tree enumeration ([9d3e89a](https://github.com/oddlantern/neutron/commit/9d3e89a2a15ad39842f5621208286f0ad7861440))
+
 ## [0.1.4](https://github.com/oddlantern/neutron/compare/v0.1.3...v0.1.4) (2026-04-17)
 
 ### Features
