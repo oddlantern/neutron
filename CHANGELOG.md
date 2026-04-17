@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/oddlantern/neutron/compare/v0.1.2...v0.1.3) (2026-04-17)
+
+
+### Bug Fixes
+
+* **ci:** upgrade npm for OIDC trusted-publisher auth ([e6dea8e](https://github.com/oddlantern/neutron/commit/e6dea8eb2e09e1c5bde4aea5c317320e135c86f7))
+
 ## [0.1.2](https://github.com/oddlantern/neutron/compare/v0.1.1...v0.1.2) (2026-04-17)
 
 ### Bug Fixes
