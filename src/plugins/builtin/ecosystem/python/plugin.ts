@@ -12,6 +12,7 @@ import { STANDARD_ACTIONS } from "@/plugins/types";
 import { runCommand } from "@/process";
 import { executeOpenapiClientGeneration } from "@/plugins/builtin/ecosystem/python/openapi-codegen";
 import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/python/schema-codegen";
+import { executeTokenGeneration } from "@/plugins/builtin/ecosystem/python/token-codegen";
 
 const WATCH_PATTERNS: readonly string[] = ["**/*.py", "pyproject.toml"];
 
@@ -157,6 +158,9 @@ export const pythonPlugin: EcosystemPlugin = {
 
       case "generate-openapi-python":
         return executeOpenapiClientGeneration(pkg, root, context);
+
+      case "generate-design-tokens-python":
+        return executeTokenGeneration(pkg, root, context);
 
       case "generate-schema-python":
         return executeSchemaGeneration(pkg, root, context);
