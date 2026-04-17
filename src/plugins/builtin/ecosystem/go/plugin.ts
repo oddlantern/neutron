@@ -7,6 +7,7 @@ import type {
 } from "@/plugins/types";
 import { STANDARD_ACTIONS } from "@/plugins/types";
 import { runCommand } from "@/process";
+import { executeOpenapiModelGeneration } from "@/plugins/builtin/ecosystem/go/openapi-codegen";
 import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/go/schema-codegen";
 import { executeTokenGeneration } from "@/plugins/builtin/ecosystem/go/token-codegen";
 
@@ -97,6 +98,9 @@ export const goPlugin: EcosystemPlugin = {
 
       case STANDARD_ACTIONS.TYPECHECK:
         return runCommand("go", ["vet", "./..."], cwd);
+
+      case "generate-openapi-go":
+        return executeOpenapiModelGeneration(pkg, root, _context);
 
       case "generate-design-tokens-go":
         return executeTokenGeneration(pkg, root, _context);
