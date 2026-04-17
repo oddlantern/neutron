@@ -48,11 +48,43 @@ const BUILTIN_DOMAIN: readonly DomainPlugin[] = [
 ];
 
 /**
- * Load builtin plugins only. Callers that want external plugins on top
- * should use `loadPluginsWithExternal`.
+ * Load builtin plugins only. Prefer `loadPluginsFromConfig` when a
+ * config is available — this stays for tests and paths that have no
+ * workspace context.
  */
 export function loadPlugins(): LoadedPlugins {
   return { ecosystem: BUILTIN_ECOSYSTEM, domain: BUILTIN_DOMAIN };
+}
+
+/**
+ * Load builtin plugins plus externals declared in `neutron.yml.plugins`.
+ *
+ * Every command that uses plugins should go through this helper so
+ * external plugins declared by the user actually take effect.
+ * Load failures are surfaced to stderr — users need to know their
+ * declared plugin didn't load even from commands that don't render a
+ * full per-plugin report.
+ *
+ * Runs doctor's full reporting? Use `loadPluginsWithExternal` directly
+ * to get the structured report.
+ */
+export async function loadPluginsFromConfig(
+  config: { readonly plugins?: readonly string[] | undefined },
+  root: string,
+): Promise<LoadedPlugins> {
+  const declared = config.plugins ?? [];
+  if (declared.length === 0) {
+    return loadPlugins();
+  }
+  const { loaded, external } = await loadPluginsWithExternal(declared, root);
+  for (const report of external) {
+    if (!report.loaded) {
+      console.error(
+        `[neutron] external plugin "${report.packageName}" failed to load: ${report.error ?? "unknown error"}`,
+      );
+    }
+  }
+  return loaded;
 }
 
 /**

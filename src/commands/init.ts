@@ -211,7 +211,10 @@ async function runFirstTime(
     log.info(`Detected ${ORANGE}${detectedBridges.length}${RESET} bridge(s):\n${bridgeLines}`);
   }
 
-  // Load plugins to get watch path suggestions
+  // Load plugins to get watch path suggestions. Init runs before any
+  // neutron.yml exists, so there's no config.plugins list to read from
+  // yet — builtins only. External plugins take effect on subsequent
+  // commands once the config is written and the packages installed.
   const { ecosystem, domain } = loadPlugins();
   const pluginRegistry = new PluginRegistry(ecosystem, domain);
 

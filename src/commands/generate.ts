@@ -6,7 +6,7 @@ import { DiagnosticCollector, formatDiagnostics } from "@/diagnostic";
 import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
 import { BOLD, DIM, PASS, RESET } from "@/output";
-import { loadPlugins } from "@/plugins/loader";
+import { loadPluginsFromConfig } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
 import { detectPackageManager } from "@/pm-detect";
 import {
@@ -41,7 +41,7 @@ export async function runGenerate(
   const { quiet = false, verbose = false, force = false, dryRun = false } = options;
   const { config, root } = await loadConfig();
   const graph = await buildWorkspaceGraph(config, root, parsers);
-  const plugins = loadPlugins();
+  const plugins = await loadPluginsFromConfig(config, root);
   const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
   const pm = detectPackageManager(root);
 

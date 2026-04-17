@@ -6,7 +6,38 @@ import type {
 } from "@/config/schema";
 import type { WorkspaceGraph, WorkspacePackage } from "@/graph/types";
 
-/** Standard action names shared across ecosystem plugins */
+/**
+ * ───────────────────────────────────────────────────────────────────────
+ * PUBLIC PLUGIN API — STABILITY CONTRACT
+ *
+ * The types and constants in this file are the contract neutron
+ * offers to external plugin authors. They are consumed by packages
+ * outside the neutron repository that are installed via
+ * `neutron.yml.plugins` and loaded at runtime.
+ *
+ * Stability promise:
+ * - **Pre-1.0** (current): breaking changes may happen in minor
+ *   releases. Changes are documented in the CHANGELOG and generally
+ *   avoided when possible.
+ * - **Post-1.0**: breaking changes to anything exported from this
+ *   file require a major version bump.
+ *
+ * "Breaking" includes: renaming or removing a field/method,
+ * tightening a type (e.g., making an optional field required),
+ * changing a method signature, or changing the runtime contract
+ * (e.g., when `execute` is called relative to other plugin methods).
+ *
+ * Adding new optional fields or methods is NOT breaking. Extending a
+ * union type with new members is NOT breaking for plugin authors,
+ * but callers matching on the union will need to handle new cases.
+ * ───────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * Standard action names shared across ecosystem plugins.
+ *
+ * @public
+ */
 export const STANDARD_ACTIONS: {
   readonly LINT: "lint";
   readonly LINT_FIX: "lint:fix";
@@ -27,7 +58,11 @@ export const STANDARD_ACTIONS: {
   CODEGEN: "codegen",
 };
 
-/** Result of a plugin execution */
+/**
+ * Result of a plugin execution.
+ *
+ * @public
+ */
 export interface ExecuteResult {
   readonly success: boolean;
   readonly duration: number;
@@ -39,7 +74,11 @@ export interface ExecuteResult {
 
 // ─── Pipeline types ──────────────────────────────────────────────────────────
 
-/** Metadata describing a single pipeline step */
+/**
+ * Metadata describing a single pipeline step.
+ *
+ * @public
+ */
 export interface PipelineStep {
   /** Short identifier (e.g., "export-spec", "prepare-spec", "generate-ts") */
   readonly name: string;
@@ -81,9 +120,15 @@ export interface WatchPathSuggestion {
 }
 
 /**
- * Ecosystem plugin — handles language-level operations.
+ * Ecosystem plugin — handles language-level operations (lint, format,
+ * build, test, typecheck, codegen) for a specific language.
  *
- * Examples: neutron-typescript, neutron-dart, neutron-rust
+ * External plugins implementing this interface are loaded via
+ * `neutron.yml.plugins`. Built-in plugins cover TypeScript, Dart,
+ * Python, Rust, Go, PHP. Examples in the wild might be
+ * `neutron-plugin-zig`, `neutron-plugin-kotlin`, `neutron-plugin-ruby`.
+ *
+ * @public
  */
 export interface EcosystemPlugin {
   readonly type: "ecosystem";
@@ -149,7 +194,11 @@ export interface EcosystemPlugin {
   suggestWatchPaths?(pkg: WorkspacePackage, root: string): Promise<WatchPathSuggestion | null>;
 }
 
-/** Returned by canHandleDomainArtifact when the plugin can handle it */
+/**
+ * Returned by canHandleDomainArtifact when the plugin can handle it.
+ *
+ * @public
+ */
 export interface DomainCapability {
   /** Action name to pass to execute() */
   readonly action: string;
@@ -158,10 +207,17 @@ export interface DomainCapability {
 }
 
 /**
- * Domain plugin — handles protocol/spec-level operations.
- * Delegates actual code generation to ecosystem plugins.
+ * Domain plugin — handles protocol/spec-level operations on a single
+ * artifact type (OpenAPI specs, design tokens, JSON schemas, assets).
+ * Delegates actual code generation to ecosystem plugins via
+ * `canHandleDomainArtifact`.
  *
- * Examples: neutron-openapi, neutron-graphql, neutron-protobuf
+ * External plugins implementing this interface are loaded via
+ * `neutron.yml.plugins`. Built-in plugins cover openapi, design,
+ * assets, and schema. Examples in the wild might be
+ * `neutron-plugin-graphql`, `neutron-plugin-protobuf`.
+ *
+ * @public
  */
 export interface DomainPlugin {
   readonly type: "domain";
@@ -226,6 +282,8 @@ export interface DomainPlugin {
 /**
  * Execution context provided by neutron core to plugins.
  * Gives plugins access to the registry without importing other plugins directly.
+ *
+ * @public
  */
 export interface ExecutionContext {
   /** The full workspace graph */
@@ -288,10 +346,17 @@ export interface ExecutionContext {
   readonly bridgeFormat?: string | undefined;
 }
 
+/** @public */
 export interface EcosystemHandler {
   readonly plugin: EcosystemPlugin;
   readonly pkg: WorkspacePackage;
   readonly capability: DomainCapability;
 }
 
+/**
+ * Discriminated union of the two plugin tiers. External plugins may
+ * export values of either type.
+ *
+ * @public
+ */
 export type NeutronPlugin = EcosystemPlugin | DomainPlugin;

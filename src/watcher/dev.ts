@@ -9,7 +9,7 @@ import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
 import type { WorkspaceGraph } from "@/graph/types";
 import { DIM, RED, RESET, YELLOW } from "@/output";
-import { loadPlugins } from "@/plugins/loader";
+import { loadPluginsFromConfig } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
 import { detectPackageManager } from "@/pm-detect";
 import {
@@ -94,7 +94,7 @@ export async function runDev(parsers: ParserRegistry, options: DevOptions = {}):
       logDebug(`packages in graph: ${graph.packages.size}`);
     }
 
-    const { ecosystem, domain } = loadPlugins();
+    const { ecosystem, domain } = await loadPluginsFromConfig(config, root);
     const registry = new PluginRegistry(ecosystem, domain);
 
     if (graph.bridges.length === 0) {

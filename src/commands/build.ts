@@ -6,7 +6,7 @@ import type { ParserRegistry } from "@/graph/workspace";
 import type { WorkspacePackage } from "@/graph/types";
 import { topologicalSort } from "@/graph/topo";
 import { BOLD, DIM, FAIL, PASS, RESET } from "@/output";
-import { loadPlugins } from "@/plugins/loader";
+import { loadPluginsFromConfig } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
 import { STANDARD_ACTIONS } from "@/plugins/types";
 import { detectPackageManager } from "@/pm-detect";
@@ -49,7 +49,7 @@ export async function runBuild(
   const { quiet = false } = options;
   const { config, root } = await loadConfig();
   const graph = await buildWorkspaceGraph(config, root, parsers);
-  const plugins = loadPlugins();
+  const plugins = await loadPluginsFromConfig(config, root);
   const registry = new PluginRegistry(plugins.ecosystem, plugins.domain);
   const pm = detectPackageManager(root);
   const context = registry.createContext(graph, root, pm);

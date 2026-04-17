@@ -9,7 +9,7 @@ import { scanRepo, type DiscoveredPackage } from "@/discovery/scanner";
 import { printBanner } from "@/banner";
 import { DIM, GREEN, ORANGE, RESET } from "@/output";
 import type { ParserRegistry } from "@/graph/workspace";
-import { loadPlugins } from "@/plugins/loader";
+import { loadPluginsFromConfig } from "@/plugins/loader";
 import { PluginRegistry } from "@/plugins/registry";
 import type { WatchPathSuggestion } from "@/plugins/types";
 import { mergeMigratedConfig, migrateLintFormatConfig } from "@/commands/migrate";
@@ -73,8 +73,9 @@ export async function runReconciliation(
 
   s.stop("Scan complete");
 
-  // Load plugins for watch path suggestions
-  const { ecosystem, domain } = loadPlugins();
+  // Load plugins for watch path suggestions — config is the existing
+  // neutron.yml so external plugins declared there are available here.
+  const { ecosystem, domain } = await loadPluginsFromConfig(existing, root);
   const pluginRegistry = new PluginRegistry(ecosystem, domain);
   const reconPackageMap = buildPackageMap(supported);
 
