@@ -35,6 +35,12 @@ jobs:
         with:
           go-version: "1.22"
 
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: none
+          coverage: none
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
