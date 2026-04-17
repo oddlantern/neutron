@@ -2,12 +2,11 @@
 
 ## [0.1.4](https://github.com/oddlantern/neutron/compare/v0.1.3...v0.1.4) (2026-04-17)
 
-
 ### Features
 
-* **plugins:** axum + utoipa framework adapter for Rust OpenAPI export ([1205037](https://github.com/oddlantern/neutron/commit/1205037a451f2a695987a24f17171a01d7ac9cbc))
-* **plugins:** rust design token codegen ([1565383](https://github.com/oddlantern/neutron/commit/15653832a00915ae1cf32f25d2a94c37829331a2))
-* **plugins:** rust OpenAPI models codegen — types only by convention ([54b3d79](https://github.com/oddlantern/neutron/commit/54b3d79490979495a388e59c8415c936b4f20aa1))
+- **plugins:** axum + utoipa framework adapter for Rust OpenAPI export ([1205037](https://github.com/oddlantern/neutron/commit/1205037a451f2a695987a24f17171a01d7ac9cbc))
+- **plugins:** rust design token codegen ([1565383](https://github.com/oddlantern/neutron/commit/15653832a00915ae1cf32f25d2a94c37829331a2))
+- **plugins:** rust OpenAPI models codegen — types only by convention ([54b3d79](https://github.com/oddlantern/neutron/commit/54b3d79490979495a388e59c8415c936b4f20aa1))
 
 ## [0.1.3](https://github.com/oddlantern/neutron/compare/v0.1.2...v0.1.3) (2026-04-17)
 
