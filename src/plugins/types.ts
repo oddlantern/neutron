@@ -91,6 +91,13 @@ export interface EcosystemPlugin {
   readonly name: string;
   /** Manifest filename this plugin understands */
   readonly manifest: string;
+  /**
+   * Marks the plugin as not yet at parity with stable plugins.
+   * Surfaced by `neutron doctor` and init flows so users know the
+   * limitations. Drop once the plugin lands framework detection,
+   * full codegen support, and tool-resolution parity.
+   */
+  readonly experimental?: boolean;
 
   /**
    * Can this plugin handle the given package?

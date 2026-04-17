@@ -192,4 +192,11 @@ describe("ecosystem plugin contract parity", () => {
   test.each(plugins)("$name plugin: detect rejects unknown ecosystem", async ({ plugin }) => {
     expect(await plugin.detect(makePkg("totally-unknown", "x"), "/tmp")).toBe(false);
   });
+
+  // All four are still thin stubs relative to TS/Dart — the experimental
+  // flag signals that to doctor/init surfaces. Drop once a plugin lands
+  // framework detection + full codegen parity.
+  test.each(plugins)("$name plugin is marked experimental", ({ plugin }) => {
+    expect(plugin.experimental).toBe(true);
+  });
 });

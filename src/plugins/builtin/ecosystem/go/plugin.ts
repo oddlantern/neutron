@@ -21,6 +21,7 @@ export const goPlugin: EcosystemPlugin = {
   type: "ecosystem",
   name: "go",
   manifest: "go.mod",
+  experimental: true,
 
   async detect(pkg: WorkspacePackage): Promise<boolean> {
     return pkg.ecosystem === "go";

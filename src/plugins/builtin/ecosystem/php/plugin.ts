@@ -32,6 +32,7 @@ export const phpPlugin: EcosystemPlugin = {
   type: "ecosystem",
   name: "php",
   manifest: "composer.json",
+  experimental: true,
 
   async detect(pkg: WorkspacePackage): Promise<boolean> {
     return pkg.ecosystem === "php";

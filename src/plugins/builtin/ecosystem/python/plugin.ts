@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import type { WorkspacePackage } from "@/graph/types";
 import type {
   DomainCapability,
@@ -11,9 +14,41 @@ import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/python/sche
 
 const WATCH_PATTERNS: readonly string[] = ["**/*.py", "pyproject.toml"];
 
-/** Check if a tool is available on PATH */
-async function hasTool(name: string, cwd: string): Promise<boolean> {
-  const result = await runCommand("which", [name], cwd);
+/**
+ * Resolve a Python tool binary, preferring per-package and workspace
+ * venvs before falling back to PATH. Returns an absolute path when
+ * found in a venv, or the bare name when PATH resolution should be used.
+ *
+ * Resolution order:
+ *   1. <pkgDir>/.venv/bin/<name>   (per-package venv — most common)
+ *   2. <pkgDir>/venv/bin/<name>    (alt convention)
+ *   3. <root>/.venv/bin/<name>     (shared workspace venv)
+ *   4. <name>                       (PATH fallback)
+ */
+export function resolvePythonTool(name: string, pkgDir: string, root: string): string {
+  const candidates = [
+    join(pkgDir, ".venv", "bin", name),
+    join(pkgDir, "venv", "bin", name),
+    join(root, ".venv", "bin", name),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return name;
+}
+
+/**
+ * Check if a Python tool is available — either resolved from a venv or
+ * present on PATH.
+ */
+async function hasPythonTool(name: string, pkgDir: string, root: string): Promise<boolean> {
+  const resolved = resolvePythonTool(name, pkgDir, root);
+  if (resolved !== name) {
+    return true;
+  }
+  const result = await runCommand("which", [name], pkgDir);
   return result.success;
 }
 
@@ -21,6 +56,7 @@ export const pythonPlugin: EcosystemPlugin = {
   type: "ecosystem",
   name: "python",
   manifest: "pyproject.toml",
+  experimental: true,
 
   async detect(pkg: WorkspacePackage): Promise<boolean> {
     return pkg.ecosystem === "python";
@@ -30,22 +66,22 @@ export const pythonPlugin: EcosystemPlugin = {
     return WATCH_PATTERNS;
   },
 
-  async getActions(_pkg: WorkspacePackage, root: string): Promise<readonly string[]> {
+  async getActions(pkg: WorkspacePackage, root: string): Promise<readonly string[]> {
+    const pkgDir = join(root, pkg.path);
     const actions: string[] = [];
-    const cwd = root;
 
-    if (await hasTool("ruff", cwd)) {
+    if (await hasPythonTool("ruff", pkgDir, root)) {
       actions.push(STANDARD_ACTIONS.LINT, STANDARD_ACTIONS.LINT_FIX);
       actions.push(STANDARD_ACTIONS.FORMAT, STANDARD_ACTIONS.FORMAT_CHECK);
     }
 
-    if (await hasTool("pytest", cwd)) {
+    if (await hasPythonTool("pytest", pkgDir, root)) {
       actions.push(STANDARD_ACTIONS.TEST);
     }
 
-    if (await hasTool("mypy", cwd)) {
+    if (await hasPythonTool("mypy", pkgDir, root)) {
       actions.push(STANDARD_ACTIONS.TYPECHECK);
-    } else if (await hasTool("pyright", cwd)) {
+    } else if (await hasPythonTool("pyright", pkgDir, root)) {
       actions.push(STANDARD_ACTIONS.TYPECHECK);
     }
 
@@ -56,11 +92,11 @@ export const pythonPlugin: EcosystemPlugin = {
     action: string,
     pkg: WorkspacePackage,
     root: string,
-    _context: ExecutionContext,
+    context: ExecutionContext,
   ): Promise<ExecuteResult> {
-    const cwd = `${root}/${pkg.path}`;
-    const fmtPy = _context.formatPython;
-    const lintPy = _context.lintPython;
+    const pkgDir = join(root, pkg.path);
+    const fmtPy = context.formatPython;
+    const lintPy = context.lintPython;
 
     switch (action) {
       case STANDARD_ACTIONS.LINT: {
@@ -75,7 +111,7 @@ export const pythonPlugin: EcosystemPlugin = {
           args.push("--target-version", lintPy.targetVersion);
         }
         args.push(".");
-        return runCommand("ruff", args, cwd);
+        return runCommand(resolvePythonTool("ruff", pkgDir, root), args, pkgDir);
       }
 
       case STANDARD_ACTIONS.LINT_FIX: {
@@ -84,7 +120,7 @@ export const pythonPlugin: EcosystemPlugin = {
           args.push("--fixable", lintPy.fixable.join(","));
         }
         args.push(".");
-        return runCommand("ruff", args, cwd);
+        return runCommand(resolvePythonTool("ruff", pkgDir, root), args, pkgDir);
       }
 
       case STANDARD_ACTIONS.FORMAT: {
@@ -96,7 +132,7 @@ export const pythonPlugin: EcosystemPlugin = {
           args.push("--config", `quote-style="${fmtPy.quoteStyle}"`);
         }
         args.push(".");
-        return runCommand("ruff", args, cwd);
+        return runCommand(resolvePythonTool("ruff", pkgDir, root), args, pkgDir);
       }
 
       case STANDARD_ACTIONS.FORMAT_CHECK: {
@@ -105,21 +141,21 @@ export const pythonPlugin: EcosystemPlugin = {
           args.push("--line-length", String(fmtPy.lineLength));
         }
         args.push(".");
-        return runCommand("ruff", args, cwd);
+        return runCommand(resolvePythonTool("ruff", pkgDir, root), args, pkgDir);
       }
 
       case STANDARD_ACTIONS.TEST:
-        return runCommand("pytest", [], cwd);
+        return runCommand(resolvePythonTool("pytest", pkgDir, root), [], pkgDir);
 
       case STANDARD_ACTIONS.TYPECHECK: {
-        if (await hasTool("mypy", root)) {
-          return runCommand("mypy", ["."], cwd);
+        if (await hasPythonTool("mypy", pkgDir, root)) {
+          return runCommand(resolvePythonTool("mypy", pkgDir, root), ["."], pkgDir);
         }
-        return runCommand("pyright", ["."], cwd);
+        return runCommand(resolvePythonTool("pyright", pkgDir, root), ["."], pkgDir);
       }
 
       case "generate-schema-python":
-        return executeSchemaGeneration(pkg, root, _context);
+        return executeSchemaGeneration(pkg, root, context);
 
       default:
         return {

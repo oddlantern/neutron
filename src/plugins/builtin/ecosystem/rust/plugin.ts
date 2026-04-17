@@ -15,6 +15,7 @@ export const rustPlugin: EcosystemPlugin = {
   type: "ecosystem",
   name: "rust",
   manifest: "Cargo.toml",
+  experimental: true,
 
   async detect(pkg: WorkspacePackage): Promise<boolean> {
     return pkg.ecosystem === "rust";
