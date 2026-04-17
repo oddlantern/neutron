@@ -6,7 +6,7 @@ import { loadConfig } from "@/config/loader";
 import { buildWorkspaceGraph } from "@/graph/workspace";
 import type { ParserRegistry } from "@/graph/workspace";
 import { BOLD, DIM, FAIL, GREEN, PASS, RED, RESET, YELLOW } from "@/output";
-import { findExperimentalEcosystems, loadPlugins } from "@/plugins/loader";
+import { findExperimentalEcosystems, loadPlugins, loadPluginsWithExternal } from "@/plugins/loader";
 import { VERSION } from "@/version";
 
 const WARN = `${YELLOW}!${RESET}`;
@@ -158,6 +158,38 @@ export async function runDoctor(parsers: ParserRegistry): Promise<number> {
           status: "warn",
           detail: `${names} — feature parity in progress`,
         });
+      }
+    } catch {
+      // Config failure already reported in section 1
+    }
+  }
+
+  // 4b. External plugins — surface load results and errors
+  if (root) {
+    try {
+      const loaded = await loadConfig();
+      const declared = loaded.config.plugins ?? [];
+      if (declared.length > 0) {
+        const { external } = await loadPluginsWithExternal(declared, root);
+        const failed = external.filter((e) => !e.loaded);
+        const succeeded = external.filter((e) => e.loaded);
+
+        if (succeeded.length > 0) {
+          const names = succeeded.map((e) => `${e.packageName}[${e.plugins.length}]`).join(", ");
+          results.push({
+            label: "external plugins",
+            status: "ok",
+            detail: `${String(succeeded.length)} loaded — ${names}`,
+          });
+        }
+
+        for (const entry of failed) {
+          results.push({
+            label: `external plugin ${entry.packageName}`,
+            status: "fail",
+            detail: entry.error ?? "unknown error",
+          });
+        }
       }
     } catch {
       // Config failure already reported in section 1

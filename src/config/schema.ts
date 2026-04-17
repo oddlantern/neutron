@@ -215,6 +215,13 @@ export const configSchema = z.object({
   lint: lintSchema.optional(),
   format: formatSchema.optional(),
   hooks: hooksSchema.optional(),
+  /**
+   * External plugin package names to load from node_modules. Each must
+   * resolve to a package that default-exports a plugin conforming to
+   * EcosystemPlugin or DomainPlugin, or that exports a `plugins` array
+   * of such.
+   */
+  plugins: z.array(z.string()).optional(),
 });
 
 export type NeutronConfig = z.infer<typeof configSchema>;
