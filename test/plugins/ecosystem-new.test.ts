@@ -87,7 +87,7 @@ describe("rustPlugin", () => {
     expect(actions).toContain(STANDARD_ACTIONS.BUILD);
   });
 
-  test("canHandleDomainArtifact: openapi + schema supported", async () => {
+  test("canHandleDomainArtifact: openapi + schema + design-tokens supported", async () => {
     const pkg = makePkg("rust", "pkg");
     expect((await rustPlugin.canHandleDomainArtifact?.("openapi", "spec.json", pkg, "/tmp"))?.action).toBe(
       "generate-openapi-rust",
@@ -95,7 +95,18 @@ describe("rustPlugin", () => {
     expect((await rustPlugin.canHandleDomainArtifact?.("schema", "s.schema.json", pkg, "/tmp"))?.action).toBe(
       "generate-schema-rust",
     );
-    expect(await rustPlugin.canHandleDomainArtifact?.("design-tokens", "t.json", pkg, "/tmp")).toBeNull();
+    expect((await rustPlugin.canHandleDomainArtifact?.("design-tokens", "t.json", pkg, "/tmp"))?.action).toBe(
+      "generate-design-tokens-rust",
+    );
+  });
+
+  test("openapi description communicates the types-only contract", async () => {
+    // Rust doesn't ship a full client generator by convention — users
+    // write thin reqwest/hyper wrappers. The advertised description
+    // must make this visible up front.
+    const pkg = makePkg("rust", "pkg");
+    const capability = await rustPlugin.canHandleDomainArtifact?.("openapi", "spec.json", pkg, "/tmp");
+    expect(capability?.description).toContain("types only");
   });
 });
 

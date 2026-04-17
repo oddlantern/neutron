@@ -8,6 +8,7 @@ import type {
 import { STANDARD_ACTIONS } from "@/plugins/types";
 import { runCommand } from "@/process";
 import { executeSchemaGeneration } from "@/plugins/builtin/ecosystem/rust/schema-codegen";
+import { executeTokenGeneration } from "@/plugins/builtin/ecosystem/rust/token-codegen";
 
 const WATCH_PATTERNS: readonly string[] = ["src/**/*.rs", "Cargo.toml"];
 
@@ -73,6 +74,9 @@ export const rustPlugin: EcosystemPlugin = {
       case STANDARD_ACTIONS.BUILD:
         return runCommand("cargo", ["build"], cwd);
 
+      case "generate-design-tokens-rust":
+        return executeTokenGeneration(pkg, root, _context);
+
       case "generate-schema-rust":
         return executeSchemaGeneration(pkg, root, _context);
 
@@ -94,7 +98,13 @@ export const rustPlugin: EcosystemPlugin = {
     if (domain === "openapi") {
       return {
         action: "generate-openapi-rust",
-        description: "Generate Rust OpenAPI client",
+        description: "Generate Rust OpenAPI models (types only — write your own client)",
+      };
+    }
+    if (domain === "design-tokens") {
+      return {
+        action: "generate-design-tokens-rust",
+        description: "Generate Rust design token constants",
       };
     }
     if (domain === "schema") {
