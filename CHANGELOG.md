@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1](https://github.com/oddlantern/neutron/compare/v0.1.0...v0.1.1) (2026-04-17)
+
+### Features
+
+- **cli:** surface experimental plugins in doctor + init ([b2c50dd](https://github.com/oddlantern/neutron/commit/b2c50dd9e8d336ec2291584de56f4a96124be77c))
+- **plugins:** add experimental flag; wire python tool resolution chain ([d025893](https://github.com/oddlantern/neutron/commit/d0258939b21b605efb591b950028def909a8c469))
+- **plugins:** FastAPI adapter for Python OpenAPI export ([c265514](https://github.com/oddlantern/neutron/commit/c265514b50dd6bbb1221f2fcb333aef72a12afad))
+- **plugins:** python design token codegen ([6a46342](https://github.com/oddlantern/neutron/commit/6a463423b8f23b8d251d4523c4e1dfe49eb38f40))
+- **plugins:** python OpenAPI client codegen via openapi-python-client ([fa78d1b](https://github.com/oddlantern/neutron/commit/fa78d1b0a3d477dce4afc7917db62b0a55a0b038))
+
 ## 0.1.0 (2026-04-17)
 
 ### Features
