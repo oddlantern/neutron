@@ -7,6 +7,7 @@ import { expressAdapter } from '../../src/plugins/builtin/domain/openapi/adapter
 import { fastifyAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/fastify.js';
 import { koaAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/koa.js';
 import { nestjsAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/nestjs.js';
+import { fastapiAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/fastapi.js';
 
 describe('framework adapter detection', () => {
   test('elysia adapter detects elysia + @elysiajs/openapi', () => {
@@ -96,5 +97,32 @@ describe('detectAdapter', () => {
     const adapter = detectAdapter(deps);
     expect(adapter).not.toBeNull();
     expect(adapter?.name).toBe('nestjs');
+  });
+
+  test('fastapi adapter detects fastapi in Python deps', () => {
+    // FastAPI has builtin OpenAPI support — no separate plugin needed,
+    // so the framework dep and the openapi dep are the same entry.
+    const deps = { fastapi: '^0.110.0' };
+    expect(fastapiAdapter.detect(deps)).toBe(true);
+
+    const adapter = detectAdapter(deps);
+    expect(adapter?.name).toBe('fastapi');
+  });
+
+  test('fastapi adapter rejects Python deps without fastapi', () => {
+    const deps = { flask: '^3.0.0', uvicorn: '^0.29.0' };
+    expect(fastapiAdapter.detect(deps)).toBe(false);
+  });
+
+  test('fastapi adapter exposes /openapi.json as default spec path', () => {
+    expect(fastapiAdapter.defaultSpecPath).toBe('/openapi.json');
+    // FastAPI apps behind a prefix or mounted under /api sometimes
+    // expose the spec at a prefixed path — fallbacks cover these.
+    expect(fastapiAdapter.fallbackSpecPaths).toContain('/api/openapi.json');
+  });
+
+  test('fastapi adapter is flagged as the python ecosystem', () => {
+    // server-boot branches on this to pick uvicorn over tsx/bun.
+    expect(fastapiAdapter.ecosystem).toBe('python');
   });
 });

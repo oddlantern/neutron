@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { resolvePythonTool } from "@/plugins/builtin/ecosystem/python/plugin";
 import { isRecord, getScripts } from "@/plugins/builtin/shared/exec";
 
 /** Default timeout waiting for server to accept connections (ms) */
@@ -40,7 +41,7 @@ export async function findFreePort(): Promise<number> {
   });
 }
 
-/** Well-known entry files checked in order */
+/** Well-known entry files checked in order. TS patterns first, Python last. */
 const ENTRY_CANDIDATES: readonly string[] = [
   "src/index.ts",
   "src/main.ts",
@@ -48,6 +49,10 @@ const ENTRY_CANDIDATES: readonly string[] = [
   "index.ts",
   "main.ts",
   "app.ts",
+  "src/main.py",
+  "src/app.py",
+  "main.py",
+  "app.py",
 ];
 
 /**
@@ -64,6 +69,9 @@ function parseEntryFromScript(script: string): string | null {
 /**
  * Auto-detect the server entry file from an absolute package directory.
  * Priority: main field → dev script → start script → well-known paths.
+ *
+ * For Python packages, package.json won't exist — we fall straight
+ * through to the well-known path list, which includes main.py/app.py.
  */
 export async function detectEntryFile(packageDir: string): Promise<string | null> {
   try {
@@ -92,10 +100,10 @@ export async function detectEntryFile(packageDir: string): Promise<string | null
       }
     }
   } catch {
-    // manifest unreadable
+    // manifest unreadable — could be a Python package
   }
 
-  // Check well-known paths
+  // Check well-known paths (covers both TS and Python conventions)
   for (const candidate of ENTRY_CANDIDATES) {
     if (existsSync(join(packageDir, candidate))) {
       return candidate;
@@ -103,6 +111,26 @@ export async function detectEntryFile(packageDir: string): Promise<string | null
   }
 
   return null;
+}
+
+/**
+ * Convert a Python source path to a module path and app variable.
+ * "main.py" → { module: "main", app: "app" }
+ * "src/main.py" → { module: "src.main", app: "app" }
+ * "main.py:myapp" → { module: "main", app: "myapp" }  (explicit override)
+ */
+export function pythonEntryToModule(entryFile: string): {
+  readonly module: string;
+  readonly app: string;
+} {
+  const colonIdx = entryFile.indexOf(":");
+  const path = colonIdx >= 0 ? entryFile.slice(0, colonIdx) : entryFile;
+  const app = colonIdx >= 0 ? entryFile.slice(colonIdx + 1) : "app";
+
+  const withoutExt = path.endsWith(".py") ? path.slice(0, -3) : path;
+  const module = withoutExt.replace(/\//g, ".");
+
+  return { module, app };
 }
 
 /** Kill a child process gracefully, then forcefully if needed */
@@ -292,8 +320,41 @@ export interface SpawnedServer {
 }
 
 /**
+ * Decide how to spawn the server based on the entry file's ecosystem.
+ * Python entry files (`.py`) spawn via uvicorn from the venv chain;
+ * everything else goes through node/bun + tsx.
+ */
+function buildSpawnCommand(
+  packageDir: string,
+  pm: string,
+  entryFile: string,
+  port: number,
+  root: string,
+): { readonly runner: string; readonly args: readonly string[] } {
+  // Python (FastAPI via uvicorn) — recognized by .py entry or explicit :app syntax.
+  if (/\.py(?::|$)/.test(entryFile)) {
+    const { module, app } = pythonEntryToModule(entryFile);
+    const uvicorn = resolvePythonTool("uvicorn", packageDir, root);
+    return {
+      runner: uvicorn,
+      args: [`${module}:${app}`, "--port", String(port)],
+    };
+  }
+
+  // TypeScript / JavaScript — fall through to the existing runner pair.
+  return {
+    runner: pm === "bun" ? "bun" : "npx",
+    args: pm === "bun" ? ["run", entryFile] : ["tsx", entryFile],
+  };
+}
+
+/**
  * Boot a server process on a free port.
  * Returns the child process, port, and associated cleanup handlers.
+ *
+ * `root` is the workspace root — needed to resolve Python tools from a
+ * workspace-level .venv when no package-level venv exists. For TS it's
+ * a no-op.
  */
 export function spawnServer(
   packageDir: string,
@@ -301,13 +362,18 @@ export function spawnServer(
   entryFile: string,
   port: number,
   debug: ((msg: string) => void) | undefined,
+  root?: string,
 ): SpawnedServer {
-  const runnerArgs = pm === "bun" ? ["run", entryFile] : ["tsx", entryFile];
-  const runner = pm === "bun" ? "bun" : "npx";
+  // If root wasn't provided (older callers), derive it from packageDir.
+  // For relative resolution it doesn't matter — we only need it for
+  // the Python tool chain, and if the caller is still on the TS path
+  // this is never consulted.
+  const resolvedRoot = root ?? packageDir;
+  const { runner, args } = buildSpawnCommand(packageDir, pm, entryFile, port, resolvedRoot);
 
-  debug?.(`spawning: ${runner} ${runnerArgs.join(" ")} (cwd: ${packageDir})`);
+  debug?.(`spawning: ${runner} ${args.join(" ")} (cwd: ${packageDir})`);
 
-  const child = spawn(runner, runnerArgs, {
+  const child = spawn(runner, args, {
     cwd: packageDir,
     stdio: ["ignore", "pipe", "pipe"],
     env: {

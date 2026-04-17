@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs";
-import { writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+
+import { parse as parseToml } from "smol-toml";
 
 import type { FrameworkAdapter } from "@/plugins/builtin/domain/openapi/adapters/types";
 import type { ExecuteResult } from "@/plugins/types";
@@ -33,6 +35,13 @@ export function assertWithinRoot(filePath: string, root: string): void {
 export interface ExportOptions {
   /** Absolute path to the server package */
   readonly packageDir: string;
+  /**
+   * Absolute path to the workspace root. Used by Python server boot
+   * to fall back to a workspace-level `.venv/bin/` when the package
+   * doesn't have its own venv. Optional for backwards compat; Python
+   * resolution degrades to pkg-level-only if omitted.
+   */
+  readonly root?: string | undefined;
   /** Package manager to use */
   readonly pm: string;
   /** Framework adapter with endpoint info */
@@ -93,7 +102,7 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
   }
 
   // 3. Boot the server
-  const server = spawnServer(packageDir, pm, entryFile, port, debug);
+  const server = spawnServer(packageDir, pm, entryFile, port, debug, options.root);
 
   try {
     // 4. Wait for server to be ready
@@ -180,19 +189,71 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
 }
 
 /**
- * Detect a framework adapter for a package.
- * Reads the package.json and checks all adapters.
+ * Extract a flat { name → version } dep map from a pyproject.toml.
+ * Handles both PEP 621 ([project.dependencies]) and Poetry
+ * ([tool.poetry.dependencies], [tool.poetry.dev-dependencies]).
+ * Versions are approximate — we only care about presence for framework
+ * detection, not resolution.
  */
-export async function detectFrameworkAdapter(
-  pkgPath: string,
-  root: string,
-): Promise<FrameworkAdapter | null> {
-  const { detectAdapter } = await import("@/plugins/builtin/domain/openapi/adapters/index");
+function extractPyProjectDeps(manifest: Record<string, unknown>): Record<string, string> {
+  const deps: Record<string, string> = {};
 
+  // PEP 621 — [project.dependencies] is an array of PEP 508 strings.
+  const project = isRecord(manifest["project"]) ? manifest["project"] : null;
+  if (project && Array.isArray(project["dependencies"])) {
+    for (const spec of project["dependencies"]) {
+      if (typeof spec !== "string") continue;
+      const match = spec.match(/^([a-zA-Z0-9][-a-zA-Z0-9_.]*)/);
+      if (match?.[1]) {
+        deps[match[1]] = spec.slice(match[1].length).trim() || "*";
+      }
+    }
+  }
+  if (project && isRecord(project["optional-dependencies"])) {
+    for (const group of Object.values(project["optional-dependencies"])) {
+      if (!Array.isArray(group)) continue;
+      for (const spec of group) {
+        if (typeof spec !== "string") continue;
+        const match = spec.match(/^([a-zA-Z0-9][-a-zA-Z0-9_.]*)/);
+        if (match?.[1]) {
+          deps[match[1]] = spec.slice(match[1].length).trim() || "*";
+        }
+      }
+    }
+  }
+
+  // Poetry — [tool.poetry.dependencies] is a table keyed by name.
+  const tool = isRecord(manifest["tool"]) ? manifest["tool"] : null;
+  const poetry = tool && isRecord(tool["poetry"]) ? tool["poetry"] : null;
+  if (poetry) {
+    for (const field of ["dependencies", "dev-dependencies"]) {
+      const raw = poetry[field];
+      if (!isRecord(raw)) continue;
+      for (const [name, value] of Object.entries(raw)) {
+        if (name === "python") continue;
+        if (typeof value === "string") {
+          deps[name] = value;
+        } else if (isRecord(value) && typeof value["version"] === "string") {
+          deps[name] = value["version"];
+        } else {
+          deps[name] = "*";
+        }
+      }
+    }
+  }
+
+  return deps;
+}
+
+/**
+ * Read all dependencies from whichever manifest the package has. Tries
+ * package.json first (TS ecosystem), then pyproject.toml (Python).
+ */
+async function readAllDeps(pkgPath: string, root: string): Promise<Record<string, string>> {
+  // Try package.json
   try {
     const manifest = await readPackageJson(pkgPath, root);
     const allDeps: Record<string, string> = {};
-
     for (const field of ["dependencies", "devDependencies", "peerDependencies"]) {
       const deps = manifest[field];
       if (isRecord(deps)) {
@@ -203,9 +264,31 @@ export async function detectFrameworkAdapter(
         }
       }
     }
-
-    return detectAdapter(allDeps);
+    return allDeps;
   } catch {
-    return null;
+    // Fall through to pyproject
   }
+
+  // Try pyproject.toml
+  try {
+    const pyprojectPath = join(root, pkgPath, "pyproject.toml");
+    const content = await readFile(pyprojectPath, "utf-8");
+    const parsed = parseToml(content) as Record<string, unknown>;
+    return extractPyProjectDeps(parsed);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Detect a framework adapter for a package. Tries package.json first,
+ * then pyproject.toml — so TS and Python packages both work.
+ */
+export async function detectFrameworkAdapter(
+  pkgPath: string,
+  root: string,
+): Promise<FrameworkAdapter | null> {
+  const { detectAdapter } = await import("@/plugins/builtin/domain/openapi/adapters/index");
+  const deps = await readAllDeps(pkgPath, root);
+  return detectAdapter(deps);
 }

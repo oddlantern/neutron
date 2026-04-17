@@ -151,6 +151,7 @@ async function tryAdapterExport(
 
   return exportSpec({
     packageDir,
+    root,
     pm: context.packageManager,
     adapter,
     outputPath,

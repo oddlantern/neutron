@@ -2,6 +2,13 @@
 export interface FrameworkAdapter {
   /** Framework name for display */
   readonly name: string;
+  /**
+   * Ecosystem this framework belongs to. Drives manifest reading (package.json
+   * vs pyproject.toml) and server-boot command selection (node vs uvicorn).
+   * Defaults to typescript when omitted so existing adapters don't need to
+   * set it explicitly.
+   */
+  readonly ecosystem?: "typescript" | "python";
   /** Detect this framework from package dependencies */
   detect(deps: Record<string, string>): boolean;
   /** The OpenAPI plugin package name(s) to check for */
