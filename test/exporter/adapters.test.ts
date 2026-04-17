@@ -9,6 +9,7 @@ import { koaAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/ko
 import { nestjsAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/nestjs.js';
 import { fastapiAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/fastapi.js';
 import { axumAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/axum.js';
+import { humaAdapter } from '../../src/plugins/builtin/domain/openapi/adapters/huma.js';
 
 describe('framework adapter detection', () => {
   test('elysia adapter detects elysia + @elysiajs/openapi', () => {
@@ -129,6 +130,35 @@ describe('detectAdapter', () => {
     // detect() matches on framework, but detectAdapter requires an
     // openapi plugin (utoipa) too.
     expect(detectAdapter(deps)).toBeNull();
+  });
+
+  test('huma adapter detects huma v2 from go.mod deps', () => {
+    const deps = {
+      'github.com/danielgtaylor/huma/v2': 'v2.27.0',
+      'github.com/gin-gonic/gin': 'v1.9.0',
+    };
+    expect(humaAdapter.detect(deps)).toBe(true);
+    // huma carries its own OpenAPI capability — framework + openapi
+    // plugin are the same import.
+    const adapter = detectAdapter(deps);
+    expect(adapter?.name).toBe('huma');
+  });
+
+  test('huma adapter detects future huma versions via import-path prefix', () => {
+    // When huma/v3 eventually ships, detect() still matches by prefix.
+    // Documents that detectAdapter additionally gates on openapiPlugins
+    // though — a v3 bump needs an entry there too.
+    const deps = { 'github.com/danielgtaylor/huma/v3': 'v3.0.0-beta' };
+    expect(humaAdapter.detect(deps)).toBe(true);
+    expect(detectAdapter(deps)).toBeNull();
+  });
+
+  test('huma adapter rejects go.mod without huma', () => {
+    const deps = {
+      'github.com/gin-gonic/gin': 'v1.9.0',
+      'github.com/go-chi/chi/v5': 'v5.0.0',
+    };
+    expect(humaAdapter.detect(deps)).toBe(false);
   });
 
 });

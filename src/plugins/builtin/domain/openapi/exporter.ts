@@ -9,6 +9,7 @@ import type { ExecuteResult } from "@/plugins/types";
 import { isRecord, readPackageJson } from "@/plugins/builtin/shared/exec";
 import {
   DEFAULT_STARTUP_TIMEOUT,
+  GO_STARTUP_TIMEOUT,
   RUST_STARTUP_TIMEOUT,
   detectEntryFile,
   fetchSpec,
@@ -59,6 +60,13 @@ export interface ExportOptions {
   readonly verbose?: boolean | undefined;
 }
 
+/** Per-ecosystem startup timeout for `cargo run` / `go run` cold starts. */
+function startupTimeoutForAdapter(ecosystem: string | undefined): number {
+  if (ecosystem === "rust") return RUST_STARTUP_TIMEOUT;
+  if (ecosystem === "go") return GO_STARTUP_TIMEOUT;
+  return DEFAULT_STARTUP_TIMEOUT;
+}
+
 /**
  * Export an OpenAPI spec by booting the server, fetching the spec endpoint,
  * writing it to disk, and killing the server.
@@ -69,9 +77,10 @@ export async function exportSpec(options: ExportOptions): Promise<ExecuteResult>
     pm,
     adapter,
     outputPath,
-    // Rust cargo-run cold starts can take up to a minute; scale the
-    // default timeout per ecosystem so TS/Python don't pay the tax.
-    startupTimeout = adapter.ecosystem === "rust" ? RUST_STARTUP_TIMEOUT : DEFAULT_STARTUP_TIMEOUT,
+    // Scale the default timeout per ecosystem so TS/Python don't pay
+    // the compile tax. Rust cargo-run can hit 30-60s cold; Go is
+    // faster but still measurable; everything else boots near-instantly.
+    startupTimeout = startupTimeoutForAdapter(adapter.ecosystem),
     verbose = false,
   } = options;
   const start = performance.now();
@@ -274,8 +283,62 @@ function extractCargoDeps(manifest: Record<string, unknown>): Record<string, str
 }
 
 /**
+ * Parse dependencies from a go.mod file.
+ *
+ * go.mod syntax (relevant bits):
+ *   require github.com/foo/bar v1.2.3
+ *   require (
+ *     github.com/foo/bar v1.2.3
+ *     github.com/baz/qux v4.5.6 // indirect
+ *   )
+ *
+ * We ignore `// indirect` deps for framework detection — those aren't
+ * direct users of the adapter framework. Comments and empty lines
+ * are skipped.
+ */
+function extractGoModDeps(content: string): Record<string, string> {
+  const deps: Record<string, string> = {};
+  const lines = content.split("\n");
+  let inBlock = false;
+
+  for (const rawLine of lines) {
+    const stripped = rawLine.replace(/\/\/.*$/, "").trim();
+    if (!stripped) continue;
+
+    if (stripped.startsWith("require (")) {
+      inBlock = true;
+      continue;
+    }
+    if (inBlock && stripped === ")") {
+      inBlock = false;
+      continue;
+    }
+
+    // "require github.com/foo/bar v1.0.0" (single-line form)
+    const single = stripped.match(/^require\s+(\S+)\s+(\S+)/);
+    if (single?.[1] && single[2]) {
+      if (!rawLine.includes("// indirect")) {
+        deps[single[1]] = single[2];
+      }
+      continue;
+    }
+
+    // Inside a require(...) block: "github.com/foo/bar v1.0.0"
+    if (inBlock) {
+      const block = stripped.match(/^(\S+)\s+(\S+)/);
+      if (block?.[1] && block[2] && !rawLine.includes("// indirect")) {
+        deps[block[1]] = block[2];
+      }
+    }
+  }
+
+  return deps;
+}
+
+/**
  * Read all dependencies from whichever manifest the package has. Tries
- * package.json (TS), pyproject.toml (Python), then Cargo.toml (Rust).
+ * package.json (TS), pyproject.toml (Python), Cargo.toml (Rust), then
+ * go.mod (Go).
  */
 async function readAllDeps(pkgPath: string, root: string): Promise<Record<string, string>> {
   // Try package.json
@@ -313,6 +376,15 @@ async function readAllDeps(pkgPath: string, root: string): Promise<Record<string
     const content = await readFile(cargoPath, "utf-8");
     const parsed = parseToml(content) as Record<string, unknown>;
     return extractCargoDeps(parsed);
+  } catch {
+    // Fall through to go.mod
+  }
+
+  // Try go.mod
+  try {
+    const goModPath = join(root, pkgPath, "go.mod");
+    const content = await readFile(goModPath, "utf-8");
+    return extractGoModDeps(content);
   } catch {
     return {};
   }
