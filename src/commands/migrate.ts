@@ -15,7 +15,7 @@ export interface MigratedToolConfig {
 // ─── JSON/JSONC parsing ──────────────────────────────────────────────────────
 
 /** Strip single-line (//) and block comments from JSONC, preserving strings. */
-function stripJsonComments(raw: string): string {
+export function stripJsonComments(raw: string): string {
   return raw.replace(
     /("(?:[^"\\]|\\.)*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
     (_match, quoted: string | undefined) => quoted ?? "",
@@ -103,7 +103,7 @@ const OXLINT_JS_CONFIGS = ["oxlint.config.ts", "oxlint.config.js"] as const;
  * Extract the neutron lint section from an oxlint config object.
  * Produces ecosystem-centric structure: { ignore, typescript: { categories, rules } }
  */
-function extractLintConfig(parsed: Record<string, unknown>): Record<string, unknown> {
+export function extractLintConfig(parsed: Record<string, unknown>): Record<string, unknown> {
   const lint: Record<string, unknown> = {};
   const ts: Record<string, unknown> = {};
 
@@ -137,7 +137,7 @@ const FORMAT_META_KEYS = new Set(["$schema"]);
  * Extract all formatting options from an oxfmt/prettier config.
  * Produces ecosystem-centric structure: { typescript: { printWidth, semi, ... } }
  */
-function extractFormatConfig(parsed: Record<string, unknown>): Record<string, unknown> {
+export function extractFormatConfig(parsed: Record<string, unknown>): Record<string, unknown> {
   const ts: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (!FORMAT_META_KEYS.has(key)) {
