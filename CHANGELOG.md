@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2](https://github.com/oddlantern/neutron/compare/v0.2.0...v0.2.2) (2026-04-17)
+
+### Bug Fixes
+
+- **plugins:** wire external plugins through every command; declare API stable ([436b77c](https://github.com/oddlantern/neutron/commit/436b77c31c609bc4e34b312d2ad3fbe08dbce5e1))
+
+### Maintenance
+
+- finish 0.2 scope — plugin authoring docs, README update, gitignore schema.json, dependabot, doctor test ([778d08f](https://github.com/oddlantern/neutron/commit/778d08ff00112e26d113c1b073e3625d96e9a79c))
+
 ## [0.2.0](https://github.com/oddlantern/neutron/compare/v0.1.7...v0.2.0) (2026-04-17)
 
 ### Features
