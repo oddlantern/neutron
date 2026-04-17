@@ -132,7 +132,7 @@ describe("goPlugin", () => {
     expect(actions).toContain(STANDARD_ACTIONS.TYPECHECK);
   });
 
-  test("canHandleDomainArtifact: openapi + schema, design-tokens not yet wired", async () => {
+  test("canHandleDomainArtifact: openapi + schema + design-tokens supported", async () => {
     const pkg = makePkg("go", "pkg");
     expect((await goPlugin.canHandleDomainArtifact?.("openapi", "x.json", pkg, "/tmp"))?.action).toBe(
       "generate-openapi-go",
@@ -140,7 +140,9 @@ describe("goPlugin", () => {
     expect((await goPlugin.canHandleDomainArtifact?.("schema", "x.schema.json", pkg, "/tmp"))?.action).toBe(
       "generate-schema-go",
     );
-    expect(await goPlugin.canHandleDomainArtifact?.("design-tokens", "t.json", pkg, "/tmp")).toBeNull();
+    expect((await goPlugin.canHandleDomainArtifact?.("design-tokens", "t.json", pkg, "/tmp"))?.action).toBe(
+      "generate-design-tokens-go",
+    );
   });
 });
 
