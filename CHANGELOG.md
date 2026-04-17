@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.6](https://github.com/oddlantern/neutron/compare/v0.1.5...v0.1.6) (2026-04-17)
+
+
+### Features
+
+* **plugins:** Go design token codegen ([e85f123](https://github.com/oddlantern/neutron/commit/e85f123e6d5335680e7d0aaa0cd9ee02396c9890))
+* **plugins:** Go OpenAPI models codegen — types only by convention ([99c6391](https://github.com/oddlantern/neutron/commit/99c63913e667220e3a3f04af96d11dd0484359d4))
+* **plugins:** huma framework adapter for Go OpenAPI export ([a74f408](https://github.com/oddlantern/neutron/commit/a74f40876c8a69a0ea7382f207b7fc35aa1db916))
+
 ## [0.1.5](https://github.com/oddlantern/neutron/compare/v0.1.4...v0.1.5) (2026-04-17)
 
 ### Documentation
