@@ -1,6 +1,6 @@
 {
   "name": "@oddlantern/neutron",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Dense workspace synchronization across ecosystems",
   "type": "module",
   "sideEffects": false,
