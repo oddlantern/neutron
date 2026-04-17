@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest a capability neutron should add.
+labels: ["type:feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are welcome. To help us assess, please frame the request in terms of the workflow it unblocks — not just the feature itself.
+
+        If you're asking for an ecosystem or framework that neutron doesn't support yet, please say which one and what the typical project layout looks like.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the workflow this blocks or friction it removes. Concrete examples from a real codebase are the most useful.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What you'd like neutron to do. Sketch the CLI surface or config shape if applicable.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Tools or patterns you've tried, and why they fell short.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      description: Check all that apply.
+      options:
+        - label: I'd ship this as an external plugin if the API supported it
+        - label: This affects the plugin API (breaking change potential)
+        - label: This affects the `neutron.yml` schema (needs migration)

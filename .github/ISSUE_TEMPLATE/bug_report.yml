@@ -1,0 +1,67 @@
+name: Bug report
+description: Something isn't working as documented.
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report. Before filing, please verify the bug is reproducible on the latest release of `@oddlantern/neutron`.
+  - type: input
+    id: version
+    attributes:
+      label: neutron version
+      description: Output of `neutron --version`.
+      placeholder: "0.1.7"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - check / versions
+        - config / migrations
+        - bridges / generate
+        - dev / watcher
+        - hooks / install
+        - upgrade / outdated
+        - plugins (ecosystem)
+        - plugins (domain)
+        - CLI / output
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: |
+        Smallest possible `neutron.yml` and package layout that triggers the bug. A link to a repo is even better.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Command output
+      description: Output of the failing command. Redact anything sensitive.
+      render: shell
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, package manager, any relevant toolchain versions (cargo, dart, python, go, php).
+      placeholder: |
+        macOS 14.4
+        Node 20.19
+        bun 1.1.29
+        ...
+    validations:
+      required: true
