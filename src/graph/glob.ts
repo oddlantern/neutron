@@ -1,80 +1,60 @@
-import { readdirSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { globSync } from "tinyglobby";
+
+import { YELLOW, RESET } from "@/output";
 
 /**
- * Expand package path patterns that contain `*` wildcards.
- * Supports single-level `*` expansion (e.g., `apps/*`, `packages/*`).
- * Literal paths (no `*`) are returned as-is.
+ * Expand `packages:` patterns against the workspace root.
  *
- * @returns Deduplicated list of expanded paths.
+ * Accepts the full glob grammar (via tinyglobby):
+ *   - literals:        `apps/web`
+ *   - single-level:    `apps/*`
+ *   - recursive:       `services/**`
+ *   - brace expansion: `{apps,tools}/*`
+ *   - exclusions:      `!packages/experimental-*` (filters matches from earlier patterns)
+ *
+ * A pattern that resolves to zero packages emits a warning rather than an
+ * error — users may be building toward packages that don't exist yet.
  */
 export function expandPackageGlobs(patterns: readonly string[], root: string): readonly string[] {
-  const results: string[] = [];
+  if (patterns.length === 0) {
+    return [];
+  }
+
+  const includes: string[] = [];
+  const excludes: string[] = [];
+  for (const p of patterns) {
+    if (p.startsWith("!")) {
+      excludes.push(p.slice(1));
+    } else {
+      includes.push(p);
+    }
+  }
+
   const seen = new Set<string>();
+  const results: string[] = [];
 
-  for (const pattern of patterns) {
-    if (!pattern.includes("*")) {
-      // Literal path — pass through unchanged
-      if (!seen.has(pattern)) {
-        seen.add(pattern);
-        results.push(pattern);
-      }
+  for (const pattern of includes) {
+    const matches = globSync(pattern, {
+      cwd: root,
+      onlyDirectories: true,
+      ignore: excludes,
+      dot: false,
+      expandDirectories: false,
+    });
+
+    if (matches.length === 0) {
+      console.error(`${YELLOW}warn:${RESET} packages pattern "${pattern}" matched no packages`);
       continue;
     }
 
-    const segments = pattern.split("/");
-    const starIndex = segments.findIndex((s) => s.includes("*"));
+    // Normalize: tinyglobby may return trailing slashes on directories; strip them.
+    // Alphabetize for predictable ordering across runs.
+    const normalized = matches.map((m) => (m.endsWith("/") ? m.slice(0, -1) : m)).sort();
 
-    if (starIndex === -1) {
-      // No star found (shouldn't happen given the includes check above)
-      if (!seen.has(pattern)) {
-        seen.add(pattern);
-        results.push(pattern);
-      }
-      continue;
-    }
-
-    // Build the parent directory path (segments before the star)
-    const parentSegments = segments.slice(0, starIndex);
-    const parentDir = parentSegments.length > 0 ? resolve(root, parentSegments.join("/")) : root;
-
-    // Build regex from the star segment (e.g., "app-*" → /^app-[^/]+$/)
-    const starSegment = segments[starIndex]!;
-    const regexSource = starSegment.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]+");
-    const segmentRegex = new RegExp(`^${regexSource}$`);
-
-    // Remaining segments after the star
-    const suffixSegments = segments.slice(starIndex + 1);
-
-    let entries: string[];
-    try {
-      entries = readdirSync(parentDir);
-    } catch {
-      // Parent directory doesn't exist — skip this pattern
-      continue;
-    }
-
-    for (const entry of entries) {
-      if (!segmentRegex.test(entry)) {
-        continue;
-      }
-
-      const fullPath = join(parentDir, entry);
-      try {
-        if (!statSync(fullPath).isDirectory()) {
-          continue;
-        }
-      } catch {
-        continue;
-      }
-
-      // If there are suffix segments, append them
-      const expandedSegments = [...parentSegments, entry, ...suffixSegments];
-      const expanded = expandedSegments.join("/");
-
-      if (!seen.has(expanded)) {
-        seen.add(expanded);
-        results.push(expanded);
+    for (const path of normalized) {
+      if (!seen.has(path)) {
+        seen.add(path);
+        results.push(path);
       }
     }
   }

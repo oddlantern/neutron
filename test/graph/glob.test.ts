@@ -44,17 +44,28 @@ describe("expandPackageGlobs", () => {
 
   test("returns empty for glob with no matches", () => {
     const root = makeTempDir();
-    // No subdirectories exist under apps/
-
-    const result = expandPackageGlobs(["apps/*"], root);
-    expect(result).toEqual([]);
+    // No subdirectories exist under apps/ — new contract: emits a warning on zero match.
+    const warnSpy = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = expandPackageGlobs(["apps/*"], root);
+      expect(result).toEqual([]);
+      expect(warnSpy.mock.calls.length).toBeGreaterThan(0);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   test("returns empty when parent directory does not exist", () => {
     const root = makeTempDir();
-
-    const result = expandPackageGlobs(["nonexistent/*"], root);
-    expect(result).toEqual([]);
+    // Non-existent parent is a zero-match — new contract: emits a warning.
+    const warnSpy = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = expandPackageGlobs(["nonexistent/*"], root);
+      expect(result).toEqual([]);
+      expect(warnSpy.mock.calls.length).toBeGreaterThan(0);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   test("skips non-directory matches", () => {
@@ -110,8 +121,9 @@ describe("expandPackageGlobs", () => {
     mkdirSync(join(root, "services", "api", "v2"), { recursive: true });
 
     const result = expandPackageGlobs(["services/**"], root);
+    // tinyglobby's ** matches zero or more path segments, so "services" itself is included.
     expect(new Set(result)).toEqual(
-      new Set(["services/api", "services/api/v1", "services/api/v2", "services/worker"]),
+      new Set(["services", "services/api", "services/api/v1", "services/api/v2", "services/worker"]),
     );
   });
 
@@ -154,6 +166,22 @@ describe("expandPackageGlobs", () => {
       expect(calls.some((line) => line.toLowerCase().includes("no packages"))).toBe(
         true,
       );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  test("warns when a literal path does not exist", () => {
+    const root = makeTempDir();
+
+    const warnSpy = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = expandPackageGlobs(["packages/not-yet-created"], root);
+      expect(result).toEqual([]);
+      const calls = warnSpy.mock.calls.map((c) => c.join(" "));
+      expect(
+        calls.some((line) => line.includes("packages/not-yet-created")),
+      ).toBe(true);
     } finally {
       warnSpy.mockRestore();
     }
