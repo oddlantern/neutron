@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 
 import { expandPackageGlobs } from "../../src/graph/glob.js";
 
@@ -139,5 +139,23 @@ describe("expandPackageGlobs", () => {
     expect(new Set(result)).toEqual(
       new Set(["apps/web", "tools/cli", "tools/doctor"]),
     );
+  });
+
+  test("emits a warning when a glob matches zero packages", () => {
+    const root = makeTempDir();
+    mkdirSync(join(root, "apps", "server"), { recursive: true });
+
+    const warnSpy = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = expandPackageGlobs(["apps/*", "nonexistent/*"], root);
+      expect(result).toEqual(["apps/server"]);
+      const calls = warnSpy.mock.calls.map((c) => c.join(" "));
+      expect(calls.some((line) => line.includes("nonexistent/*"))).toBe(true);
+      expect(calls.some((line) => line.toLowerCase().includes("no packages"))).toBe(
+        true,
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });
