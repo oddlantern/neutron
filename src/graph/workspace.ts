@@ -86,6 +86,17 @@ export async function buildWorkspaceGraph(
     );
   }
 
+  // Zero-packages-total is a config error: every glob expanded to nothing.
+  // A missing parent dir or a too-specific pattern may be the cause.
+  // Checked after errors so that parser/manifest failures surface with detail.
+  if (packages.size === 0) {
+    throw new Error(
+      "No packages found. Every ecosystem's `packages:` pattern expanded to an empty set. " +
+        "Check that your paths/globs match real directories (and that those directories " +
+        "contain the expected manifests).",
+    );
+  }
+
   // Re-resolve local dependencies now that all packages are discovered
   const resolvedPackages = new Map<string, WorkspacePackage>();
 

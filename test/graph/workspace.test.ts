@@ -100,7 +100,7 @@ describe('buildWorkspaceGraph', () => {
     ).rejects.toThrow('No parser registered');
   });
 
-  test('throws when manifest file does not exist', async () => {
+  test('throws when all package paths resolve to zero packages', async () => {
     const configBadPath: NeutronConfig = {
       workspace: 'test',
       ecosystems: {
@@ -112,6 +112,6 @@ describe('buildWorkspaceGraph', () => {
     };
     await expect(
       buildWorkspaceGraph(configBadPath, FIXTURE_CLEAN, parsers),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/no packages/i);
   });
 });
