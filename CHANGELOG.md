@@ -2,11 +2,10 @@
 
 ## [0.2.3](https://github.com/oddlantern/neutron/compare/v0.2.2...v0.2.3) (2026-04-18)
 
-
 ### Documentation
 
-* add v1 design spec ([fc15939](https://github.com/oddlantern/neutron/commit/fc159394ed4dd0d04a1e16c51e1bf70c74b246b4))
-* **changelog:** regenerate hash-links after history rewrite ([b5eefe2](https://github.com/oddlantern/neutron/commit/b5eefe229f98657b661f1d09fa73f782e812fafe))
+- add v1 design spec ([fc15939](https://github.com/oddlantern/neutron/commit/fc159394ed4dd0d04a1e16c51e1bf70c74b246b4))
+- **changelog:** regenerate hash-links after history rewrite ([b5eefe2](https://github.com/oddlantern/neutron/commit/b5eefe229f98657b661f1d09fa73f782e812fafe))
 
 ## [0.2.2](https://github.com/oddlantern/neutron/compare/v0.2.0...v0.2.2) (2026-04-17)
 
