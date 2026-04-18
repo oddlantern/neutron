@@ -114,4 +114,18 @@ describe("expandPackageGlobs", () => {
       new Set(["services/api", "services/api/v1", "services/api/v2", "services/worker"]),
     );
   });
+
+  test("excludes patterns prefixed with !", () => {
+    const root = makeTempDir();
+    mkdirSync(join(root, "packages", "core"), { recursive: true });
+    mkdirSync(join(root, "packages", "ui"), { recursive: true });
+    mkdirSync(join(root, "packages", "experimental-alpha"), { recursive: true });
+    mkdirSync(join(root, "packages", "experimental-beta"), { recursive: true });
+
+    const result = expandPackageGlobs(
+      ["packages/*", "!packages/experimental-*"],
+      root,
+    );
+    expect(new Set(result)).toEqual(new Set(["packages/core", "packages/ui"]));
+  });
 });
