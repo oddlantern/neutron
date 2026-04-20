@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/oddlantern/neutron/compare/v0.2.3...v0.3.0) (2026-04-20)
+
+
+### Features
+
+* **graph:** 0.3 — glob package paths ([#19](https://github.com/oddlantern/neutron/issues/19)) ([780d7c2](https://github.com/oddlantern/neutron/commit/780d7c22e8c8e14af1f6032e5c4945e2445da1d9))
+
+
+### Maintenance
+
+* **ci:** trigger 0.3.0 release ([6995c98](https://github.com/oddlantern/neutron/commit/6995c98efa279f3f434de31d89eaae984cc3c736))
+
 ## [0.2.3](https://github.com/oddlantern/neutron/compare/v0.2.2...v0.2.3) (2026-04-18)
 
 ### Documentation
